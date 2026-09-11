@@ -12,19 +12,21 @@ import {
   CalendarClock,
   FileBarChart,
   KeyRound,
+  StickyNote,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/empleados", label: "Empleados", icon: Users, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/sueldos", label: "Sueldos", icon: Wallet, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/costos-fijos", label: "Costos Fijos", icon: Receipt, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/cheques", label: "Cheques", icon: Landmark, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
-    { href: "/reportes", label: "Reportes", icon: FileBarChart, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/reportes", label: "Reportes", icon: FileBarChart, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/vault", label: "Vault", icon: KeyRound, roles: ["OWNER"] },
+  { href: "/notas", label: "Notas", icon: StickyNote, roles: ["OWNER", "ACCOUNTANT"] },
 ];
 
 export function Sidebar({ role, name }: { role: string; name: string }) {
@@ -33,7 +35,6 @@ export function Sidebar({ role, name }: { role: string; name: string }) {
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-border bg-background">
       <div className="flex items-center gap-2 border-b border-border px-4 py-4">
-        {/* Espacio reservado para el logo */}
         <img src="/logo.png" alt="PayFlow" className="h-8 w-auto" />
         <span className="font-semibold">{name}</span>
       </div>
