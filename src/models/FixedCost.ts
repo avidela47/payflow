@@ -21,7 +21,13 @@ export interface IFixedCostEntry {
   _id: mongoose.Types.ObjectId;
   category: mongoose.Types.ObjectId;
   period: Date;
-  amount: number;
+  amount: number; // siempre en pesos — lo que usan reportes y dashboard
+  // Si el costo se cargó en dólares, guardamos el monto en USD y la
+  // cotización usada, además del equivalente en pesos ya calculado en
+  // `amount`. Así se puede ver/editar después sin perder el dato original.
+  currency: "ARS" | "USD";
+  usdAmount?: number;
+  exchangeRate?: number;
   paymentMode?: string; // "VEP" | "Tarjeta" | "Débito automático" | ...
   dueDate?: Date;
   paid: boolean;
@@ -33,6 +39,9 @@ const FixedCostEntrySchema = new Schema<IFixedCostEntry>({
   category: { type: Schema.Types.ObjectId, ref: "FixedCostCategory", required: true },
   period: { type: Date, required: true },
   amount: { type: Number, required: true },
+  currency: { type: String, enum: ["ARS", "USD"], default: "ARS" },
+  usdAmount: Number,
+  exchangeRate: Number,
   paymentMode: String,
   dueDate: Date,
   paid: { type: Boolean, default: false },

@@ -126,7 +126,12 @@ export async function deleteFixedCostCategory(categoryId: string) {
 const entrySchema = z.object({
   categoryId: z.string().min(1, "Elegí una categoría."),
   period: z.string().min(1, "Falta el período."), // "YYYY-MM"
-  amount: z.coerce.number().positive("El monto tiene que ser mayor a cero."),
+  currency: z.enum(["ARS", "USD"]).default("ARS"),
+  // Uno u otro según `currency` — se valida a mano abajo, no acá, porque
+  // cuál es obligatorio depende del valor de currency.
+  amount: z.coerce.number().positive().optional(),
+  usdAmount: z.coerce.number().positive().optional(),
+  exchangeRate: z.coerce.number().positive().optional(),
   paymentMode: z.string().optional(),
   dueDate: z.string().optional(), // "YYYY-MM-DD"
   notes: z.string().optional(),
@@ -136,11 +141,39 @@ function parseEntryForm(formData: FormData) {
   return entrySchema.safeParse({
     categoryId: formData.get("categoryId"),
     period: formData.get("period"),
-    amount: formData.get("amount"),
+    currency: formData.get("currency") || "ARS",
+    amount: formData.get("amount") || undefined,
+    usdAmount: formData.get("usdAmount") || undefined,
+    exchangeRate: formData.get("exchangeRate") || undefined,
     paymentMode: formData.get("paymentMode") || undefined,
     dueDate: formData.get("dueDate") || undefined,
     notes: formData.get("notes") || undefined,
   });
+}
+
+// Calcula el monto en pesos a guardar según la moneda elegida. Si es USD,
+// exige monto en USD + cotización y calcula el equivalente; si es ARS, exige
+// el monto directo. Devuelve un error legible si falta algo.
+function resolveAmount(data: z.infer<typeof entrySchema>):
+  | { ok: true; amount: number; currency: "ARS" | "USD"; usdAmount?: number; exchangeRate?: number }
+  | { ok: false; error: string } {
+  if (data.currency === "USD") {
+    if (!data.usdAmount || !data.exchangeRate) {
+      return { ok: false, error: "Falta el monto en USD o la cotización." };
+    }
+    return {
+      ok: true,
+      amount: Math.round(data.usdAmount * data.exchangeRate * 100) / 100,
+      currency: "USD",
+      usdAmount: data.usdAmount,
+      exchangeRate: data.exchangeRate,
+    };
+  }
+
+  if (!data.amount) {
+    return { ok: false, error: "El monto tiene que ser mayor a cero." };
+  }
+  return { ok: true, amount: data.amount, currency: "ARS" };
 }
 
 export async function createFixedCostEntry(formData: FormData) {
@@ -152,6 +185,11 @@ export async function createFixedCostEntry(formData: FormData) {
   const parsed = parseEntryForm(formData);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const resolved = resolveAmount(parsed.data);
+  if (!resolved.ok) {
+    return { ok: false, error: resolved.error };
   }
 
   const [year, month] = parsed.data.period.split("-").map(Number);
@@ -166,7 +204,10 @@ export async function createFixedCostEntry(formData: FormData) {
       {
         category: parsed.data.categoryId,
         period,
-        amount: parsed.data.amount,
+        amount: resolved.amount,
+        currency: resolved.currency,
+        usdAmount: resolved.usdAmount,
+        exchangeRate: resolved.exchangeRate,
         paymentMode: parsed.data.paymentMode,
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         notes: parsed.data.notes,
@@ -194,18 +235,33 @@ export async function updateFixedCostEntry(entryId: string, formData: FormData) 
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
+  const resolved = resolveAmount(parsed.data);
+  if (!resolved.ok) {
+    return { ok: false, error: resolved.error };
+  }
+
   const [year, month] = parsed.data.period.split("-").map(Number);
   const period = new Date(year, month - 1, 1);
 
   try {
     await connectDB();
+    // $set explícito acá (a diferencia del create de arriba) porque, al
+    // pasar de USD a ARS, necesitamos poder BORRAR usdAmount/exchangeRate
+    // viejos — con $unset, no dejándolos pegados con el valor anterior.
     await FixedCostEntry.findByIdAndUpdate(entryId, {
-      category: parsed.data.categoryId,
-      period,
-      amount: parsed.data.amount,
-      paymentMode: parsed.data.paymentMode,
-      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
-      notes: parsed.data.notes,
+      $set: {
+        category: parsed.data.categoryId,
+        period,
+        amount: resolved.amount,
+        currency: resolved.currency,
+        paymentMode: parsed.data.paymentMode,
+        dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
+        notes: parsed.data.notes,
+        ...(resolved.currency === "USD"
+          ? { usdAmount: resolved.usdAmount, exchangeRate: resolved.exchangeRate }
+          : {}),
+      },
+      ...(resolved.currency === "ARS" ? { $unset: { usdAmount: "", exchangeRate: "" } } : {}),
     });
   } catch (err) {
     console.error("updateFixedCostEntry error:", err);

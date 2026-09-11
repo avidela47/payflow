@@ -20,9 +20,9 @@ export default async function CostosFijosPage() {
   ]);
 
   const entryItems: FixedCostEntryItem[] = entries.map((entry) => {
-    // Con `.lean()` + `.populate()`, `category` puede venir como el
-    // documento completo o quedar como solo el id si la referencia está
-    // rota — cubrimos los dos casos.
+    // Si el empleado/categoría referenciada fue borrada, Mongoose deja
+    // `entry.category` en null (no el id crudo) — usamos el id de la propia
+    // liquidación como respaldo para no crashear (mismo caso que en Sueldos).
     const categoryDoc =
       entry.category && typeof entry.category === "object" && "name" in entry.category
         ? (entry.category as unknown as { _id: { toString(): string }; name: string })
@@ -30,11 +30,14 @@ export default async function CostosFijosPage() {
 
     return {
       id: entry._id.toString(),
-      categoryId: categoryDoc ? categoryDoc._id.toString() : entry.category.toString(),
+      categoryId: categoryDoc ? categoryDoc._id.toString() : `huerfano-${entry._id.toString()}`,
       categoryName: categoryDoc ? categoryDoc.name : "Categoría eliminada",
       periodISO: entry.period.toISOString(),
       periodLabel: formatPeriod(entry.period),
       amount: entry.amount,
+      currency: entry.currency ?? "ARS",
+      usdAmount: entry.usdAmount,
+      exchangeRate: entry.exchangeRate,
       paymentMode: entry.paymentMode,
       dueDateISO: entry.dueDate ? entry.dueDate.toISOString().slice(0, 10) : undefined,
       dueDateLabel: entry.dueDate ? formatDueDate(entry.dueDate) : undefined,
