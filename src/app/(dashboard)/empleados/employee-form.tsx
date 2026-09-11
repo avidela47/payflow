@@ -25,6 +25,8 @@ export type EmployeeFormValues = {
   paymentType?: PaymentType;
   cuit?: string;
   hourlyRate?: number;
+  banco?: string;
+  cbuAlias?: string;
 };
 
 export function EmployeeForm({
@@ -114,6 +116,19 @@ export function EmployeeForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cuit">CUIT</Label>
           <Input id="cuit" name="cuit" defaultValue={defaultValues?.cuit} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="banco">Banco / Billetera virtual</Label>
+          <Input
+            id="banco"
+            name="banco"
+            placeholder="Ej: Banco Galicia, Mercado Pago, Ualá"
+            defaultValue={defaultValues?.banco}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="cbuAlias">CBU/CVU o Alias</Label>
+          <Input id="cbuAlias" name="cbuAlias" defaultValue={defaultValues?.cbuAlias} />
         </div>
       </div>
 

@@ -22,6 +22,8 @@ export interface IEmployee {
   paymentType?: PaymentType; // solo relevante si category === "EMPLEADO"
   cuit?: string;
   hourlyRate?: number; // solo relevante si paymentType === "POR_HORA"
+  banco?: string; // banco o billetera virtual (Mercado Pago, Ualá, etc.)
+  cbuAlias?: string; // CBU/CVU o alias para transferir el pago
   active: boolean;
   createdAt: Date;
 }
@@ -44,6 +46,8 @@ const EmployeeSchema = new Schema<IEmployee>({
   paymentType: { type: String, enum: ["FIJO", "POR_HORA"] },
   cuit: String,
   hourlyRate: Number,
+  banco: String,
+  cbuAlias: String,
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });

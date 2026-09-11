@@ -29,6 +29,8 @@ export default async function EmpleadosPage() {
     paymentType: emp.paymentType,
     cuit: emp.cuit,
     hourlyRate: emp.hourlyRate,
+    banco: emp.banco,
+    cbuAlias: emp.cbuAlias,
     active: emp.active,
   }));
 

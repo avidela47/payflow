@@ -21,6 +21,8 @@ const employeeSchema = z
     paymentType: z.enum(["FIJO", "POR_HORA"]).optional().or(z.literal("")),
     cuit: z.string().optional(),
     hourlyRate: z.coerce.number().positive().optional().or(z.literal("")),
+    banco: z.string().optional(),
+    cbuAlias: z.string().optional(),
   })
   .transform((data) => ({
     ...data,
@@ -53,6 +55,8 @@ function parseEmployeeForm(formData: FormData) {
     paymentType: formData.get("paymentType") || undefined,
     cuit: formData.get("cuit") || undefined,
     hourlyRate: formData.get("hourlyRate") || undefined,
+    banco: formData.get("banco") || undefined,
+    cbuAlias: formData.get("cbuAlias") || undefined,
   });
 }
 
