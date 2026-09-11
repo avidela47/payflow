@@ -14,9 +14,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex">
-            <Sidebar role={session.user.role} name={session.user.name ?? "Usuario"} />
-      <main className="flex-1 p-8">{children}</main>
+    <div className="flex flex-col md:h-screen md:flex-row">
+      <Sidebar role={session.user.role} name={session.user.name ?? "Usuario"} />
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">{children}</main>
     </div>
   );
 }

@@ -40,12 +40,12 @@ export function Dialog({
         if (e.target === e.currentTarget) onOpenChange(false);
       }}
       className={cn(
-        "w-full max-w-2xl rounded-lg border border-border bg-card p-0 text-card-foreground shadow-lg backdrop:bg-black/40",
+        "w-[calc(100%-2rem)] max-w-2xl rounded-lg border border-border bg-card p-0 text-card-foreground shadow-lg backdrop:bg-black/40",
         className
       )}
     >
       {(title || description) && (
-        <div className="flex items-start justify-between border-b border-border px-6 py-4">
+        <div className="flex items-start justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <div>
             {title && <h2 className="text-lg font-semibold">{title}</h2>}
             {description && (
@@ -62,7 +62,7 @@ export function Dialog({
           </button>
         </div>
       )}
-      <div className="max-h-[80vh] overflow-y-auto px-6 py-6">{children}</div>
+      <div className="max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{children}</div>
     </dialog>
   );
 }
