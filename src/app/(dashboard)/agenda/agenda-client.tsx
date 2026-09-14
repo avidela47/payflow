@@ -27,7 +27,13 @@ export type AgendaEntryItem = {
   sent: boolean;
 };
 
-export function AgendaClient({ entries }: { entries: AgendaEntryItem[] }) {
+export function AgendaClient({
+  entries,
+  role,
+}: {
+  entries: AgendaEntryItem[];
+  role: string;
+}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<AgendaEntryItem | null>(null);
@@ -91,15 +97,17 @@ export function AgendaClient({ entries }: { entries: AgendaEntryItem[] }) {
               venzan esa fecha — no hace falta cargarlos acá de nuevo.
             </p>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={sendingNow}
-            onClick={handleSendNow}
-          >
-            {sendingNow ? "Enviando..." : "Enviar ahora (prueba)"}
-          </Button>
+          {role === "OWNER" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={sendingNow}
+              onClick={handleSendNow}
+            >
+              {sendingNow ? "Enviando..." : "Enviar ahora (prueba)"}
+            </Button>
+          )}
         </div>
 
         <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">

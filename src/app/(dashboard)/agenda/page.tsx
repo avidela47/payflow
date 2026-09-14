@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { AgendaEntry } from "@/models/AgendaEntry";
 import { AgendaClient, type AgendaEntryItem } from "./agenda-client";
 
@@ -13,6 +14,7 @@ function toDateInputValue(date: Date) {
 }
 
 export default async function AgendaPage() {
+  const session = await getSession();
   await connectDB();
 
   const entries = await AgendaEntry.find({}).sort({ date: -1 }).limit(200).lean();
@@ -36,7 +38,7 @@ export default async function AgendaPage() {
         </p>
       </div>
 
-      <AgendaClient entries={entryItems} />
+      <AgendaClient entries={entryItems} role={session?.user?.role ?? ""} />
     </div>
   );
 }

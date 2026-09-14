@@ -73,6 +73,12 @@ export async function sendAgendaDigestNow() {
   if (!session?.user) {
     return { ok: false, error: "No autenticado." };
   }
+  // Solo OWNER puede disparar el envío de prueba — la contadora no lo ve
+  // en la UI, pero esto evita que lo dispare igual llamando la acción
+  // directamente (mismo patrón que Vault).
+  if (session.user.role !== "OWNER") {
+    return { ok: false, error: "No autorizado." };
+  }
 
   try {
     const result = await runAgendaDigest();
