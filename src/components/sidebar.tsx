@@ -30,7 +30,7 @@ const navItems = [
   { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/reportes", label: "Reportes", icon: FileBarChart, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/vault", label: "Vault", icon: KeyRound, roles: ["OWNER"] },
+  { href: "/vault", label: "Vault", icon: KeyRound, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/notas", label: "Notas", icon: StickyNote, roles: ["OWNER", "ACCOUNTANT"] },
 ];
 

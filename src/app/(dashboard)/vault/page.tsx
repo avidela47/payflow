@@ -14,14 +14,14 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-// Módulo aparte y de acceso restringido — ver ARCHITECTURE.md, sección 4.
-// Por default solo OWNER entra acá. Un ACCOUNTANT con un VaultGrant puntual
-// se resolvería filtrando VaultEntry por esos grants — el modelo ya está
-// listo para eso, pero no se usa todavía (queda para cuando haga falta).
+// Módulo aparte — ver ARCHITECTURE.md, sección 4. Entran OWNER y
+// ACCOUNTANT (ella es quien gestiona las claves del día a día); ambos
+// roles ven y pueden crear/editar/borrar cualquier credencial, no hay
+// grants por entrada individual (el modelo VaultGrant queda sin usar).
 export default async function VaultPage() {
   const session = await getSession();
 
-  if (session?.user?.role !== "OWNER") {
+  if (session?.user?.role !== "OWNER" && session?.user?.role !== "ACCOUNTANT") {
     redirect("/");
   }
 
@@ -49,8 +49,8 @@ export default async function VaultPage() {
       <div>
         <h1 className="text-2xl font-semibold">Vault de Credenciales</h1>
         <p className="text-sm text-muted-foreground">
-          Acceso restringido a OWNER. Cifrado con AES-256-GCM — la clave nunca se muestra sin
-          pedirlo explícitamente.
+          Acceso restringido a OWNER y ACCOUNTANT. Cifrado con AES-256-GCM — la clave nunca se
+          muestra sin pedirlo explícitamente.
         </p>
       </div>
 

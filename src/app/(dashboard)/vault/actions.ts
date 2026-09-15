@@ -7,12 +7,12 @@ import { getSession } from "@/lib/auth";
 import { VaultEntry, VaultAccessLog } from "@/models/Vault";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 
-// Todo el módulo es OWNER-only por default (ver ARCHITECTURE.md sección
-// 4/2) — cada acción revalida el rol server-side, no confiamos solo en el
-// redirect de la página.
-async function requireOwner() {
+// Entran OWNER y ACCOUNTANT (ver ARCHITECTURE.md sección 4/2) — cada
+// acción revalida el rol server-side, no confiamos solo en el redirect de
+// la página.
+async function requireVaultAccess() {
   const session = await getSession();
-  if (session?.user?.role !== "OWNER") {
+  if (session?.user?.role !== "OWNER" && session?.user?.role !== "ACCOUNTANT") {
     return null;
   }
   return session;
@@ -42,7 +42,7 @@ const createSchema = z.object({
 });
 
 export async function createVaultEntry(formData: FormData) {
-  const session = await requireOwner();
+  const session = await requireVaultAccess();
   if (!session) {
     return { ok: false, error: "No autorizado." };
   }
@@ -91,7 +91,7 @@ const editSchema = z.object({
 });
 
 export async function updateVaultEntry(entryId: string, formData: FormData) {
-  const session = await requireOwner();
+  const session = await requireVaultAccess();
   if (!session) {
     return { ok: false, error: "No autorizado." };
   }
@@ -138,7 +138,7 @@ export async function updateVaultEntry(entryId: string, formData: FormData) {
 }
 
 export async function deleteVaultEntry(entryId: string) {
-  const session = await requireOwner();
+  const session = await requireVaultAccess();
   if (!session) {
     return { ok: false, error: "No autorizado." };
   }
@@ -160,7 +160,7 @@ export async function deleteVaultEntry(entryId: string) {
 }
 
 export async function revealVaultEntry(entryId: string) {
-  const session = await requireOwner();
+  const session = await requireVaultAccess();
   if (!session) {
     return { ok: false as const, error: "No autorizado." };
   }
