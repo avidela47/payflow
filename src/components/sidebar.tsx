@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
+  Building2,
   Wallet,
   Receipt,
   Landmark,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/empleados", label: "Empleados", icon: Users, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/sueldos", label: "Sueldos", icon: Wallet, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/costos-fijos", label: "Costos Fijos", icon: Receipt, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/cheques", label: "Cheques", icon: Landmark, roles: ["OWNER", "ACCOUNTANT"] },
