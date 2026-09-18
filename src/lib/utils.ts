@@ -19,3 +19,13 @@ export function formatPeriod(date: Date): string {
     year: "numeric",
   }).format(date);
 }
+
+export function formatFullDate(date: Date): string {
+  const text = new Intl.DateTimeFormat("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

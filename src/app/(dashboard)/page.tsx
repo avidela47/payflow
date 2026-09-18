@@ -23,9 +23,13 @@ import {
   StickyNote,
   AlertTriangle,
   ArrowRight,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, formatFullDate, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
+import { DashboardCharts, type SueldosLinePoint, type CostosDonutSlice } from "@/components/dashboard-charts";
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -37,24 +41,38 @@ function startOfToday() {
   return d;
 }
 
-// Rediseño: en vez de solo KPIs sueltos, el dashboard ahora es un
-// "lanzador" de los 10 módulos — cada tile muestra un número vivo (sacado
-// de la base) para que sirva de vistazo general, no solo de menú. Notas
-// es privado por usuario, así que ese conteo se filtra por
-// session.user.id — nunca mostramos el total de notas de todos.
+// Nombre de pila para el saludo: se corta en el primer espacio porque el
+// "name" del usuario suele ser nombre + apellido y "Hola, Ariel" queda
+// mejor que "Hola, Ariel Videla".
+function firstName(fullName: string) {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
+// Rediseño (v2): arriba, saludo + fecha, 4 tarjetas KPI con variación
+// mes a mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos
+// fijos por categoría). Abajo se mantiene el lanzador de los 10 módulos
+// que ya existía, ahora como referencia completa además del resumen de
+// arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
+// por session.user.id, nunca se muestra el total de todos.
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
 
-  const periodStart = startOfMonth(new Date());
+  const now = new Date();
+  const periodStart = startOfMonth(now);
+  const prevPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth() - 1, 1);
   const todayStart = startOfToday();
   const in7Days = new Date(todayStart);
   in7Days.setDate(in7Days.getDate() + 7);
+  const daysInMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
 
   const [
     activeEmployees,
+    newEmployeesThisMonth,
     totalClients,
+    newClientsThisMonth,
     payrollEntries,
+    prevPayrollEntries,
     pendingFixedCosts,
     activeChecks,
     pendingAgenda,
@@ -63,9 +81,12 @@ export default async function DashboardPage() {
     myNotesCount,
   ] = await Promise.all([
     Employee.countDocuments({ active: true }),
+    Employee.countDocuments({ active: true, createdAt: { $gte: periodStart } }),
     Client.countDocuments({}),
+    Client.countDocuments({ createdAt: { $gte: periodStart } }),
     PayrollEntry.find({ period: periodStart }).lean(),
-    FixedCostEntry.find({ period: periodStart, paid: false }).lean(),
+    PayrollEntry.find({ period: prevPeriodStart }).lean(),
+    FixedCostEntry.find({ period: periodStart, paid: false }).populate("category").lean(),
     Check.find({ status: "ACTIVO" }).lean(),
     AgendaEntry.countDocuments({ sent: false, date: { $gte: todayStart, $lte: in7Days } }),
     CalendarEvent.countDocuments({ startsAt: { $gte: todayStart, $lte: in7Days } }),
@@ -74,11 +95,41 @@ export default async function DashboardPage() {
   ]);
 
   const totalPayroll = payrollEntries.reduce((sum, e) => sum + e.amount, 0);
+  const prevTotalPayroll = prevPayrollEntries.reduce((sum, e) => sum + e.amount, 0);
+  const payrollDeltaPct =
+    prevTotalPayroll > 0 ? Math.round(((totalPayroll - prevTotalPayroll) / prevTotalPayroll) * 100) : null;
+
   const totalPendingFixedCosts = pendingFixedCosts.reduce((sum, e) => sum + e.amount, 0);
+
+  // Serie diaria acumulada del mes en curso, en base a cuándo se cargó
+  // cada liquidación (no hay un campo de "fecha de pago" separado en
+  // PayrollEntry — createdAt es el único dato con granularidad diaria).
+  const dailyTotals = new Array(daysInMonth + 1).fill(0);
+  for (const entry of payrollEntries) {
+    const day = new Date(entry.createdAt).getDate();
+    dailyTotals[day] = (dailyTotals[day] ?? 0) + entry.amount;
+  }
+  let running = 0;
+  const lineData: SueldosLinePoint[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    running += dailyTotals[day] ?? 0;
+    lineData.push({ day, total: running });
+  }
+
+  // Costos fijos pendientes agrupados por categoría (nombre real de
+  // FixedCostCategory, poblado arriba), ordenados de mayor a menor.
+  const donutByCategory = new Map<string, number>();
+  for (const entry of pendingFixedCosts) {
+    const categoryDoc = entry.category as unknown as { name?: string } | null;
+    const name = categoryDoc && typeof categoryDoc === "object" ? categoryDoc.name ?? "Sin categoría" : "Sin categoría";
+    donutByCategory.set(name, (donutByCategory.get(name) ?? 0) + entry.amount);
+  }
+  const donutData: CostosDonutSlice[] = Array.from(donutByCategory.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
 
   // Mismo criterio que la página de Cheques (daysUntil por cheque activo)
   // para que estos números coincidan siempre con los badges que se ven ahí.
-  const now = new Date();
   let checksDueSoon = 0;
   let checksOverdue = 0;
   for (const check of activeChecks) {
@@ -109,6 +160,83 @@ export default async function DashboardPage() {
       tone: "text-warning",
     },
   ].filter((a): a is { text: string; tone: string } => Boolean(a));
+
+  // Las 4 tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio
+  // que el resto de la app); Costos Fijos queda a la vista, como antes.
+  const kpis = [
+    {
+      title: "Empleados activos",
+      icon: Users,
+      iconWrap: "bg-blue-50",
+      iconColor: "text-blue-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{activeEmployees}</p>,
+      delta:
+        newEmployeesThisMonth > 0
+          ? { text: `${newEmployeesThisMonth} este mes`, up: true }
+          : null,
+    },
+    {
+      title: "Clientes",
+      icon: Building2,
+      iconWrap: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{totalClients}</p>,
+      delta:
+        newClientsThisMonth > 0 ? { text: `${newClientsThisMonth} este mes`, up: true } : null,
+    },
+    {
+      title: "Sueldos del mes",
+      icon: Wallet,
+      iconWrap: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      value: <MaskedAmount value={formatCurrency(totalPayroll)} className="text-2xl font-semibold tracking-tight" />,
+      delta:
+        payrollDeltaPct !== null
+          ? { text: `${Math.abs(payrollDeltaPct)}% vs mes anterior`, up: payrollDeltaPct >= 0 }
+          : null,
+    },
+    {
+      title: "Costos fijos pendientes",
+      icon: Receipt,
+      iconWrap: "bg-amber-50",
+      iconColor: "text-amber-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPendingFixedCosts)}</p>,
+      delta:
+        pendingFixedCosts.length > 0
+          ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
+          : null,
+    },
+  ];
+
+  // Accesos rápidos: van directo a la página del módulo. En Clientes el
+  // formulario de alta vive en un diálogo (no se abre solo), así que ahí
+  // queda un click más — el resto ya cae parado en el formulario.
+  const quickActions = [
+    {
+      href: "/sueldos",
+      title: "Nueva liquidación",
+      description: "Cargar sueldo de un empleado",
+      icon: Wallet,
+      wrap: "bg-emerald-50 hover:bg-emerald-100",
+      iconColor: "text-emerald-600",
+    },
+    {
+      href: "/costos-fijos",
+      title: "Nuevo costo fijo",
+      description: "Registrar un gasto del mes",
+      icon: Receipt,
+      wrap: "bg-amber-50 hover:bg-amber-100",
+      iconColor: "text-amber-600",
+    },
+    {
+      href: "/clientes",
+      title: "Nuevo cliente",
+      description: "Sumar a la cartera",
+      icon: Building2,
+      wrap: "bg-indigo-50 hover:bg-indigo-100",
+      iconColor: "text-indigo-600",
+    },
+  ];
 
   const modules = [
     {
@@ -228,11 +356,18 @@ export default async function DashboardPage() {
     },
   ];
 
+  const displayName = session?.user?.name ? firstName(session.user.name) : "";
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Vista general de PayFlow.</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            Hola{displayName ? `, ${displayName}` : ""} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground">Acá tenés un resumen de PayFlow.</p>
+        </div>
+        <p className="text-sm text-muted-foreground">{formatFullDate(now)}</p>
       </div>
 
       {alerts.length > 0 && (
@@ -246,40 +381,106 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {modules.map((mod) => {
-          const Icon = mod.icon;
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
           return (
-            <Link
-              key={mod.href}
-              href={mod.href}
-              className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            <div
+              key={kpi.title}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm"
             >
-              <div className={`absolute inset-x-0 top-0 h-1 ${mod.bar}`} />
-              <div className="flex items-center justify-between">
-                <div className={`rounded-lg p-2.5 ${mod.iconWrap}`}>
-                  <Icon className={`h-5 w-5 ${mod.iconColor}`} />
+              <div className="flex items-center gap-2">
+                <div className={`rounded-lg p-2 ${kpi.iconWrap}`}>
+                  <Icon className={`h-4 w-4 ${kpi.iconColor}`} />
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <span className="text-sm text-muted-foreground">{kpi.title}</span>
               </div>
-              <div>
-                <h2 className="font-semibold">{mod.title}</h2>
-                <p className="text-xs text-muted-foreground">{mod.description}</p>
-              </div>
-              <div>
-                {mod.href === "/sueldos" ? (
-                  <MaskedAmount
-                    value={mod.value}
-                    className="text-xl font-semibold tracking-tight"
-                  />
-                ) : (
-                  <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
-                )}
-                <p className="text-xs text-muted-foreground">{mod.caption}</p>
-              </div>
-            </Link>
+              {kpi.value}
+              {kpi.delta && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-xs font-medium",
+                    kpi.delta.up ? "text-success" : "text-destructive"
+                  )}
+                >
+                  {kpi.delta.up ? (
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDownRight className="h-3.5 w-3.5" />
+                  )}
+                  {kpi.delta.text}
+                </span>
+              )}
+            </div>
           );
         })}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <h2 className="mb-4 flex items-center gap-2 font-semibold">
+          <Zap className="h-4 w-4 text-primary" />
+          Acciones rápidas
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className={cn(
+                  "flex flex-col gap-2 rounded-lg p-4 transition-colors",
+                  action.wrap
+                )}
+              >
+                <Icon className={`h-6 w-6 ${action.iconColor}`} />
+                <span className="font-medium">{action.title}</span>
+                <span className="text-xs text-muted-foreground">{action.description}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <DashboardCharts lineData={lineData} donutData={donutData} />
+
+      <div>
+        <h2 className="mb-3 font-semibold">Todos los módulos</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {modules.map((mod) => {
+            const Icon = mod.icon;
+            return (
+              <Link
+                key={mod.href}
+                href={mod.href}
+                className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className={`absolute inset-x-0 top-0 h-1 ${mod.bar}`} />
+                <div className="flex items-center justify-between">
+                  <div className={`rounded-lg p-2.5 ${mod.iconWrap}`}>
+                    <Icon className={`h-5 w-5 ${mod.iconColor}`} />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{mod.title}</h3>
+                  <p className="text-xs text-muted-foreground">{mod.description}</p>
+                </div>
+                <div>
+                  {mod.href === "/sueldos" ? (
+                    <MaskedAmount
+                      value={mod.value}
+                      className="text-xl font-semibold tracking-tight"
+                    />
+                  ) : (
+                    <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">{mod.caption}</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
