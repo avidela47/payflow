@@ -25,6 +25,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
+import { MaskedAmount } from "@/components/masked-amount";
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -266,7 +267,14 @@ export default async function DashboardPage() {
                 <p className="text-xs text-muted-foreground">{mod.description}</p>
               </div>
               <div>
-                <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
+                {mod.href === "/sueldos" ? (
+                  <MaskedAmount
+                    value={mod.value}
+                    className="text-xl font-semibold tracking-tight"
+                  />
+                ) : (
+                  <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
+                )}
                 <p className="text-xs text-muted-foreground">{mod.caption}</p>
               </div>
             </Link>

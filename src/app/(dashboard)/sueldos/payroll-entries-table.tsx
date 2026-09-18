@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
+import { MaskedAmount } from "@/components/masked-amount";
 import { setPayrollGroupPaid, updatePayrollGroup, deletePayrollGroup } from "./actions";
 
 // Una fila = un empleado + un período, con el total combinado de
@@ -131,7 +132,9 @@ export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) 
                   </button>
                 </TableCell>
                 <TableCell className="capitalize">{group.periodLabel}</TableCell>
-                <TableCell>{formatCurrency(group.total)}</TableCell>
+                <TableCell>
+                  <MaskedAmount value={formatCurrency(group.total)} />
+                </TableCell>
                 <TableCell>{group.paidBy ?? "—"}</TableCell>
                 <TableCell>
                   <button
@@ -183,15 +186,15 @@ export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) 
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Registrado</span>
-              <span>{formatCurrency(breakdownTarget.registradoAmount)}</span>
+              <MaskedAmount value={formatCurrency(breakdownTarget.registradoAmount)} />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Informal</span>
-              <span>{formatCurrency(breakdownTarget.informalAmount)}</span>
+              <MaskedAmount value={formatCurrency(breakdownTarget.informalAmount)} />
             </div>
             <div className="mt-2 flex justify-between gap-4 border-t border-border pt-2 font-medium">
               <span>Total</span>
-              <span>{formatCurrency(breakdownTarget.total)}</span>
+              <MaskedAmount value={formatCurrency(breakdownTarget.total)} />
             </div>
           </div>
         )}
