@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Employee } from "@/models/Employee";
 import { Client } from "@/models/Client";
+import { Sale } from "@/models/Sale";
 import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { Check } from "@/models/Check";
@@ -26,6 +27,7 @@ import {
   Zap,
   ArrowUpRight,
   ArrowDownRight,
+  TrendingUp,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
@@ -50,7 +52,7 @@ function firstName(fullName: string) {
 
 // Rediseño (v2): arriba, saludo + fecha, 4 tarjetas KPI con variación
 // mes a mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos
-// fijos por categoría). Abajo se mantiene el lanzador de los 10 módulos
+// fijos por categoría). Abajo se mantiene el lanzador de los módulos
 // que ya existía, ahora como referencia completa además del resumen de
 // arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
 // por session.user.id, nunca se muestra el total de todos.
@@ -65,12 +67,15 @@ export default async function DashboardPage() {
   const in7Days = new Date(todayStart);
   in7Days.setDate(in7Days.getDate() + 7);
   const daysInMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
+  const nextPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
 
   const [
     activeEmployees,
     newEmployeesThisMonth,
     totalClients,
     newClientsThisMonth,
+    salesThisMonth,
+    overdueSalesCount,
     payrollEntries,
     prevPayrollEntries,
     pendingFixedCosts,
@@ -84,6 +89,8 @@ export default async function DashboardPage() {
     Employee.countDocuments({ active: true, createdAt: { $gte: periodStart } }),
     Client.countDocuments({}),
     Client.countDocuments({ createdAt: { $gte: periodStart } }),
+    Sale.find({ saleDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
+    Sale.countDocuments({ collected: false, expectedCollectionDate: { $lt: todayStart } }),
     PayrollEntry.find({ period: periodStart }).lean(),
     PayrollEntry.find({ period: prevPeriodStart }).lean(),
     FixedCostEntry.find({ period: periodStart, paid: false }).populate("category").lean(),
@@ -93,6 +100,8 @@ export default async function DashboardPage() {
     VaultEntry.countDocuments({}),
     session?.user ? Note.countDocuments({ user: session.user.id }) : Promise.resolve(0),
   ]);
+
+  const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
 
   const totalPayroll = payrollEntries.reduce((sum, e) => sum + e.amount, 0);
   const prevTotalPayroll = prevPayrollEntries.reduce((sum, e) => sum + e.amount, 0);
@@ -145,6 +154,12 @@ export default async function DashboardPage() {
       text: `${checksOverdue} cheque${checksOverdue === 1 ? "" : "s"} vencido${
         checksOverdue === 1 ? "" : "s"
       }`,
+      tone: "text-destructive",
+    },
+    overdueSalesCount > 0 && {
+      text: `${overdueSalesCount} venta${overdueSalesCount === 1 ? "" : "s"} vencida${
+        overdueSalesCount === 1 ? "" : "s"
+      } sin cobrar`,
       tone: "text-destructive",
     },
     checksDueSoon > 0 && {
@@ -260,6 +275,17 @@ export default async function DashboardPage() {
       iconWrap: "bg-indigo-50",
       iconColor: "text-indigo-600",
       bar: "bg-indigo-500",
+    },
+    {
+      href: "/ventas",
+      title: "Ventas",
+      description: "Ventas por cliente y cobros",
+      value: formatCurrency(totalSalesThisMonth),
+      caption: "este mes",
+      icon: TrendingUp,
+      iconWrap: "bg-teal-50",
+      iconColor: "text-teal-600",
+      bar: "bg-teal-500",
     },
     {
       href: "/sueldos",
