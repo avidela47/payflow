@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
+import { Sale } from "@/models/Sale";
 import { formatPeriod } from "@/lib/utils";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
@@ -9,6 +10,8 @@ import { formatPeriod } from "@/lib/utils";
 // registrado y populate("employee") explota con MissingSchemaError. Este
 // import fuerza el registro aunque no usemos el símbolo directamente.
 import "@/models/Employee";
+// Mismo motivo, para Sale.client → "Client".
+import "@/models/Client";
 
 // Mismo criterio que ya usan sueldos/costos-fijos: el período se guarda
 // siempre como el día 1 del mes, construido en hora local — así evitamos
@@ -90,7 +93,7 @@ export async function getPayrollReport(periodISO: string): Promise<PayrollReport
           })
         : null;
 
-      // Igual que en sueldos/page.tsx: si el empleado fue borrado, Mongoose
+    // Igual que en sueldos/page.tsx: si el empleado fue borrado, Mongoose
     // deja `entry.employee` en null (no el id crudo) — usamos el id de la
     // propia liquidación como clave para no crashear.
     const employeeId = employeeDoc
@@ -199,7 +202,7 @@ export async function getFixedCostReport(
       entry.category && typeof entry.category === "object" && "name" in entry.category
         ? (entry.category as unknown as { _id: { toString(): string }; name: string })
         : null;
-        // Borrar una categoría en uso está bloqueado en costos-fijos/actions.ts,
+    // Borrar una categoría en uso está bloqueado en costos-fijos/actions.ts,
     // así que esto no debería pasar — pero si alguna vez pasa (ej. borrado
     // manual en Atlas), mejor un id de respaldo que un crash por null.
     const categoryId = categoryDoc
@@ -251,6 +254,121 @@ export async function getFixedCostReport(
     summary,
     summaryTotalsByPeriod,
     grandTotal,
+    detail,
+  };
+}
+
+// ---------- Reporte de Ventas ----------
+
+// A diferencia de Sueldos/Costos Fijos, Sale no tiene un campo `period`
+// fijo al día 1 del mes: cada venta tiene su propia `saleDate` real. Por
+// eso el filtro por mes acá es un rango [from, to) sobre esa fecha, no una
+// igualdad exacta.
+//
+// El estado cobrado/pendiente que se muestra es SIEMPRE el actual (en
+// vivo), no una foto congelada al cierre del mes: si una venta de este
+// período se cobra más adelante (ej. un cheque que se hace efectivo el
+// mes que viene), `collected`/`collectedDate` se actualizan en el momento
+// en Ventas y este reporte, si se vuelve a abrir después, ya la va a
+// mostrar como cobrada. El reporte no intenta "cerrar" el mes.
+export type SalesPaymentMethodRow = {
+  method: string;
+  count: number;
+  amount: number;
+};
+
+export type SalesReportDetailRow = {
+  id: string;
+  clientName: string;
+  saleDateISO: string;
+  paymentMethod?: string;
+  amount: number;
+  collected: boolean;
+  collectedDateISO?: string;
+  invoiceNumber?: string;
+};
+
+export type SalesReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  totalCount: number;
+  totalAmount: number;
+  collectedCount: number;
+  collectedAmount: number;
+  pendingCount: number;
+  pendingAmount: number;
+  byPaymentMethod: SalesPaymentMethodRow[];
+  detail: SalesReportDetailRow[];
+};
+
+export async function getSalesReport(periodISO: string): Promise<SalesReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const sales = await Sale.find({ saleDate: { $gte: from, $lt: to } })
+    .populate("client")
+    .sort({ saleDate: 1 })
+    .lean();
+
+  let totalAmount = 0;
+  let collectedCount = 0;
+  let collectedAmount = 0;
+  let pendingCount = 0;
+  let pendingAmount = 0;
+  const methodMap = new Map<string, SalesPaymentMethodRow>();
+  const detail: SalesReportDetailRow[] = [];
+
+  for (const sale of sales) {
+    // Mismo caso que en ventas/page.tsx: si el cliente fue borrado,
+    // Mongoose deja `sale.client` en null (no el id crudo).
+    const clientDoc =
+      sale.client && typeof sale.client === "object" && "nombre" in sale.client
+        ? (sale.client as unknown as { nombre: string })
+        : null;
+    const clientName = clientDoc?.nombre ?? "Cliente eliminado";
+
+    totalAmount += sale.amount;
+    if (sale.collected) {
+      collectedCount += 1;
+      collectedAmount += sale.amount;
+    } else {
+      pendingCount += 1;
+      pendingAmount += sale.amount;
+    }
+
+    const methodKey = sale.paymentMethod || "Sin especificar";
+    const methodRow = methodMap.get(methodKey) ?? { method: methodKey, count: 0, amount: 0 };
+    methodRow.count += 1;
+    methodRow.amount += sale.amount;
+    methodMap.set(methodKey, methodRow);
+
+    detail.push({
+      id: sale._id.toString(),
+      clientName,
+      saleDateISO: sale.saleDate.toISOString().slice(0, 10),
+      paymentMethod: sale.paymentMethod,
+      amount: sale.amount,
+      collected: sale.collected,
+      collectedDateISO: sale.collectedDate
+        ? sale.collectedDate.toISOString().slice(0, 10)
+        : undefined,
+      invoiceNumber: sale.invoiceNumber,
+    });
+  }
+
+  const byPaymentMethod = Array.from(methodMap.values()).sort((a, b) => b.amount - a.amount);
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    totalCount: sales.length,
+    totalAmount,
+    collectedCount,
+    collectedAmount,
+    pendingCount,
+    pendingAmount,
+    byPaymentMethod,
     detail,
   };
 }

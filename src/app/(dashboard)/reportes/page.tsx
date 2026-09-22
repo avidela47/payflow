@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet, Receipt, ArrowRight } from "lucide-react";
+import { Wallet, Receipt, TrendingUp, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function ReportesPage() {
@@ -13,6 +13,23 @@ export default function ReportesPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link href="/reportes/ventas">
+          <Card className="transition-colors hover:border-primary">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="rounded-md bg-primary/10 p-3">
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Ventas</p>
+                <p className="text-sm text-muted-foreground">
+                  Por mes: total, cobradas/pendientes y formas de pago.
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/reportes/sueldos">
           <Card className="transition-colors hover:border-primary">
             <CardContent className="flex items-center gap-4 pt-6">
