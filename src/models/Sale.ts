@@ -20,6 +20,7 @@ export interface ISale {
   exchangeRate?: number;
   remitoNumber?: string;
   invoiceNumber?: string;
+  purchaseOrderNumber?: string;
   notes?: string;
   createdAt: Date;
 }
@@ -37,6 +38,7 @@ const SaleSchema = new Schema<ISale>({
   exchangeRate: Number,
   remitoNumber: String,
   invoiceNumber: String,
+  purchaseOrderNumber: String,
   notes: String,
   createdAt: { type: Date, default: Date.now },
 });

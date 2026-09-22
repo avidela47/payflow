@@ -37,6 +37,7 @@ export type SaleItem = {
   exchangeRate?: number;
   remitoNumber?: string;
   invoiceNumber?: string;
+  purchaseOrderNumber?: string;
   notes?: string;
 };
 
@@ -97,8 +98,8 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
       const matchesMonth = !month || sale.saleDateISO.slice(0, 7) === month;
       const matchesSearch =
         !q ||
-        [sale.clientName, sale.remitoNumber, sale.invoiceNumber].some((field) =>
-          field?.toLowerCase().includes(q)
+        [sale.clientName, sale.remitoNumber, sale.invoiceNumber, sale.purchaseOrderNumber].some(
+          (field) => field?.toLowerCase().includes(q)
         );
       return matchesMonth && matchesSearch;
     });
@@ -307,6 +308,11 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
               <Input id="invoiceNumber" name="invoiceNumber" />
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="purchaseOrderNumber">Número de orden de compra</Label>
+              <Input id="purchaseOrderNumber" name="purchaseOrderNumber" />
+            </div>
+
             <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-2">
               <Label htmlFor="notes">Notas</Label>
               <Input id="notes" name="notes" />
@@ -346,7 +352,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por cliente, remito o factura..."
+            placeholder="Buscar por cliente, remito, factura u OC..."
             className="pl-9"
           />
         </div>
@@ -373,6 +379,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
             <TableHead>Monto</TableHead>
             <TableHead>Remito</TableHead>
             <TableHead>Factura</TableHead>
+            <TableHead>OC</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead />
           </TableRow>
@@ -380,7 +387,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
+              <TableCell colSpan={10} className="text-center text-muted-foreground">
                 {sales.length === 0 ? "Todavía no hay ventas cargadas." : "No hay ventas para este filtro."}
               </TableCell>
             </TableRow>
@@ -405,6 +412,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
                 </TableCell>
                 <TableCell>{sale.remitoNumber ?? "—"}</TableCell>
                 <TableCell>{sale.invoiceNumber ?? "—"}</TableCell>
+                <TableCell>{sale.purchaseOrderNumber ?? "—"}</TableCell>
                 <TableCell>
                   <button
                     onClick={() => handleToggleCollected(sale)}
@@ -571,7 +579,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
               </>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="editRemitoNumber">Número de remito</Label>
                 <Input id="editRemitoNumber" name="remitoNumber" defaultValue={editing.remitoNumber} />
@@ -579,6 +587,14 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="editInvoiceNumber">Número de factura</Label>
                 <Input id="editInvoiceNumber" name="invoiceNumber" defaultValue={editing.invoiceNumber} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="editPurchaseOrderNumber">Número de orden de compra</Label>
+                <Input
+                  id="editPurchaseOrderNumber"
+                  name="purchaseOrderNumber"
+                  defaultValue={editing.purchaseOrderNumber}
+                />
               </div>
             </div>
 

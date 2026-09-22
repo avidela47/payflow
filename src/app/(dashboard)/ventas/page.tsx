@@ -36,6 +36,7 @@ export default async function VentasPage() {
       exchangeRate: sale.exchangeRate,
       remitoNumber: sale.remitoNumber,
       invoiceNumber: sale.invoiceNumber,
+      purchaseOrderNumber: sale.purchaseOrderNumber,
       notes: sale.notes,
     };
   });

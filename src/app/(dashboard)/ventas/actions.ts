@@ -18,6 +18,7 @@ const saleSchema = z.object({
   exchangeRate: z.coerce.number().positive().optional(),
   remitoNumber: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  purchaseOrderNumber: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -33,6 +34,7 @@ function parseSaleForm(formData: FormData) {
     exchangeRate: formData.get("exchangeRate") || undefined,
     remitoNumber: formData.get("remitoNumber") || undefined,
     invoiceNumber: formData.get("invoiceNumber") || undefined,
+    purchaseOrderNumber: formData.get("purchaseOrderNumber") || undefined,
     notes: formData.get("notes") || undefined,
   });
 }
@@ -93,6 +95,7 @@ export async function createSale(formData: FormData) {
       exchangeRate: resolved.exchangeRate,
       remitoNumber: parsed.data.remitoNumber,
       invoiceNumber: parsed.data.invoiceNumber,
+      purchaseOrderNumber: parsed.data.purchaseOrderNumber,
       notes: parsed.data.notes,
     });
   } catch (err) {
@@ -139,6 +142,7 @@ export async function updateSale(saleId: string, formData: FormData) {
         currency: resolved.currency,
         remitoNumber: parsed.data.remitoNumber,
         invoiceNumber: parsed.data.invoiceNumber,
+        purchaseOrderNumber: parsed.data.purchaseOrderNumber,
         notes: parsed.data.notes,
         ...(resolved.currency === "USD"
           ? { usdAmount: resolved.usdAmount, exchangeRate: resolved.exchangeRate }
