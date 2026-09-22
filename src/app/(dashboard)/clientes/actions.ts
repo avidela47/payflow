@@ -5,7 +5,15 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Client } from "@/models/Client";
+import { getNextSequence } from "@/models/Counter";
 import { IVA_CONDITIONS } from "@/lib/iva-conditions";
+
+// Detecta el error de índice único de MongoDB (E11000) sin depender de un
+// tipo de error específico — Mongoose lo tira como un objeto plano, no
+// como instancia de Error.
+function isDuplicateKeyError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === 11000;
+}
 
 // Compartido entre OWNER y ACCOUNTANT — sin restricción de rol, igual que
 // Empleados/Cheques/Agenda (a diferencia de Notas, que es privado, y de
@@ -65,12 +73,18 @@ export async function createClient(formData: FormData) {
 
   try {
     await connectDB();
+    const seq = await getNextSequence("client");
+    const codigo = `CLI-${String(seq).padStart(3, "0")}`;
     await Client.create({
       ...parsed.data,
+      codigo,
       condicionIva: parsed.data.condicionIva || undefined,
     });
   } catch (err) {
     console.error("createClient error:", err);
+    if (isDuplicateKeyError(err)) {
+      return { ok: false, error: "Ya existe un cliente con ese nombre." };
+    }
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `No se pudo crear el cliente: ${message}` };
   }
@@ -101,6 +115,9 @@ export async function updateClient(clientId: string, formData: FormData) {
     }
   } catch (err) {
     console.error("updateClient error:", err);
+    if (isDuplicateKeyError(err)) {
+      return { ok: false, error: "Ya existe otro cliente con ese nombre." };
+    }
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `No se pudo actualizar el cliente: ${message}` };
   }

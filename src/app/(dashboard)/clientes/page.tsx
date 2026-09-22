@@ -9,6 +9,7 @@ export default async function ClientesPage() {
 
   const clientItems: ClientItem[] = clients.map((client) => ({
     id: client._id.toString(),
+    codigo: client.codigo,
     nombre: client.nombre,
     razonSocial: client.razonSocial,
     cuit: client.cuit,

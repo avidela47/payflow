@@ -23,6 +23,7 @@ import { createClient, updateClient, deleteClient } from "./actions";
 
 export type ClientItem = {
   id: string;
+  codigo: string;
   nombre: string;
   razonSocial?: string;
   cuit?: string;
@@ -74,6 +75,12 @@ function ClientForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {mode === "edit" && defaultValues?.codigo && (
+        <p className="text-sm text-muted-foreground">
+          Código: <span className="font-medium text-foreground">{defaultValues.codigo}</span>
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nombre">Nombre</Label>
@@ -219,7 +226,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
     const q = search.trim().toLowerCase();
     if (!q) return clients;
     return clients.filter((c) =>
-      [c.nombre, c.razonSocial, c.cuit, c.localidad].some((field) =>
+      [c.codigo, c.nombre, c.razonSocial, c.cuit, c.localidad].some((field) =>
         field?.toLowerCase().includes(q)
       )
     );
@@ -248,7 +255,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, CUIT o localidad..."
+            placeholder="Buscar por código, nombre, CUIT o localidad..."
             className="pl-9"
           />
         </div>
@@ -261,6 +268,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Código</TableHead>
             <TableHead>Nombre / Razón social</TableHead>
             <TableHead>CUIT</TableHead>
             <TableHead>Localidad</TableHead>
@@ -273,7 +281,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 {clients.length === 0
                   ? "Todavía no hay clientes cargados."
                   : "No se encontró ningún cliente con esa búsqueda."}
@@ -282,6 +290,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
           )}
           {filtered.map((client) => (
             <TableRow key={client.id}>
+              <TableCell className="text-muted-foreground">{client.codigo}</TableCell>
               <TableCell className="font-medium">
                 {client.nombre}
                 {client.razonSocial && (

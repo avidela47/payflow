@@ -6,6 +6,7 @@ import { IVA_CONDITIONS, type IvaCondition } from "@/lib/iva-conditions";
 // _id de Mongo alcanza como identificador interno.
 export interface IClient {
   _id: mongoose.Types.ObjectId;
+  codigo: string;
   nombre: string;
   razonSocial?: string;
   cuit?: string;
@@ -22,7 +23,19 @@ export interface IClient {
 
 const ClientSchema = new Schema<IClient>(
   {
-    nombre: { type: String, required: true },
+    // Código correlativo autogenerado (CLI-001, CLI-002, ...) — ver
+    // getNextSequence en @/models/Counter. Nunca se edita desde el
+    // formulario: es una referencia fija que no cambia aunque el nombre
+    // se corrija más adelante.
+    codigo: { type: String, required: true, unique: true },
+    // `unique: true` acá (no solo validado en la action) porque la
+    // garantía real tiene que vivir en la base — dos altas casi
+    // simultáneas podrían pasar la validación de la action antes de que
+    // cualquiera de las dos llegue a insertarse. `nombre` siempre se
+    // normaliza a MAYÚSCULA en clientes/actions.ts antes de guardar, así
+    // que este índice ya cubre variantes de mayúscula/minúscula sin
+    // necesitar una collation especial.
+    nombre: { type: String, required: true, unique: true },
     razonSocial: String,
     cuit: String,
     telefono: String,
@@ -37,7 +50,8 @@ const ClientSchema = new Schema<IClient>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-ClientSchema.index({ nombre: 1 });
+// (No hace falta un ClientSchema.index({ nombre: 1 }) aparte: el
+// `unique: true` de arriba ya crea ese índice.)
 
 export const Client =
   (models.Client as Model<IClient>) || model<IClient>("Client", ClientSchema);
