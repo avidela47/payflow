@@ -12,9 +12,19 @@ import { IVA_CONDITIONS } from "@/lib/iva-conditions";
 // Vault, que solo dejamos entrar a esos dos roles pero no a otros que
 // pudieran existir en el futuro).
 
+// Prolijidad de carga: sin importar cómo lo tipeen, el nombre siempre
+// queda en MAYÚSCULA y la razón social en minúscula. Se normaliza acá
+// (server action), no en el input, para que quede igual sin importar por
+// dónde se cargue o edite el cliente.
 const clientSchema = z.object({
-  nombre: z.string().min(1, "Falta el nombre."),
-  razonSocial: z.string().optional(),
+  nombre: z
+    .string()
+    .min(1, "Falta el nombre.")
+    .transform((v) => v.trim().toUpperCase()),
+  razonSocial: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.trim().toLowerCase() : v)),
   cuit: z.string().optional(),
   telefono: z.string().optional(),
   email: z.string().optional(),
