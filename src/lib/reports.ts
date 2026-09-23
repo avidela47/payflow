@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { Sale } from "@/models/Sale";
+import { Purchase, type PurchaseReceiptStatus } from "@/models/Purchase";
 import { formatPeriod } from "@/lib/utils";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
@@ -12,6 +13,8 @@ import { formatPeriod } from "@/lib/utils";
 import "@/models/Employee";
 // Mismo motivo, para Sale.client → "Client".
 import "@/models/Client";
+// Mismo motivo, para Purchase.provider → "Provider".
+import "@/models/Provider";
 
 // Mismo criterio que ya usan sueldos/costos-fijos: el período se guarda
 // siempre como el día 1 del mes, construido en hora local — así evitamos
@@ -369,6 +372,138 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
     pendingCount,
     pendingAmount,
     byPaymentMethod,
+    detail,
+  };
+}
+
+// ---------- Reporte de Compras ----------
+
+// Mismo criterio que Ventas: Purchase tampoco tiene un campo `period` fijo
+// al día 1 del mes, así que el filtro por mes es un rango [from, to) sobre
+// `purchaseDate`. El estado de pago mostrado es siempre el actual (en
+// vivo), no una foto congelada al cierre del mes — misma filosofía que
+// Ventas, ver comentario más arriba.
+//
+// A diferencia de Ventas, acá hay una dimensión extra: el estado de
+// recepción (en curso / recibida parcial / recibida total), independiente
+// del estado de pago — se desglosa aparte en `byReceiptStatus`.
+export type PurchasesPaymentMethodRow = {
+  method: string;
+  count: number;
+  amount: number;
+};
+
+export type PurchasesReceiptStatusRow = {
+  status: PurchaseReceiptStatus;
+  count: number;
+  amount: number;
+};
+
+export type PurchasesReportDetailRow = {
+  id: string;
+  providerName: string;
+  purchaseDateISO: string;
+  paymentMethod?: string;
+  amount: number;
+  paid: boolean;
+  paidDateISO?: string;
+  receiptStatus: PurchaseReceiptStatus;
+  invoiceNumber?: string;
+};
+
+export type PurchasesReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  totalCount: number;
+  totalAmount: number;
+  paidCount: number;
+  paidAmount: number;
+  pendingCount: number;
+  pendingAmount: number;
+  byPaymentMethod: PurchasesPaymentMethodRow[];
+  byReceiptStatus: PurchasesReceiptStatusRow[];
+  detail: PurchasesReportDetailRow[];
+};
+
+export async function getPurchasesReport(periodISO: string): Promise<PurchasesReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const purchases = await Purchase.find({ purchaseDate: { $gte: from, $lt: to } })
+    .populate("provider")
+    .sort({ purchaseDate: 1 })
+    .lean();
+
+  let totalAmount = 0;
+  let paidCount = 0;
+  let paidAmount = 0;
+  let pendingCount = 0;
+  let pendingAmount = 0;
+  const methodMap = new Map<string, PurchasesPaymentMethodRow>();
+  const receiptMap = new Map<PurchaseReceiptStatus, PurchasesReceiptStatusRow>();
+  const detail: PurchasesReportDetailRow[] = [];
+
+  for (const purchase of purchases) {
+    // Mismo caso que en compras/page.tsx: si el proveedor fue borrado,
+    // Mongoose deja `purchase.provider` en null (no el id crudo).
+    const providerDoc =
+      purchase.provider && typeof purchase.provider === "object" && "nombre" in purchase.provider
+        ? (purchase.provider as unknown as { nombre: string })
+        : null;
+    const providerName = providerDoc?.nombre ?? "Proveedor eliminado";
+
+    totalAmount += purchase.amount;
+    if (purchase.paid) {
+      paidCount += 1;
+      paidAmount += purchase.amount;
+    } else {
+      pendingCount += 1;
+      pendingAmount += purchase.amount;
+    }
+
+    const methodKey = purchase.paymentMethod || "Sin especificar";
+    const methodRow = methodMap.get(methodKey) ?? { method: methodKey, count: 0, amount: 0 };
+    methodRow.count += 1;
+    methodRow.amount += purchase.amount;
+    methodMap.set(methodKey, methodRow);
+
+    const receiptRow = receiptMap.get(purchase.receiptStatus) ?? {
+      status: purchase.receiptStatus,
+      count: 0,
+      amount: 0,
+    };
+    receiptRow.count += 1;
+    receiptRow.amount += purchase.amount;
+    receiptMap.set(purchase.receiptStatus, receiptRow);
+
+    detail.push({
+      id: purchase._id.toString(),
+      providerName,
+      purchaseDateISO: purchase.purchaseDate.toISOString().slice(0, 10),
+      paymentMethod: purchase.paymentMethod,
+      amount: purchase.amount,
+      paid: purchase.paid,
+      paidDateISO: purchase.paidDate ? purchase.paidDate.toISOString().slice(0, 10) : undefined,
+      receiptStatus: purchase.receiptStatus,
+      invoiceNumber: purchase.invoiceNumber,
+    });
+  }
+
+  const byPaymentMethod = Array.from(methodMap.values()).sort((a, b) => b.amount - a.amount);
+  const byReceiptStatus = Array.from(receiptMap.values()).sort((a, b) => b.amount - a.amount);
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    totalCount: purchases.length,
+    totalAmount,
+    paidCount,
+    paidAmount,
+    pendingCount,
+    pendingAmount,
+    byPaymentMethod,
+    byReceiptStatus,
     detail,
   };
 }

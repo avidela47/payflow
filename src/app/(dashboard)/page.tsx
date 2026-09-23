@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth";
 import { Employee } from "@/models/Employee";
 import { Client } from "@/models/Client";
 import { Sale } from "@/models/Sale";
+import { Provider } from "@/models/Provider";
+import { Purchase } from "@/models/Purchase";
 import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { Check } from "@/models/Check";
@@ -28,6 +30,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   TrendingUp,
+  ShoppingCart,
+  Truck,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
@@ -50,12 +54,12 @@ function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
-// Rediseño (v2): arriba, saludo + fecha, 4 tarjetas KPI con variación
-// mes a mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos
-// fijos por categoría). Abajo se mantiene el lanzador de los módulos
-// que ya existía, ahora como referencia completa además del resumen de
-// arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
-// por session.user.id, nunca se muestra el total de todos.
+// Rediseño (v2): arriba, saludo + fecha, tarjetas KPI con variación mes a
+// mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos fijos por
+// categoría). Abajo se mantiene el lanzador de módulos, ahora como
+// referencia completa además del resumen de arriba. Notas sigue siendo
+// privado por usuario — ese conteo se filtra por session.user.id, nunca se
+// muestra el total de todos.
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
@@ -74,8 +78,13 @@ export default async function DashboardPage() {
     newEmployeesThisMonth,
     totalClients,
     newClientsThisMonth,
+    totalProviders,
     salesThisMonth,
     overdueSalesCount,
+    purchasesThisMonth,
+    pendingPaymentPurchasesThisMonth,
+    overduePurchasesCount,
+    inProgressPurchasesCount,
     payrollEntries,
     prevPayrollEntries,
     pendingFixedCosts,
@@ -89,8 +98,20 @@ export default async function DashboardPage() {
     Employee.countDocuments({ active: true, createdAt: { $gte: periodStart } }),
     Client.countDocuments({}),
     Client.countDocuments({ createdAt: { $gte: periodStart } }),
+    Provider.countDocuments({}),
     Sale.find({ saleDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
     Sale.countDocuments({ collected: false, expectedCollectionDate: { $lt: todayStart } }),
+    Purchase.find({ purchaseDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
+    Purchase.find({
+      purchaseDate: { $gte: periodStart, $lt: nextPeriodStart },
+      paid: false,
+    }).lean(),
+    Purchase.countDocuments({ paid: false, expectedPaymentDate: { $lt: todayStart } }),
+    // "En curso / por recibir" es un estado operativo, no atado al mes en
+    // que se cargó la compra — una compra pedida hace dos meses que sigue
+    // sin llegar sigue siendo relevante hoy, igual que overdueSalesCount
+    // más abajo tampoco se filtra por mes.
+    Purchase.countDocuments({ receiptStatus: { $in: ["EN_CURSO", "RECIBIDA_PARCIAL"] } }),
     PayrollEntry.find({ period: periodStart }).lean(),
     PayrollEntry.find({ period: prevPeriodStart }).lean(),
     FixedCostEntry.find({ period: periodStart, paid: false }).populate("category").lean(),
@@ -102,6 +123,11 @@ export default async function DashboardPage() {
   ]);
 
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
+  const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, p) => sum + p.amount, 0);
+  const totalPendingPaymentPurchasesThisMonth = pendingPaymentPurchasesThisMonth.reduce(
+    (sum, p) => sum + p.amount,
+    0
+  );
 
   const totalPayroll = payrollEntries.reduce((sum, e) => sum + e.amount, 0);
   const prevTotalPayroll = prevPayrollEntries.reduce((sum, e) => sum + e.amount, 0);
@@ -162,6 +188,12 @@ export default async function DashboardPage() {
       } sin cobrar`,
       tone: "text-destructive",
     },
+    overduePurchasesCount > 0 && {
+      text: `${overduePurchasesCount} compra${overduePurchasesCount === 1 ? "" : "s"} vencida${
+        overduePurchasesCount === 1 ? "" : "s"
+      } sin pagar`,
+      tone: "text-destructive",
+    },
     checksDueSoon > 0 && {
       text: `${checksDueSoon} cheque${checksDueSoon === 1 ? "" : "s"} por vencer esta semana`,
       tone: "text-warning",
@@ -176,8 +208,8 @@ export default async function DashboardPage() {
     },
   ].filter((a): a is { text: string; tone: string } => Boolean(a));
 
-  // Las 4 tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio
-  // que el resto de la app); Costos Fijos queda a la vista, como antes.
+  // Las tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio que
+  // el resto de la app); el resto queda a la vista, como antes.
   const kpis = [
     {
       title: "Empleados activos",
@@ -220,6 +252,45 @@ export default async function DashboardPage() {
         pendingFixedCosts.length > 0
           ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
           : null,
+    },
+    {
+      title: "Compras del mes",
+      icon: ShoppingCart,
+      iconWrap: "bg-orange-50",
+      iconColor: "text-orange-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPurchasesThisMonth)}</p>,
+      delta:
+        purchasesThisMonth.length > 0
+          ? { text: `${purchasesThisMonth.length} compra${purchasesThisMonth.length === 1 ? "" : "s"}`, up: true }
+          : null,
+    },
+    {
+      title: "Pendiente de pago (compras)",
+      icon: Receipt,
+      iconWrap: "bg-rose-50",
+      iconColor: "text-rose-600",
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          {formatCurrency(totalPendingPaymentPurchasesThisMonth)}
+        </p>
+      ),
+      delta:
+        pendingPaymentPurchasesThisMonth.length > 0
+          ? {
+              text: `${pendingPaymentPurchasesThisMonth.length} pendiente${
+                pendingPaymentPurchasesThisMonth.length === 1 ? "" : "s"
+              }`,
+              up: false,
+            }
+          : null,
+    },
+    {
+      title: "En curso / por recibir",
+      icon: Truck,
+      iconWrap: "bg-cyan-50",
+      iconColor: "text-cyan-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
+      delta: null,
     },
   ];
 
@@ -277,6 +348,17 @@ export default async function DashboardPage() {
       bar: "bg-indigo-500",
     },
     {
+      href: "/proveedores",
+      title: "Proveedores",
+      description: "Cartera de proveedores",
+      value: String(totalProviders),
+      caption: totalProviders === 1 ? "proveedor" : "proveedores",
+      icon: Truck,
+      iconWrap: "bg-purple-50",
+      iconColor: "text-purple-600",
+      bar: "bg-purple-500",
+    },
+    {
       href: "/ventas",
       title: "Ventas",
       description: "Ventas por cliente y cobros",
@@ -286,6 +368,17 @@ export default async function DashboardPage() {
       iconWrap: "bg-teal-50",
       iconColor: "text-teal-600",
       bar: "bg-teal-500",
+    },
+    {
+      href: "/compras",
+      title: "Compras",
+      description: "Compras por proveedor y pagos",
+      value: formatCurrency(totalPurchasesThisMonth),
+      caption: "este mes",
+      icon: ShoppingCart,
+      iconWrap: "bg-orange-50",
+      iconColor: "text-orange-600",
+      bar: "bg-orange-500",
     },
     {
       href: "/sueldos",
