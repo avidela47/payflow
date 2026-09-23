@@ -80,6 +80,7 @@ export default async function DashboardPage() {
     newClientsThisMonth,
     totalProviders,
     salesThisMonth,
+    pendingCollectionSalesThisMonth,
     overdueSalesCount,
     purchasesThisMonth,
     pendingPaymentPurchasesThisMonth,
@@ -100,6 +101,10 @@ export default async function DashboardPage() {
     Client.countDocuments({ createdAt: { $gte: periodStart } }),
     Provider.countDocuments({}),
     Sale.find({ saleDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
+    Sale.find({
+      saleDate: { $gte: periodStart, $lt: nextPeriodStart },
+      collected: false,
+    }).lean(),
     Sale.countDocuments({ collected: false, expectedCollectionDate: { $lt: todayStart } }),
     Purchase.find({ purchaseDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
     Purchase.find({
@@ -123,6 +128,10 @@ export default async function DashboardPage() {
   ]);
 
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
+  const totalPendingCollectionSalesThisMonth = pendingCollectionSalesThisMonth.reduce(
+    (sum, s) => sum + s.amount,
+    0
+  );
   const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, p) => sum + p.amount, 0);
   const totalPendingPaymentPurchasesThisMonth = pendingPaymentPurchasesThisMonth.reduce(
     (sum, p) => sum + p.amount,
@@ -251,6 +260,37 @@ export default async function DashboardPage() {
       delta:
         pendingFixedCosts.length > 0
           ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
+          : null,
+    },
+    {
+      title: "Ventas del mes",
+      icon: TrendingUp,
+      iconWrap: "bg-teal-50",
+      iconColor: "text-teal-600",
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalSalesThisMonth)}</p>,
+      delta:
+        salesThisMonth.length > 0
+          ? { text: `${salesThisMonth.length} venta${salesThisMonth.length === 1 ? "" : "s"}`, up: true }
+          : null,
+    },
+    {
+      title: "Pendiente de cobro",
+      icon: Receipt,
+      iconWrap: "bg-pink-50",
+      iconColor: "text-pink-600",
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          {formatCurrency(totalPendingCollectionSalesThisMonth)}
+        </p>
+      ),
+      delta:
+        pendingCollectionSalesThisMonth.length > 0
+          ? {
+              text: `${pendingCollectionSalesThisMonth.length} pendiente${
+                pendingCollectionSalesThisMonth.length === 1 ? "" : "s"
+              }`,
+              up: false,
+            }
           : null,
     },
     {
