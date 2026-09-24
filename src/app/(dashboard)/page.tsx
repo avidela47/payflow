@@ -54,15 +54,20 @@ function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
-// Rediseño (v2): arriba, saludo + fecha, tarjetas KPI con variación mes a
-// mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos fijos por
-// categoría). Abajo se mantiene el lanzador de módulos, ahora como
-// referencia completa además del resumen de arriba. Notas sigue siendo
-// privado por usuario — ese conteo se filtra por session.user.id, nunca se
-// muestra el total de todos.
+// Rediseño (v2): arriba, saludo + fecha, 4 tarjetas KPI con variación
+// mes a mes, 3 accesos rápidos y 2 gráficos (sueldos por día, costos
+// fijos por categoría). Abajo se mantiene el lanzador de los 10 módulos
+// que ya existía, ahora como referencia completa además del resumen de
+// arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
+// por session.user.id, nunca se muestra el total de todos.
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
+  // Mismos módulos restringibles que sidebar.tsx/requireModuleAccess —
+  // acá no bloqueamos la página entera (el Dashboard es de todos), pero sí
+  // sacamos de la vista las tarjetas/alertas/gráficos/accesos que exponen
+  // datos de un módulo al que este usuario puntual no tiene acceso.
+  const restrictedModules = session?.user?.restrictedModules ?? [];
 
   const now = new Date();
   const periodStart = startOfMonth(now);
@@ -190,22 +195,26 @@ export default async function DashboardPage() {
         checksOverdue === 1 ? "" : "s"
       }`,
       tone: "text-destructive",
+      moduleKey: "cheques",
     },
     overdueSalesCount > 0 && {
       text: `${overdueSalesCount} venta${overdueSalesCount === 1 ? "" : "s"} vencida${
         overdueSalesCount === 1 ? "" : "s"
       } sin cobrar`,
       tone: "text-destructive",
+      moduleKey: null,
     },
     overduePurchasesCount > 0 && {
       text: `${overduePurchasesCount} compra${overduePurchasesCount === 1 ? "" : "s"} vencida${
         overduePurchasesCount === 1 ? "" : "s"
       } sin pagar`,
       tone: "text-destructive",
+      moduleKey: null,
     },
     checksDueSoon > 0 && {
       text: `${checksDueSoon} cheque${checksDueSoon === 1 ? "" : "s"} por vencer esta semana`,
       tone: "text-warning",
+      moduleKey: "cheques",
     },
     pendingFixedCosts.length > 0 && {
       text: `${pendingFixedCosts.length} costo${
@@ -214,11 +223,14 @@ export default async function DashboardPage() {
         pendingFixedCosts.length === 1 ? "" : "s"
       } este mes`,
       tone: "text-warning",
+      moduleKey: "costos-fijos",
     },
-  ].filter((a): a is { text: string; tone: string } => Boolean(a));
+  ]
+    .filter((a): a is { text: string; tone: string; moduleKey: string | null } => Boolean(a))
+    .filter((a) => !a.moduleKey || !restrictedModules.includes(a.moduleKey as never));
 
-  // Las tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio que
-  // el resto de la app); el resto queda a la vista, como antes.
+  // Las 4 tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio
+  // que el resto de la app); Costos Fijos queda a la vista, como antes.
   const kpis = [
     {
       title: "Empleados activos",
@@ -230,6 +242,7 @@ export default async function DashboardPage() {
         newEmployeesThisMonth > 0
           ? { text: `${newEmployeesThisMonth} este mes`, up: true }
           : null,
+      moduleKey: "empleados",
     },
     {
       title: "Clientes",
@@ -239,6 +252,7 @@ export default async function DashboardPage() {
       value: <p className="text-2xl font-semibold tracking-tight">{totalClients}</p>,
       delta:
         newClientsThisMonth > 0 ? { text: `${newClientsThisMonth} este mes`, up: true } : null,
+      moduleKey: null,
     },
     {
       title: "Sueldos del mes",
@@ -250,6 +264,7 @@ export default async function DashboardPage() {
         payrollDeltaPct !== null
           ? { text: `${Math.abs(payrollDeltaPct)}% vs mes anterior`, up: payrollDeltaPct >= 0 }
           : null,
+      moduleKey: "sueldos",
     },
     {
       title: "Costos fijos pendientes",
@@ -261,6 +276,7 @@ export default async function DashboardPage() {
         pendingFixedCosts.length > 0
           ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
           : null,
+      moduleKey: "costos-fijos",
     },
     {
       title: "Ventas del mes",
@@ -272,6 +288,7 @@ export default async function DashboardPage() {
         salesThisMonth.length > 0
           ? { text: `${salesThisMonth.length} venta${salesThisMonth.length === 1 ? "" : "s"}`, up: true }
           : null,
+      moduleKey: null,
     },
     {
       title: "Pendiente de cobro",
@@ -292,6 +309,7 @@ export default async function DashboardPage() {
               up: false,
             }
           : null,
+      moduleKey: null,
     },
     {
       title: "Compras del mes",
@@ -303,6 +321,7 @@ export default async function DashboardPage() {
         purchasesThisMonth.length > 0
           ? { text: `${purchasesThisMonth.length} compra${purchasesThisMonth.length === 1 ? "" : "s"}`, up: true }
           : null,
+      moduleKey: null,
     },
     {
       title: "Pendiente de pago (compras)",
@@ -323,6 +342,7 @@ export default async function DashboardPage() {
               up: false,
             }
           : null,
+      moduleKey: null,
     },
     {
       title: "En curso / por recibir",
@@ -331,8 +351,9 @@ export default async function DashboardPage() {
       iconColor: "text-cyan-600",
       value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
       delta: null,
+      moduleKey: null,
     },
-  ];
+  ].filter((kpi) => !kpi.moduleKey || !restrictedModules.includes(kpi.moduleKey as never));
 
   // Accesos rápidos: van directo a la página del módulo. En Clientes el
   // formulario de alta vive en un diálogo (no se abre solo), así que ahí
@@ -345,6 +366,7 @@ export default async function DashboardPage() {
       icon: Wallet,
       wrap: "bg-emerald-50 hover:bg-emerald-100",
       iconColor: "text-emerald-600",
+      moduleKey: "sueldos",
     },
     {
       href: "/costos-fijos",
@@ -353,6 +375,7 @@ export default async function DashboardPage() {
       icon: Receipt,
       wrap: "bg-amber-50 hover:bg-amber-100",
       iconColor: "text-amber-600",
+      moduleKey: "costos-fijos",
     },
     {
       href: "/clientes",
@@ -361,8 +384,9 @@ export default async function DashboardPage() {
       icon: Building2,
       wrap: "bg-indigo-50 hover:bg-indigo-100",
       iconColor: "text-indigo-600",
+      moduleKey: null,
     },
-  ];
+  ].filter((action) => !action.moduleKey || !restrictedModules.includes(action.moduleKey as never));
 
   const modules = [
     {
@@ -375,6 +399,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-blue-50",
       iconColor: "text-blue-600",
       bar: "bg-blue-500",
+      moduleKey: "empleados",
     },
     {
       href: "/clientes",
@@ -386,6 +411,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-indigo-50",
       iconColor: "text-indigo-600",
       bar: "bg-indigo-500",
+      moduleKey: null,
     },
     {
       href: "/proveedores",
@@ -397,6 +423,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-purple-50",
       iconColor: "text-purple-600",
       bar: "bg-purple-500",
+      moduleKey: null,
     },
     {
       href: "/ventas",
@@ -408,6 +435,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-teal-50",
       iconColor: "text-teal-600",
       bar: "bg-teal-500",
+      moduleKey: null,
     },
     {
       href: "/compras",
@@ -419,6 +447,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-orange-50",
       iconColor: "text-orange-600",
       bar: "bg-orange-500",
+      moduleKey: null,
     },
     {
       href: "/sueldos",
@@ -430,6 +459,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-emerald-50",
       iconColor: "text-emerald-600",
       bar: "bg-emerald-500",
+      moduleKey: "sueldos",
     },
     {
       href: "/costos-fijos",
@@ -441,6 +471,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-amber-50",
       iconColor: "text-amber-600",
       bar: "bg-amber-500",
+      moduleKey: "costos-fijos",
     },
     {
       href: "/cheques",
@@ -457,6 +488,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-rose-50",
       iconColor: "text-rose-600",
       bar: "bg-rose-500",
+      moduleKey: "cheques",
     },
     {
       href: "/agenda",
@@ -468,6 +500,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-violet-50",
       iconColor: "text-violet-600",
       bar: "bg-violet-500",
+      moduleKey: null,
     },
     {
       href: "/calendario",
@@ -479,6 +512,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-cyan-50",
       iconColor: "text-cyan-600",
       bar: "bg-cyan-500",
+      moduleKey: null,
     },
     {
       href: "/reportes",
@@ -490,6 +524,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-slate-100",
       iconColor: "text-slate-600",
       bar: "bg-slate-500",
+      moduleKey: "reportes",
     },
     {
       href: "/vault",
@@ -501,6 +536,7 @@ export default async function DashboardPage() {
       iconWrap: "bg-fuchsia-50",
       iconColor: "text-fuchsia-600",
       bar: "bg-fuchsia-500",
+      moduleKey: "vault",
     },
     {
       href: "/notas",
@@ -512,8 +548,9 @@ export default async function DashboardPage() {
       iconWrap: "bg-yellow-50",
       iconColor: "text-yellow-600",
       bar: "bg-yellow-500",
+      moduleKey: null,
     },
-  ];
+  ].filter((mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never));
 
   const displayName = session?.user?.name ? firstName(session.user.name) : "";
 
@@ -601,7 +638,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <DashboardCharts lineData={lineData} donutData={donutData} />
+      <DashboardCharts
+        lineData={lineData}
+        donutData={donutData}
+        showSueldos={!restrictedModules.includes("sueldos" as never)}
+        showCostosFijos={!restrictedModules.includes("costos-fijos" as never)}
+      />
 
       <div>
         <h2 className="mb-3 font-semibold">Todos los módulos</h2>
