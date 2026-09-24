@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getPurchasesReport, currentPeriodString } from "@/lib/reports";
+import { requireModuleAccess } from "@/lib/auth";
 import type { PurchaseReceiptStatus } from "@/models/Purchase";
 
 const RECEIPT_STATUS_LABELS: Record<PurchaseReceiptStatus, string> = {
@@ -28,6 +29,8 @@ export default async function ReporteComprasPage({
 }: {
   searchParams: { period?: string };
 }) {
+  await requireModuleAccess("reportes");
+
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getPurchasesReport(periodISO);
 

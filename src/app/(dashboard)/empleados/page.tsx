@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Employee } from "@/models/Employee";
 import { EmployeesClient } from "./employees-client";
 
@@ -8,6 +9,7 @@ function toDateInputValue(date?: Date) {
 }
 
 export default async function EmpleadosPage() {
+  await requireModuleAccess("empleados");
   await connectDB();
 
   const employees = await Employee.find({})

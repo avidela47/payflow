@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { requireModuleAccess } from "@/lib/auth";
 import { VaultEntry } from "@/models/Vault";
 import { VaultClient, type VaultEntryItem } from "./vault-client";
 
@@ -19,11 +18,7 @@ function formatDateTime(date: Date) {
 // roles ven y pueden crear/editar/borrar cualquier credencial, no hay
 // grants por entrada individual (el modelo VaultGrant queda sin usar).
 export default async function VaultPage() {
-  const session = await getSession();
-
-  if (session?.user?.role !== "OWNER" && session?.user?.role !== "ACCOUNTANT") {
-    redirect("/");
-  }
+  await requireModuleAccess("vault");
 
   await connectDB();
 

@@ -25,24 +25,71 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// moduleKey ausente = módulo que no se puede restringir por usuario (solo
+// por rol) — Dashboard, Clientes, Proveedores, Ventas, Compras, Agenda,
+// Calendario y Notas quedan siempre visibles para OWNER/ACCOUNTANT.
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/empleados", label: "Empleados", icon: Users, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/empleados",
+    label: "Empleados",
+    icon: Users,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "empleados",
+  },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/sueldos", label: "Sueldos", icon: Wallet, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/costos-fijos", label: "Costos Fijos", icon: Receipt, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/cheques", label: "Cheques", icon: Landmark, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/sueldos",
+    label: "Sueldos",
+    icon: Wallet,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "sueldos",
+  },
+  {
+    href: "/costos-fijos",
+    label: "Costos Fijos",
+    icon: Receipt,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "costos-fijos",
+  },
+  {
+    href: "/cheques",
+    label: "Cheques",
+    icon: Landmark,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "cheques",
+  },
   { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/reportes", label: "Reportes", icon: FileBarChart, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/vault", label: "Vault", icon: KeyRound, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/reportes",
+    label: "Reportes",
+    icon: FileBarChart,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "reportes",
+  },
+  {
+    href: "/vault",
+    label: "Vault",
+    icon: KeyRound,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "vault",
+  },
   { href: "/notas", label: "Notas", icon: StickyNote, roles: ["OWNER", "ACCOUNTANT"] },
 ];
 
-export function Sidebar({ role, name }: { role: string; name: string }) {
+export function Sidebar({
+  role,
+  name,
+  restrictedModules,
+}: {
+  role: string;
+  name: string;
+  restrictedModules: string[];
+}) {
   const pathname = usePathname();
   // Solo importa en mobile/tablet (< md) — en desktop el aside queda
   // siempre visible y este estado no se usa para nada.
@@ -105,6 +152,7 @@ export function Sidebar({ role, name }: { role: string; name: string }) {
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems
             .filter((item) => item.roles.includes(role))
+            .filter((item) => !item.moduleKey || !restrictedModules.includes(item.moduleKey))
             .map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;

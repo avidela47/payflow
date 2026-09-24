@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Check } from "@/models/Check";
 import { ChequesClient, type CheckItem } from "./cheques-client";
 
@@ -15,6 +16,7 @@ function toDateInputValue(date: Date) {
 }
 
 export default async function ChequesPage() {
+  await requireModuleAccess("cheques");
   await connectDB();
 
   const checks = await Check.find({}).sort({ paymentDate: 1 }).limit(300).lean();

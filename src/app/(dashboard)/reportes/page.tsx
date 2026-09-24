@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Wallet, Receipt, TrendingUp, ShoppingCart, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { requireModuleAccess } from "@/lib/auth";
 
-export default function ReportesPage() {
+export default async function ReportesPage() {
+  await requireModuleAccess("reportes");
+
   return (
     <div className="flex flex-col gap-6">
       <div>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, requireModuleAccess } from "@/lib/auth";
 import { getPurchasesReport, currentPeriodString } from "@/lib/reports";
 import { formatCurrency } from "@/lib/utils";
 import { COMPANY } from "@/lib/company";
@@ -23,6 +23,7 @@ export default async function ImprimirReporteComprasPage({
   if (!session?.user) {
     redirect("/login");
   }
+  await requireModuleAccess("reportes");
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getPurchasesReport(periodISO);

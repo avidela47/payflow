@@ -14,12 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatPeriod } from "@/lib/utils";
 import { getFixedCostReport, currentPeriodString, periodStringToDate } from "@/lib/reports";
+import { requireModuleAccess } from "@/lib/auth";
 
 export default async function ReporteGastosPage({
   searchParams,
 }: {
   searchParams: { from?: string; to?: string };
 }) {
+  await requireModuleAccess("reportes");
+
   const current = currentPeriodString();
   const fromISO = searchParams.from || current;
   const toISO = searchParams.to || current;

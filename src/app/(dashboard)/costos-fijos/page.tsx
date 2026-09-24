@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { FixedCostCategory, FixedCostEntry } from "@/models/FixedCost";
 import { formatPeriod } from "@/lib/utils";
 import { ensureDefaultCategories } from "./actions";
@@ -11,6 +12,7 @@ function formatDueDate(date: Date) {
 }
 
 export default async function CostosFijosPage() {
+  await requireModuleAccess("costos-fijos");
   await ensureDefaultCategories();
   await connectDB();
 

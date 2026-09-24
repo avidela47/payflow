@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Employee } from "@/models/Employee";
 import { PayrollEntry } from "@/models/PayrollEntry";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { PayrollForm } from "./payroll-form";
 import { PayrollEntriesTable, type PayrollGroupItem } from "./payroll-entries-table";
 
 export default async function SueldosPage() {
+  await requireModuleAccess("sueldos");
   await connectDB();
 
   const [employees, entries] = await Promise.all([
