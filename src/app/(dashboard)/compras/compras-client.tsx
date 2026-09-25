@@ -456,7 +456,7 @@ export function ComprasClient({
         </span>
       </div>
 
-      <Table>
+            <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Proveedor</TableHead>

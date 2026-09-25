@@ -369,7 +369,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
         </span>
       </div>
 
-      <Table>
+            <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Cliente</TableHead>
