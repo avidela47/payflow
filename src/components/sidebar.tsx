@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Truck,
   ShoppingCart,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,13 @@ const navItems = [
     icon: Landmark,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "cheques",
+  },
+  {
+    href: "/caja-chica",
+    label: "Caja Chica",
+    icon: Banknote,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "caja-chica",
   },
   { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
