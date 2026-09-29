@@ -41,11 +41,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted px-4">
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          {/* Espacio reservado para el logo cuando esté listo */}
-          <div className="mb-2 h-10 w-10 rounded-lg bg-primary/10" />
+        <CardHeader className="items-center text-center">
+          <img src="/logo.png" alt="PayFlow" className="mb-2 h-10 w-auto" />
           <CardTitle className="text-xl font-semibold text-foreground">
-            Ingresar a PayFlow
+            Ingresar al Sistema
           </CardTitle>
           <p className="text-sm text-muted-foreground">ITELSA SAS</p>
         </CardHeader>
