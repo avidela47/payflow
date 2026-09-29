@@ -7,9 +7,9 @@ import { getSession } from "@/lib/auth";
 import { CalendarEvent } from "@/models/CalendarEvent";
 import { NOTE_COLORS } from "@/lib/note-colors";
 
-// Compartido entre OWNER y ACCOUNTANT — cualquiera de los dos puede
-// crear/editar/borrar cualquier evento, no hay dueño individual (a
-// diferencia de Notas, que es privado por usuario).
+// Privado por usuario (mismo criterio que Notas): cada acción filtra/valida
+// por `user: session.user.id`, nunca se confía en un id que venga del
+// cliente para saber de quién es el evento.
 
 const eventSchema = z
   .object({
@@ -91,6 +91,7 @@ export async function createCalendarEvent(formData: FormData) {
   try {
     await connectDB();
     await CalendarEvent.create({
+      user: session.user.id,
       title: parsed.data.title,
       notes: parsed.data.notes,
       startsAt,
@@ -123,14 +124,19 @@ export async function updateCalendarEvent(eventId: string, formData: FormData) {
 
   try {
     await connectDB();
-    await CalendarEvent.findByIdAndUpdate(eventId, {
-      title: parsed.data.title,
-      notes: parsed.data.notes,
-      startsAt,
-      endsAt,
-      allDay: parsed.data.allDay,
-      color: parsed.data.color,
-    });
+    // Filtramos por user acá también: si el id es de un evento de otro
+    // usuario, no encuentra nada y no pasa nada (mismo criterio que Notas).
+    await CalendarEvent.findOneAndUpdate(
+      { _id: eventId, user: session.user.id },
+      {
+        title: parsed.data.title,
+        notes: parsed.data.notes,
+        startsAt,
+        endsAt,
+        allDay: parsed.data.allDay,
+        color: parsed.data.color,
+      }
+    );
   } catch (err) {
     console.error("updateCalendarEvent error:", err);
     const message = err instanceof Error ? err.message : String(err);
@@ -149,7 +155,7 @@ export async function deleteCalendarEvent(eventId: string) {
 
   try {
     await connectDB();
-    await CalendarEvent.findByIdAndDelete(eventId);
+    await CalendarEvent.findOneAndDelete({ _id: eventId, user: session.user.id });
   } catch (err) {
     console.error("deleteCalendarEvent error:", err);
     const message = err instanceof Error ? err.message : String(err);

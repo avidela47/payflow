@@ -17,7 +17,12 @@ export default async function AgendaPage() {
   const session = await getSession();
   await connectDB();
 
-  const entries = await AgendaEntry.find({}).sort({ date: -1 }).limit(200).lean();
+  // Privado por usuario (ver AgendaEntry.ts) — el mail de las 8am sigue
+  // combinando los recordatorios de todos, pero acá en pantalla cada uno
+  // ve y administra solo los suyos.
+  const entries = session?.user
+    ? await AgendaEntry.find({ user: session.user.id }).sort({ date: -1 }).limit(200).lean()
+    : [];
 
   const entryItems: AgendaEntryItem[] = entries.map((entry) => ({
     id: entry._id.toString(),

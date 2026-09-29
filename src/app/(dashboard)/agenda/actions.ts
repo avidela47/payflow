@@ -32,6 +32,7 @@ export async function createAgendaEntry(formData: FormData) {
   try {
     await connectDB();
     await AgendaEntry.create({
+      user: session.user.id,
       title: parsed.data.title,
       date: new Date(parsed.data.date),
       notes: parsed.data.notes,
@@ -54,7 +55,9 @@ export async function deleteAgendaEntry(entryId: string) {
 
   try {
     await connectDB();
-    await AgendaEntry.findByIdAndDelete(entryId);
+    // Filtramos por user: si el id es de un recordatorio de otro usuario,
+    // no encuentra nada y no pasa nada (mismo criterio que Notas).
+    await AgendaEntry.findOneAndDelete({ _id: entryId, user: session.user.id });
   } catch (err) {
     console.error("deleteAgendaEntry error:", err);
     const message = err instanceof Error ? err.message : String(err);

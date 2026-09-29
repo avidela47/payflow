@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { CalendarEvent } from "@/models/CalendarEvent";
 import { CalendarClient, type CalendarEventItem } from "./calendario-client";
 
@@ -7,16 +8,24 @@ import { CalendarClient, type CalendarEventItem } from "./calendario-client";
 // pedirle nada al servidor — para un calendario de uso interno esto es de
 // sobra y evita tener que paginar por vista.
 export default async function CalendarioPage() {
+  const session = await getSession();
   await connectDB();
 
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth() - 6, 1);
   const to = new Date(now.getFullYear(), now.getMonth() + 7, 0);
 
-  const events = await CalendarEvent.find({ startsAt: { $gte: from, $lte: to } })
-    .sort({ startsAt: 1 })
-    .limit(1000)
-    .lean();
+  // Privado por usuario (ver CalendarEvent.ts) — cada uno ve solo sus
+  // propios eventos.
+  const events = session?.user
+    ? await CalendarEvent.find({
+        user: session.user.id,
+        startsAt: { $gte: from, $lte: to },
+      })
+        .sort({ startsAt: 1 })
+        .limit(1000)
+        .lean()
+    : [];
 
   const eventItems: CalendarEventItem[] = events.map((event) => ({
     id: event._id.toString(),

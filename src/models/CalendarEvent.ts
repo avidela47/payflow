@@ -1,13 +1,15 @@
 import mongoose, { Schema, models, model, Model } from "mongoose";
 import { NOTE_COLORS, type NoteColor } from "@/lib/note-colors";
 
-// Calendario tipo Google Calendar, compartido (lo ven OWNER y ACCOUNTANT
-// por igual, a diferencia de Notas que es privado por usuario) — no manda
-// mail, es puramente visual (a diferencia de Agenda, que sí manda el
-// digest de las 8am). Reusa la misma paleta de 6 colores que Notas
+// Calendario tipo Google Calendar, privado por usuario (cada uno ve y
+// administra solo sus propios eventos — mismo criterio que Notas, ver
+// Note.ts; antes era compartido entre OWNER y ACCOUNTANT, dejó de serlo).
+// No manda mail, es puramente visual (a diferencia de Agenda, que sí manda
+// el digest de las 8am). Reusa la misma paleta de 6 colores que Notas
 // (@/lib/note-colors) para no duplicar el lookup.
 export interface ICalendarEvent {
   _id: mongoose.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   title: string;
   notes?: string;
   startsAt: Date;
@@ -19,6 +21,7 @@ export interface ICalendarEvent {
 
 const CalendarEventSchema = new Schema<ICalendarEvent>(
   {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     notes: String,
     startsAt: { type: Date, required: true },
@@ -30,6 +33,7 @@ const CalendarEventSchema = new Schema<ICalendarEvent>(
 );
 
 CalendarEventSchema.index({ startsAt: 1 });
+CalendarEventSchema.index({ user: 1, startsAt: 1 });
 
 export const CalendarEvent =
   (models.CalendarEvent as Model<ICalendarEvent>) ||
