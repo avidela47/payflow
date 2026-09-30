@@ -3,6 +3,7 @@ import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { Sale } from "@/models/Sale";
 import { Purchase, type PurchaseReceiptStatus } from "@/models/Purchase";
+import { Check, type CheckStatus, type CheckType } from "@/models/Check";
 import { formatPeriod } from "@/lib/utils";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
@@ -504,6 +505,96 @@ export async function getPurchasesReport(periodISO: string): Promise<PurchasesRe
     pendingAmount,
     byPaymentMethod,
     byReceiptStatus,
+    detail,
+  };
+}
+
+// ---------- Reporte de Cheques ----------
+
+// Igual que Ventas/Compras: el filtro por mes es un rango [from, to) sobre
+// `paymentDate` (la fecha de pago/vencimiento del cheque, la misma que se
+// usa para las alertas en Cheques y en el Dashboard) — no hay un campo
+// `period` fijo al día 1 del mes acá.
+export type ChecksStatusRow = {
+  status: CheckStatus;
+  count: number;
+  amount: number;
+};
+
+export type ChecksTypeRow = {
+  type: CheckType;
+  count: number;
+  amount: number;
+};
+
+export type ChecksReportDetailRow = {
+  id: string;
+  issuerName: string;
+  type: CheckType;
+  checkNumber: string;
+  paymentDateISO: string;
+  amount: number;
+  status: CheckStatus;
+};
+
+export type ChecksReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  totalCount: number;
+  totalAmount: number;
+  byStatus: ChecksStatusRow[];
+  byType: ChecksTypeRow[];
+  detail: ChecksReportDetailRow[];
+};
+
+export async function getCheckReport(periodISO: string): Promise<ChecksReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const checks = await Check.find({ paymentDate: { $gte: from, $lt: to } })
+    .sort({ paymentDate: 1 })
+    .lean();
+
+  let totalAmount = 0;
+  const statusMap = new Map<CheckStatus, ChecksStatusRow>();
+  const typeMap = new Map<CheckType, ChecksTypeRow>();
+  const detail: ChecksReportDetailRow[] = [];
+
+  for (const check of checks) {
+    totalAmount += check.amount;
+
+    const statusRow = statusMap.get(check.status) ?? { status: check.status, count: 0, amount: 0 };
+    statusRow.count += 1;
+    statusRow.amount += check.amount;
+    statusMap.set(check.status, statusRow);
+
+    const typeRow = typeMap.get(check.type) ?? { type: check.type, count: 0, amount: 0 };
+    typeRow.count += 1;
+    typeRow.amount += check.amount;
+    typeMap.set(check.type, typeRow);
+
+    detail.push({
+      id: check._id.toString(),
+      issuerName: check.issuerName,
+      type: check.type,
+      checkNumber: check.checkNumber,
+      paymentDateISO: check.paymentDate.toISOString().slice(0, 10),
+      amount: check.amount,
+      status: check.status,
+    });
+  }
+
+  const byStatus = Array.from(statusMap.values()).sort((a, b) => b.amount - a.amount);
+  const byType = Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    totalCount: checks.length,
+    totalAmount,
+    byStatus,
+    byType,
     detail,
   };
 }

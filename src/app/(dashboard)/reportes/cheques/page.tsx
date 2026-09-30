@@ -1,0 +1,205 @@
+import Link from "next/link";
+import { Printer } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/lib/utils";
+import { getCheckReport, currentPeriodString } from "@/lib/reports";
+import { requireModuleAccess } from "@/lib/auth";
+import type { CheckStatus, CheckType } from "@/models/Check";
+
+const STATUS_LABELS: Record<CheckStatus, string> = {
+  ACTIVO: "Activo",
+  COBRADO: "Cobrado",
+  ENDOSADO: "Endosado",
+  DEPOSITADO: "Depositado",
+  CADUCADO: "Caducado",
+  OTRO: "Otro",
+};
+
+const STATUS_BADGE_VARIANT: Record<CheckStatus, "success" | "default" | "destructive" | "warning"> = {
+  ACTIVO: "default",
+  COBRADO: "success",
+  ENDOSADO: "default",
+  DEPOSITADO: "success",
+  CADUCADO: "destructive",
+  OTRO: "default",
+};
+
+const TYPE_LABELS: Record<CheckType, string> = {
+  ELECTRONICO: "E-cheq",
+  FISICO: "Físico",
+};
+
+export default async function ReporteChequesPage({
+  searchParams,
+}: {
+  searchParams: { period?: string };
+}) {
+  await requireModuleAccess("reportes");
+
+  const periodISO = searchParams.period || currentPeriodString();
+  const report = await getCheckReport(periodISO);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Reporte de Cheques</h1>
+        <p className="text-sm text-muted-foreground">
+          Cheques con vencimiento (fecha de pago) en el mes, por estado y tipo.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border p-4">
+        <form method="GET" className="flex items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="period">Período</Label>
+            <Input id="period" name="period" type="month" defaultValue={periodISO} required />
+          </div>
+          <Button type="submit" variant="outline">
+            Ver
+          </Button>
+        </form>
+
+        <Button asChild variant="outline">
+          <Link href={`/imprimir/reportes/cheques?period=${periodISO}`} target="_blank">
+            <Printer className="h-4 w-4" />
+            Ver para imprimir / PDF
+          </Link>
+        </Button>
+      </div>
+
+      <p className="text-sm font-medium capitalize">{report.periodLabel}</p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Total del mes</p>
+            <p className="text-2xl font-semibold">{formatCurrency(report.totalAmount)}</p>
+            <p className="text-xs text-muted-foreground">{report.totalCount} cheque(s)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Activos (todavía sin cobrar/depositar)</p>
+            <p className="text-2xl font-semibold text-amber-600">
+              {formatCurrency(report.byStatus.find((s) => s.status === "ACTIVO")?.amount ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {report.byStatus.find((s) => s.status === "ACTIVO")?.count ?? 0} cheque(s)
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium">Por estado</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Cantidad</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byStatus.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center text-muted-foreground">
+                  No hay cheques con vencimiento en este mes.
+                </TableCell>
+              </TableRow>
+            )}
+            {report.byStatus.map((row) => (
+              <TableRow key={row.status}>
+                <TableCell className="font-medium">
+                  <Badge variant={STATUS_BADGE_VARIANT[row.status]}>{STATUS_LABELS[row.status]}</Badge>
+                </TableCell>
+                <TableCell className="text-right">{row.count}</TableCell>
+                <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium">Por tipo</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tipo</TableHead>
+              <TableHead className="text-right">Cantidad</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byType.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center text-muted-foreground">
+                  No hay cheques con vencimiento en este mes.
+                </TableCell>
+              </TableRow>
+            )}
+            {report.byType.map((row) => (
+              <TableRow key={row.type}>
+                <TableCell className="font-medium">{TYPE_LABELS[row.type]}</TableCell>
+                <TableCell className="text-right">{row.count}</TableCell>
+                <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium">Detalle cronológico</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Emisor</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>N° cheque</TableHead>
+              <TableHead>Vencimiento</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.detail.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  No hay cheques con vencimiento en este mes.
+                </TableCell>
+              </TableRow>
+            )}
+            {report.detail.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="font-medium">{entry.issuerName}</TableCell>
+                <TableCell>{TYPE_LABELS[entry.type]}</TableCell>
+                <TableCell>{entry.checkNumber}</TableCell>
+                <TableCell>{entry.paymentDateISO}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_BADGE_VARIANT[entry.status]}>
+                    {STATUS_LABELS[entry.status]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
