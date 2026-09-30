@@ -13,6 +13,7 @@ import { AgendaEntry } from "@/models/AgendaEntry";
 import { CalendarEvent } from "@/models/CalendarEvent";
 import { VaultEntry } from "@/models/Vault";
 import { Note } from "@/models/Note";
+import { PettyCashMovement } from "@/models/PettyCash";
 import {
   Users,
   Building2,
@@ -32,6 +33,7 @@ import {
   TrendingUp,
   ShoppingCart,
   Truck,
+  Banknote,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
@@ -107,6 +109,7 @@ export default async function DashboardPage() {
     weekEvents,
     vaultCount,
     myNotesCount,
+    pettyCashBalanceAgg,
   ] = await Promise.all([
     Employee.countDocuments({ active: true }),
     Employee.countDocuments({ active: true, createdAt: { $gte: periodStart } }),
@@ -138,7 +141,22 @@ export default async function DashboardPage() {
     CalendarEvent.countDocuments({ startsAt: { $gte: todayStart, $lte: in7Days } }),
     VaultEntry.countDocuments({}),
     session?.user ? Note.countDocuments({ user: session.user.id }) : Promise.resolve(0),
+    // Mismo criterio que caja-chica/page.tsx: el saldo sale de TODOS los
+    // movimientos vía agregación, no de una lectura parcial.
+    PettyCashMovement.aggregate([
+      {
+        $group: {
+          _id: null,
+          ingresos: { $sum: { $cond: [{ $eq: ["$type", "ingreso"] }, "$amount", 0] } },
+          egresos: { $sum: { $cond: [{ $eq: ["$type", "egreso"] }, "$amount", 0] } },
+        },
+      },
+    ]),
   ]);
+
+  const pettyCashBalance = pettyCashBalanceAgg[0]
+    ? pettyCashBalanceAgg[0].ingresos - pettyCashBalanceAgg[0].egresos
+    : 0;
 
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
   const totalPendingCollectionSalesThisMonth = pendingCollectionSalesThisMonth.reduce(
@@ -490,6 +508,18 @@ export default async function DashboardPage() {
       hover: "hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/10",
       arrowHover: "group-hover:text-rose-600",
       moduleKey: "cheques",
+    },
+    {
+      href: "/caja-chica",
+      title: "Caja Chica",
+      description: "Efectivo para gastos corrientes",
+      value: formatCurrency(pettyCashBalance),
+      caption: "saldo actual",
+      icon: Banknote,
+      chip: "bg-gradient-to-br from-lime-500 to-lime-600 shadow-md shadow-lime-500/25",
+      hover: "hover:border-lime-500/40 hover:shadow-lg hover:shadow-lime-500/10",
+      arrowHover: "group-hover:text-lime-600",
+      moduleKey: "caja-chica",
     },
     {
       href: "/agenda",
