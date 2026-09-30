@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth";
 
 const checkSchema = z.object({
   type: z.enum(["ELECTRONICO", "FISICO"]),
+  direction: z.enum(["RECIBIDO", "EMITIDO"]),
   issueDate: z.string().min(1, "Falta la fecha de emisión."),
   paymentDate: z.string().min(1, "Falta la fecha de pago."),
   checkNumber: z.string().min(1, "Falta el número de cheque."),
@@ -25,6 +26,7 @@ const checkSchema = z.object({
 function parseCheckForm(formData: FormData) {
   return checkSchema.safeParse({
     type: formData.get("type"),
+    direction: formData.get("direction"),
     issueDate: formData.get("issueDate"),
     paymentDate: formData.get("paymentDate"),
     checkNumber: formData.get("checkNumber"),
@@ -64,7 +66,11 @@ export async function createCheck(formData: FormData) {
     return { ok: false, error: `No se pudo guardar el cheque: ${message}` };
   }
 
-  revalidatePath("/cheques");
+  // "layout" en vez de la ruta exacta: los cheques ahora viven en varias
+  // rutas anidadas (/cheques, /cheques/[tipo], /cheques/[tipo]/[vista]) y
+  // esto invalida todo ese árbol de una sola vez, sin importar desde cuál
+  // se llamó a la acción.
+  revalidatePath("/cheques", "layout");
   return { ok: true };
 }
 
@@ -92,7 +98,7 @@ export async function updateCheck(checkId: string, formData: FormData) {
     return { ok: false, error: `No se pudo editar el cheque: ${message}` };
   }
 
-  revalidatePath("/cheques");
+  revalidatePath("/cheques", "layout");
   return { ok: true };
 }
 
@@ -114,7 +120,7 @@ export async function setCheckStatus(
     return { ok: false, error: `No se pudo cambiar el estado: ${message}` };
   }
 
-  revalidatePath("/cheques");
+  revalidatePath("/cheques", "layout");
   return { ok: true };
 }
 
@@ -133,6 +139,6 @@ export async function deleteCheck(checkId: string) {
     return { ok: false, error: `No se pudo borrar el cheque: ${message}` };
   }
 
-  revalidatePath("/cheques");
+  revalidatePath("/cheques", "layout");
   return { ok: true };
 }

@@ -17,17 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import { createCheck, deleteCheck, setCheckStatus, updateCheck } from "./actions";
+import { createCheck, deleteCheck, setCheckStatus, updateCheck } from "../../actions";
 
 export type CheckStatus = "ACTIVO" | "COBRADO" | "ENDOSADO" | "DEPOSITADO" | "CADUCADO" | "OTRO";
 export type CheckType = "ELECTRONICO" | "FISICO";
+export type CheckDirection = "RECIBIDO" | "EMITIDO";
 
 export type CheckItem = {
   id: string;
   type: CheckType;
-  issueDateISO: string; // "YYYY-MM-DD"
+  direction: CheckDirection;
+  issueDateISO: string;
   issueDateLabel: string;
-  paymentDateISO: string; // "YYYY-MM-DD"
+  paymentDateISO: string;
   paymentDateLabel: string;
   checkNumber: string;
   echeqId?: string;
@@ -52,11 +54,6 @@ const STATUS_OPTIONS: { value: CheckStatus; label: string }[] = [
   { value: "OTRO", label: "Otro" },
 ];
 
-const TYPE_OPTIONS: { value: CheckType; label: string }[] = [
-  { value: "FISICO", label: "Físico" },
-  { value: "ELECTRONICO", label: "E-cheq" },
-];
-
 function selectClass() {
   return "h-10 rounded-md border border-border bg-background px-3 text-sm";
 }
@@ -75,39 +72,26 @@ function DueBadge({ item }: { item: CheckItem }) {
   return null;
 }
 
-function CheckFormFields({ defaultValues }: { defaultValues?: CheckItem }) {
-  const [type, setType] = useState<CheckType>(defaultValues?.type ?? "FISICO");
-
+function CheckFormFields({
+  lockedType,
+  lockedDirection,
+  defaultValues,
+}: {
+  lockedType: CheckType;
+  lockedDirection: CheckDirection;
+  defaultValues?: CheckItem;
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="type">Tipo</Label>
-        <select
-          id="type"
-          name="type"
-          value={type}
-          onChange={(e) => setType(e.target.value as CheckType)}
-          className={selectClass()}
-        >
-          {TYPE_OPTIONS.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <input type="hidden" name="type" value={lockedType} />
+      <input type="hidden" name="direction" value={lockedDirection} />
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="checkNumber">Número de cheque</Label>
-        <Input
-          id="checkNumber"
-          name="checkNumber"
-          required
-          defaultValue={defaultValues?.checkNumber}
-        />
+        <Input id="checkNumber" name="checkNumber" required defaultValue={defaultValues?.checkNumber} />
       </div>
 
-      {type === "ELECTRONICO" && (
+      {lockedType === "ELECTRONICO" && (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="echeqId">ID de e-cheq</Label>
           <Input id="echeqId" name="echeqId" defaultValue={defaultValues?.echeqId} />
@@ -115,17 +99,14 @@ function CheckFormFields({ defaultValues }: { defaultValues?: CheckItem }) {
       )}
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="issuerName">Librador</Label>
-        <Input
-          id="issuerName"
-          name="issuerName"
-          required
-          defaultValue={defaultValues?.issuerName}
-        />
+        <Label htmlFor="issuerName">
+          {lockedDirection === "EMITIDO" ? "A nombre de quién (beneficiario)" : "Librador"}
+        </Label>
+        <Input id="issuerName" name="issuerName" required defaultValue={defaultValues?.issuerName} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="issuerCuit">CUIT librador</Label>
+        <Label htmlFor="issuerCuit">CUIT</Label>
         <Input id="issuerCuit" name="issuerCuit" defaultValue={defaultValues?.issuerCuit} />
       </div>
 
@@ -136,62 +117,31 @@ function CheckFormFields({ defaultValues }: { defaultValues?: CheckItem }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="amount">Monto</Label>
-        <Input
-          id="amount"
-          name="amount"
-          type="number"
-          step="0.01"
-          min="0"
-          required
-          defaultValue={defaultValues?.amount}
-        />
+        <Input id="amount" name="amount" type="number" step="0.01" min="0" required defaultValue={defaultValues?.amount} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="issueDate">Fecha de emisión</Label>
-        <Input
-          id="issueDate"
-          name="issueDate"
-          type="date"
-          required
-          defaultValue={defaultValues?.issueDateISO}
-        />
+        <Input id="issueDate" name="issueDate" type="date" required defaultValue={defaultValues?.issueDateISO} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="paymentDate">Fecha de pago</Label>
-        <Input
-          id="paymentDate"
-          name="paymentDate"
-          type="date"
-          required
-          defaultValue={defaultValues?.paymentDateISO}
-        />
+        <Input id="paymentDate" name="paymentDate" type="date" required defaultValue={defaultValues?.paymentDateISO} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="status">Estado</Label>
-        <select
-          id="status"
-          name="status"
-          defaultValue={defaultValues?.status ?? "ACTIVO"}
-          className={selectClass()}
-        >
+        <select id="status" name="status" defaultValue={defaultValues?.status ?? "ACTIVO"} className={selectClass()}>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
+            <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="currentHolder">Quién lo tiene</Label>
-        <Input
-          id="currentHolder"
-          name="currentHolder"
-          defaultValue={defaultValues?.currentHolder}
-        />
+        <Input id="currentHolder" name="currentHolder" defaultValue={defaultValues?.currentHolder} />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -207,7 +157,17 @@ function CheckFormFields({ defaultValues }: { defaultValues?: CheckItem }) {
   );
 }
 
-export function ChequesClient({ checks }: { checks: CheckItem[] }) {
+export function ChequesClient({
+  checks,
+  lockedType,
+  lockedDirection,
+  allowCreate,
+}: {
+  checks: CheckItem[];
+  lockedType: CheckType;
+  lockedDirection: CheckDirection;
+  allowCreate: boolean;
+}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<CheckItem | null>(null);
@@ -222,12 +182,7 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
     const formData = new FormData(e.currentTarget);
     const result = await createCheck(formData);
     setCreating(false);
-
-    if (!result.ok) {
-      toast.error(result.error ?? "Ocurrió un error.");
-      return;
-    }
-
+    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
     toast.success("Cheque guardado.");
     (e.target as HTMLFormElement).reset();
     router.refresh();
@@ -237,28 +192,18 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
     setChangingStatusId(check.id);
     const result = await setCheckStatus(check.id, status);
     setChangingStatusId(null);
-
-    if (!result.ok) {
-      toast.error(result.error ?? "Ocurrió un error.");
-      return;
-    }
+    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
     router.refresh();
   }
 
   async function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editing) return;
-
     setSavingEdit(true);
     const formData = new FormData(e.currentTarget);
     const result = await updateCheck(editing.id, formData);
     setSavingEdit(false);
-
-    if (!result.ok) {
-      toast.error(result.error ?? "Ocurrió un error.");
-      return;
-    }
-
+    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
     toast.success("Cheque actualizado.");
     setEditing(null);
     router.refresh();
@@ -268,12 +213,7 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
     setDeletingId(check.id);
     const result = await deleteCheck(check.id);
     setDeletingId(null);
-
-    if (!result.ok) {
-      toast.error(result.error ?? "Ocurrió un error.");
-      return;
-    }
-
+    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
     toast.success("Cheque borrado.");
     setConfirmTarget(null);
     router.refresh();
@@ -281,22 +221,30 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
-        <span className="text-sm font-medium">Cargar cheque</span>
-        <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
-          <CheckFormFields />
-          <div>
-            <Button type="submit" disabled={creating}>
-              {creating ? "Guardando..." : "Guardar cheque"}
-            </Button>
-          </div>
-        </form>
-      </div>
+      {allowCreate && (
+        <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+          <span className="text-sm font-medium">Cargar cheque</span>
+          <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
+            <CheckFormFields lockedType={lockedType} lockedDirection={lockedDirection} />
+            <div>
+              <Button type="submit" disabled={creating}>
+                {creating ? "Guardando..." : "Guardar cheque"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {!allowCreate && (
+        <p className="text-sm text-muted-foreground">
+          Un cheque llega acá cuando, desde "Recibidos", le cambiás el estado a "Endosado" — no
+          se carga directamente en esta vista.
+        </p>
+      )}
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Tipo</TableHead>
             <TableHead>Librador</TableHead>
             <TableHead>Monto</TableHead>
             <TableHead>Emisión</TableHead>
@@ -308,14 +256,13 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
         <TableBody>
           {checks.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Todavía no hay cheques cargados.
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
+                No hay cheques acá todavía.
               </TableCell>
             </TableRow>
           )}
           {checks.map((check) => (
             <TableRow key={check.id}>
-              <TableCell>{check.type === "ELECTRONICO" ? "E-cheq" : "Físico"}</TableCell>
               <TableCell className="font-medium">{check.issuerName}</TableCell>
               <TableCell>{formatCurrency(check.amount)}</TableCell>
               <TableCell>{check.issueDateLabel}</TableCell>
@@ -333,28 +280,16 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
                   className="h-8 rounded-md border border-border bg-background px-2 text-xs"
                 >
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-primary hover:bg-primary/10"
-                    onClick={() => setEditing(check)}
-                  >
+                  <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setEditing(check)}>
                     Editar
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => setConfirmTarget(check)}
-                  >
+                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setConfirmTarget(check)}>
                     Borrar
                   </Button>
                 </div>
@@ -366,15 +301,13 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
 
       <Dialog
         open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
+        onOpenChange={(open) => { if (!open) setEditing(null); }}
         title={editing ? `Editar cheque — ${editing.issuerName}` : undefined}
         className="max-w-2xl"
       >
         {editing && (
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-            <CheckFormFields defaultValues={editing} />
+            <CheckFormFields lockedType={lockedType} lockedDirection={lockedDirection} defaultValues={editing} />
             <div>
               <Button type="submit" disabled={savingEdit}>
                 {savingEdit ? "Guardando..." : "Guardar cambios"}
@@ -386,9 +319,7 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
 
       <Dialog
         open={confirmTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfirmTarget(null);
-        }}
+        onOpenChange={(open) => { if (!open) setConfirmTarget(null); }}
         title="Borrar cheque"
         className="max-w-md"
       >
@@ -397,20 +328,12 @@ export function ChequesClient({ checks }: { checks: CheckItem[] }) {
             <p className="text-sm text-muted-foreground">
               ¿Seguro que querés borrar el cheque de{" "}
               <span className="font-medium text-foreground">{confirmTarget.issuerName}</span> por{" "}
-              <span className="font-medium text-foreground">
-                {formatCurrency(confirmTarget.amount)}
-              </span>
+              <span className="font-medium text-foreground">{formatCurrency(confirmTarget.amount)}</span>
               ? No se puede deshacer.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmTarget(null)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={deletingId === confirmTarget.id}
-                onClick={() => performDelete(confirmTarget)}
-              >
+              <Button variant="outline" onClick={() => setConfirmTarget(null)}>Cancelar</Button>
+              <Button variant="destructive" disabled={deletingId === confirmTarget.id} onClick={() => performDelete(confirmTarget)}>
                 {deletingId === confirmTarget.id ? "Borrando..." : "Sí, borrar"}
               </Button>
             </div>

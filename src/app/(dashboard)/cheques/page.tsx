@@ -1,74 +1,71 @@
+import Link from "next/link";
+import { Landmark, FileDigit, ArrowRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { connectDB } from "@/lib/db";
 import { requireModuleAccess } from "@/lib/auth";
 import { Check } from "@/models/Check";
-import { ChequesClient, type CheckItem } from "./cheques-client";
 
-const DUE_SOON_DAYS = 7;
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
-    date
-  );
-}
-
-function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
+// Landing de Cheques (v2, estructura estilo app del banco): acá solo se
+// elige Físicos o Electrónicos; adentro de cada uno (/cheques/[tipo]) se
+// elige Recibidos / Emitidos / Endosados, y recién ahí aparece la lista
+// filtrada. Antes esto era una sola página con una tabla gigante mezclando
+// todo — a pedido de Ariel, ahora es la misma navegación en cascada que
+// tiene la app de Galicia para e-cheqs.
 export default async function ChequesPage() {
   await requireModuleAccess("cheques");
   await connectDB();
 
-  const checks = await Check.find({}).sort({ paymentDate: 1 }).limit(300).lean();
-
-  const now = new Date();
-
-  const checkItems: CheckItem[] = checks.map((check) => {
-    const daysUntil = Math.ceil(
-      (check.paymentDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Solo alertamos vencimientos de cheques que siguen activos — uno ya
-    // cobrado/depositado/endosado no necesita aviso aunque su fecha de
-    // pago haya quedado en el pasado.
-    let dueAlert: CheckItem["dueAlert"];
-    if (check.status === "ACTIVO") {
-      if (daysUntil < 0) dueAlert = "vencido";
-      else if (daysUntil <= DUE_SOON_DAYS) dueAlert = "proximo";
-    }
-
-    return {
-      id: check._id.toString(),
-      type: check.type,
-      issueDateISO: toDateInputValue(check.issueDate),
-      issueDateLabel: formatDate(check.issueDate),
-      paymentDateISO: toDateInputValue(check.paymentDate),
-      paymentDateLabel: formatDate(check.paymentDate),
-      checkNumber: check.checkNumber,
-      echeqId: check.echeqId,
-      issuerName: check.issuerName,
-      issuerCuit: check.issuerCuit,
-      issuingBank: check.issuingBank,
-      amount: check.amount,
-      status: check.status,
-      currentHolder: check.currentHolder,
-      requestedBy: check.requestedBy,
-      notes: check.notes,
-      dueAlert,
-      daysUntil,
-    };
-  });
+  const [fisicosCount, electronicosCount] = await Promise.all([
+    Check.countDocuments({ type: "FISICO" }),
+    Check.countDocuments({ type: "ELECTRONICO" }),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Cartera de Cheques</h1>
+        <h1 className="text-2xl font-semibold">Cheques</h1>
         <p className="text-sm text-muted-foreground">
-          Cheques electrónicos y físicos recibidos, con estado y vencimientos.
+          Elegí el tipo de cheque para ver recibidos, emitidos y endosados.
         </p>
       </div>
 
-      <ChequesClient checks={checkItems} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link href="/cheques/fisicos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/10">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25">
+                <Landmark className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Físicos</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {fisicosCount} cheque{fisicosCount === 1 ? "" : "s"} en papel cargado
+                  {fisicosCount === 1 ? "" : "s"}.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-rose-600" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/cheques/electronicos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-md shadow-primary/25">
+                <FileDigit className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Electrónicos (e-cheq)</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {electronicosCount} e-cheq{electronicosCount === 1 ? "" : "s"} cargado
+                  {electronicosCount === 1 ? "" : "s"}.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
     </div>
   );
 }
