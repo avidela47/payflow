@@ -29,25 +29,65 @@ import { cn } from "@/lib/utils";
 // moduleKey ausente = módulo que no se puede restringir por usuario (solo
 // por rol) — Dashboard, Clientes, Proveedores, Ventas, Compras, Agenda,
 // Calendario y Notas quedan siempre visibles para OWNER/ACCOUNTANT.
+//
+// `chip` es el mismo lenguaje visual que ya tienen /reportes y el
+// Dashboard: un ícono en un chip con degradé de color, uno distinto por
+// módulo. Los colores coinciden con los que ya usa la grilla "Todos los
+// módulos" del Dashboard (Empleados azul, Sueldos verde, Cheques rosa,
+// etc.) para que el mismo módulo se reconozca por color en toda la app.
+// Dashboard y Caja Chica no están en esa grilla, así que les tocó un
+// color propio (celeste y lima) que no pisa a ningún otro.
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-sky-500 to-sky-600 shadow-sm shadow-sky-500/20",
+  },
   {
     href: "/empleados",
     label: "Empleados",
     icon: Users,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "empleados",
+    chip: "bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm shadow-blue-500/20",
   },
-  { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/clientes",
+    label: "Clientes",
+    icon: Building2,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm shadow-indigo-500/20",
+  },
+  {
+    href: "/proveedores",
+    label: "Proveedores",
+    icon: Truck,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-purple-500 to-purple-600 shadow-sm shadow-purple-500/20",
+  },
+  {
+    href: "/ventas",
+    label: "Ventas",
+    icon: TrendingUp,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm shadow-teal-500/20",
+  },
+  {
+    href: "/compras",
+    label: "Compras",
+    icon: ShoppingCart,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm shadow-orange-500/20",
+  },
   {
     href: "/sueldos",
     label: "Sueldos",
     icon: Wallet,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "sueldos",
+    chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-500/20",
   },
   {
     href: "/costos-fijos",
@@ -55,6 +95,7 @@ const navItems = [
     icon: Receipt,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "costos-fijos",
+    chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-sm shadow-amber-500/20",
   },
   {
     href: "/cheques",
@@ -62,6 +103,7 @@ const navItems = [
     icon: Landmark,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "cheques",
+    chip: "bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-500/20",
   },
   {
     href: "/caja-chica",
@@ -69,15 +111,29 @@ const navItems = [
     icon: Banknote,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "caja-chica",
+    chip: "bg-gradient-to-br from-lime-500 to-lime-600 shadow-sm shadow-lime-500/20",
   },
-  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/agenda",
+    label: "Agenda",
+    icon: CalendarClock,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-violet-500 to-violet-600 shadow-sm shadow-violet-500/20",
+  },
+  {
+    href: "/calendario",
+    label: "Calendario",
+    icon: CalendarDays,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-sm shadow-cyan-500/20",
+  },
   {
     href: "/reportes",
     label: "Reportes",
     icon: FileBarChart,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
+    chip: "bg-gradient-to-br from-slate-500 to-slate-600 shadow-sm shadow-slate-500/20",
   },
   {
     href: "/vault",
@@ -85,8 +141,15 @@ const navItems = [
     icon: KeyRound,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "vault",
+    chip: "bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 shadow-sm shadow-fuchsia-500/20",
   },
-  { href: "/notas", label: "Notas", icon: StickyNote, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/notas",
+    label: "Notas",
+    icon: StickyNote,
+    roles: ["OWNER", "ACCOUNTANT"],
+    chip: "bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-sm shadow-yellow-500/20",
+  },
 ];
 
 export function Sidebar({
@@ -170,13 +233,20 @@ export function Sidebar({
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
                     active
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-muted font-semibold text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <div
+                    className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+                      item.chip
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 text-white" />
+                  </div>
                   {item.label}
                 </Link>
               );
@@ -186,9 +256,11 @@ export function Sidebar({
         <div className="border-t border-border p-3">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex w-full items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <LogOut className="h-4 w-4" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-destructive/10">
+              <LogOut className="h-3.5 w-3.5 text-destructive" />
+            </div>
             Cerrar sesión
           </button>
         </div>
