@@ -60,6 +60,14 @@ function firstName(fullName: string) {
 // que ya existía, ahora como referencia completa además del resumen de
 // arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
 // por session.user.id, nunca se muestra el total de todos.
+//
+// Rediseño (v3, visual): mismo lenguaje que /reportes — chips de ícono
+// con degradé de color, borde y sombra tintados al hover, flecha que se
+// desliza — aplicado a KPIs, accesos rápidos y la grilla de módulos. Se
+// saca la barrita de color de arriba de cada módulo (el chip ya cumple
+// ese rol) y la flecha pasa de aparecer con fade a deslizarse + cambiar
+// de color, igual que en Reportes. Ninguna lógica de datos cambia acá,
+// solo las clases de Tailwind.
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
@@ -231,12 +239,13 @@ export default async function DashboardPage() {
 
   // Las 4 tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio
   // que el resto de la app); Costos Fijos queda a la vista, como antes.
+  // `chip` reemplaza al viejo iconWrap/iconColor: mismo criterio que
+  // /reportes, un chip con degradé de color en vez de un cuadrado pastel.
   const kpis = [
     {
       title: "Empleados activos",
       icon: Users,
-      iconWrap: "bg-blue-50",
-      iconColor: "text-blue-600",
+      chip: "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{activeEmployees}</p>,
       delta:
         newEmployeesThisMonth > 0
@@ -247,8 +256,7 @@ export default async function DashboardPage() {
     {
       title: "Clientes",
       icon: Building2,
-      iconWrap: "bg-indigo-50",
-      iconColor: "text-indigo-600",
+      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{totalClients}</p>,
       delta:
         newClientsThisMonth > 0 ? { text: `${newClientsThisMonth} este mes`, up: true } : null,
@@ -257,8 +265,7 @@ export default async function DashboardPage() {
     {
       title: "Sueldos del mes",
       icon: Wallet,
-      iconWrap: "bg-emerald-50",
-      iconColor: "text-emerald-600",
+      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
       value: <MaskedAmount value={formatCurrency(totalPayroll)} className="text-2xl font-semibold tracking-tight" />,
       delta:
         payrollDeltaPct !== null
@@ -269,8 +276,7 @@ export default async function DashboardPage() {
     {
       title: "Costos fijos pendientes",
       icon: Receipt,
-      iconWrap: "bg-amber-50",
-      iconColor: "text-amber-600",
+      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPendingFixedCosts)}</p>,
       delta:
         pendingFixedCosts.length > 0
@@ -281,8 +287,7 @@ export default async function DashboardPage() {
     {
       title: "Ventas del mes",
       icon: TrendingUp,
-      iconWrap: "bg-teal-50",
-      iconColor: "text-teal-600",
+      chip: "bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalSalesThisMonth)}</p>,
       delta:
         salesThisMonth.length > 0
@@ -293,8 +298,7 @@ export default async function DashboardPage() {
     {
       title: "Pendiente de cobro",
       icon: Receipt,
-      iconWrap: "bg-pink-50",
-      iconColor: "text-pink-600",
+      chip: "bg-gradient-to-br from-pink-500 to-pink-600 shadow-md shadow-pink-500/25",
       value: (
         <p className="text-2xl font-semibold tracking-tight">
           {formatCurrency(totalPendingCollectionSalesThisMonth)}
@@ -314,8 +318,7 @@ export default async function DashboardPage() {
     {
       title: "Compras del mes",
       icon: ShoppingCart,
-      iconWrap: "bg-orange-50",
-      iconColor: "text-orange-600",
+      chip: "bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPurchasesThisMonth)}</p>,
       delta:
         purchasesThisMonth.length > 0
@@ -326,8 +329,7 @@ export default async function DashboardPage() {
     {
       title: "Pendiente de pago (compras)",
       icon: Receipt,
-      iconWrap: "bg-rose-50",
-      iconColor: "text-rose-600",
+      chip: "bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25",
       value: (
         <p className="text-2xl font-semibold tracking-tight">
           {formatCurrency(totalPendingPaymentPurchasesThisMonth)}
@@ -347,8 +349,7 @@ export default async function DashboardPage() {
     {
       title: "En curso / por recibir",
       icon: Truck,
-      iconWrap: "bg-cyan-50",
-      iconColor: "text-cyan-600",
+      chip: "bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md shadow-cyan-500/25",
       value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
       delta: null,
       moduleKey: null,
@@ -364,8 +365,8 @@ export default async function DashboardPage() {
       title: "Nueva liquidación",
       description: "Cargar sueldo de un empleado",
       icon: Wallet,
-      wrap: "bg-emerald-50 hover:bg-emerald-100",
-      iconColor: "text-emerald-600",
+      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
+      hover: "hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10",
       moduleKey: "sueldos",
     },
     {
@@ -373,8 +374,8 @@ export default async function DashboardPage() {
       title: "Nuevo costo fijo",
       description: "Registrar un gasto del mes",
       icon: Receipt,
-      wrap: "bg-amber-50 hover:bg-amber-100",
-      iconColor: "text-amber-600",
+      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
+      hover: "hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10",
       moduleKey: "costos-fijos",
     },
     {
@@ -382,8 +383,8 @@ export default async function DashboardPage() {
       title: "Nuevo cliente",
       description: "Sumar a la cartera",
       icon: Building2,
-      wrap: "bg-indigo-50 hover:bg-indigo-100",
-      iconColor: "text-indigo-600",
+      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
+      hover: "hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10",
       moduleKey: null,
     },
   ].filter((action) => !action.moduleKey || !restrictedModules.includes(action.moduleKey as never));
@@ -396,9 +397,9 @@ export default async function DashboardPage() {
       value: String(activeEmployees),
       caption: "activos",
       icon: Users,
-      iconWrap: "bg-blue-50",
-      iconColor: "text-blue-600",
-      bar: "bg-blue-500",
+      chip: "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/25",
+      hover: "hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10",
+      arrowHover: "group-hover:text-blue-600",
       moduleKey: "empleados",
     },
     {
@@ -408,9 +409,9 @@ export default async function DashboardPage() {
       value: String(totalClients),
       caption: totalClients === 1 ? "cliente" : "clientes",
       icon: Building2,
-      iconWrap: "bg-indigo-50",
-      iconColor: "text-indigo-600",
-      bar: "bg-indigo-500",
+      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
+      hover: "hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10",
+      arrowHover: "group-hover:text-indigo-600",
       moduleKey: null,
     },
     {
@@ -420,9 +421,9 @@ export default async function DashboardPage() {
       value: String(totalProviders),
       caption: totalProviders === 1 ? "proveedor" : "proveedores",
       icon: Truck,
-      iconWrap: "bg-purple-50",
-      iconColor: "text-purple-600",
-      bar: "bg-purple-500",
+      chip: "bg-gradient-to-br from-purple-500 to-purple-600 shadow-md shadow-purple-500/25",
+      hover: "hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10",
+      arrowHover: "group-hover:text-purple-600",
       moduleKey: null,
     },
     {
@@ -432,9 +433,9 @@ export default async function DashboardPage() {
       value: formatCurrency(totalSalesThisMonth),
       caption: "este mes",
       icon: TrendingUp,
-      iconWrap: "bg-teal-50",
-      iconColor: "text-teal-600",
-      bar: "bg-teal-500",
+      chip: "bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/25",
+      hover: "hover:border-teal-500/40 hover:shadow-lg hover:shadow-teal-500/10",
+      arrowHover: "group-hover:text-teal-600",
       moduleKey: null,
     },
     {
@@ -444,9 +445,9 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPurchasesThisMonth),
       caption: "este mes",
       icon: ShoppingCart,
-      iconWrap: "bg-orange-50",
-      iconColor: "text-orange-600",
-      bar: "bg-orange-500",
+      chip: "bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25",
+      hover: "hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10",
+      arrowHover: "group-hover:text-orange-600",
       moduleKey: null,
     },
     {
@@ -456,9 +457,9 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPayroll),
       caption: "este mes",
       icon: Wallet,
-      iconWrap: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      bar: "bg-emerald-500",
+      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
+      hover: "hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10",
+      arrowHover: "group-hover:text-emerald-600",
       moduleKey: "sueldos",
     },
     {
@@ -468,9 +469,9 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPendingFixedCosts),
       caption: "pendiente este mes",
       icon: Receipt,
-      iconWrap: "bg-amber-50",
-      iconColor: "text-amber-600",
-      bar: "bg-amber-500",
+      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
+      hover: "hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10",
+      arrowHover: "group-hover:text-amber-600",
       moduleKey: "costos-fijos",
     },
     {
@@ -485,9 +486,9 @@ export default async function DashboardPage() {
             ? `${checksDueSoon} por vencer`
             : "activos, todo en orden",
       icon: Landmark,
-      iconWrap: "bg-rose-50",
-      iconColor: "text-rose-600",
-      bar: "bg-rose-500",
+      chip: "bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25",
+      hover: "hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/10",
+      arrowHover: "group-hover:text-rose-600",
       moduleKey: "cheques",
     },
     {
@@ -497,9 +498,9 @@ export default async function DashboardPage() {
       value: String(pendingAgenda),
       caption: "pendientes esta semana",
       icon: CalendarClock,
-      iconWrap: "bg-violet-50",
-      iconColor: "text-violet-600",
-      bar: "bg-violet-500",
+      chip: "bg-gradient-to-br from-violet-500 to-violet-600 shadow-md shadow-violet-500/25",
+      hover: "hover:border-violet-500/40 hover:shadow-lg hover:shadow-violet-500/10",
+      arrowHover: "group-hover:text-violet-600",
       moduleKey: null,
     },
     {
@@ -509,9 +510,9 @@ export default async function DashboardPage() {
       value: String(weekEvents),
       caption: "eventos esta semana",
       icon: CalendarDays,
-      iconWrap: "bg-cyan-50",
-      iconColor: "text-cyan-600",
-      bar: "bg-cyan-500",
+      chip: "bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md shadow-cyan-500/25",
+      hover: "hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10",
+      arrowHover: "group-hover:text-cyan-600",
       moduleKey: null,
     },
     {
@@ -521,9 +522,9 @@ export default async function DashboardPage() {
       value: "PDF",
       caption: "reportes disponibles",
       icon: FileBarChart,
-      iconWrap: "bg-slate-100",
-      iconColor: "text-slate-600",
-      bar: "bg-slate-500",
+      chip: "bg-gradient-to-br from-slate-500 to-slate-600 shadow-md shadow-slate-500/25",
+      hover: "hover:border-slate-500/40 hover:shadow-lg hover:shadow-slate-500/10",
+      arrowHover: "group-hover:text-slate-600",
       moduleKey: "reportes",
     },
     {
@@ -533,9 +534,9 @@ export default async function DashboardPage() {
       value: String(vaultCount),
       caption: vaultCount === 1 ? "credencial guardada" : "credenciales guardadas",
       icon: KeyRound,
-      iconWrap: "bg-fuchsia-50",
-      iconColor: "text-fuchsia-600",
-      bar: "bg-fuchsia-500",
+      chip: "bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 shadow-md shadow-fuchsia-500/25",
+      hover: "hover:border-fuchsia-500/40 hover:shadow-lg hover:shadow-fuchsia-500/10",
+      arrowHover: "group-hover:text-fuchsia-600",
       moduleKey: "vault",
     },
     {
@@ -545,9 +546,9 @@ export default async function DashboardPage() {
       value: String(myNotesCount),
       caption: myNotesCount === 1 ? "nota tuya" : "notas tuyas",
       icon: StickyNote,
-      iconWrap: "bg-yellow-50",
-      iconColor: "text-yellow-600",
-      bar: "bg-yellow-500",
+      chip: "bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-md shadow-yellow-500/25",
+      hover: "hover:border-yellow-500/40 hover:shadow-lg hover:shadow-yellow-500/10",
+      arrowHover: "group-hover:text-yellow-600",
       moduleKey: null,
     },
   ].filter((mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never));
@@ -585,9 +586,9 @@ export default async function DashboardPage() {
               key={kpi.title}
               className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm"
             >
-              <div className="flex items-center gap-2">
-                <div className={`rounded-lg p-2 ${kpi.iconWrap}`}>
-                  <Icon className={`h-4 w-4 ${kpi.iconColor}`} />
+              <div className="flex items-center gap-2.5">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${kpi.chip}`}>
+                  <Icon className="h-4 w-4 text-white" />
                 </div>
                 <span className="text-sm text-muted-foreground">{kpi.title}</span>
               </div>
@@ -625,13 +626,17 @@ export default async function DashboardPage() {
                 key={action.href}
                 href={action.href}
                 className={cn(
-                  "flex flex-col gap-2 rounded-lg p-4 transition-colors",
-                  action.wrap
+                  "group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                  action.hover
                 )}
               >
-                <Icon className={`h-6 w-6 ${action.iconColor}`} />
-                <span className="font-medium">{action.title}</span>
-                <span className="text-xs text-muted-foreground">{action.description}</span>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${action.chip}`}>
+                  <Icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <span className="font-medium">{action.title}</span>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                </div>
               </Link>
             );
           })}
@@ -654,14 +659,21 @@ export default async function DashboardPage() {
               <Link
                 key={mod.href}
                 href={mod.href}
-                className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className={cn(
+                  "group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                  mod.hover
+                )}
               >
-                <div className={`absolute inset-x-0 top-0 h-1 ${mod.bar}`} />
                 <div className="flex items-center justify-between">
-                  <div className={`rounded-lg p-2.5 ${mod.iconWrap}`}>
-                    <Icon className={`h-5 w-5 ${mod.iconColor}`} />
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${mod.chip}`}>
+                    <Icon className="h-5 w-5 text-white" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <ArrowRight
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1",
+                      mod.arrowHover
+                    )}
+                  />
                 </div>
                 <div>
                   <h3 className="font-semibold">{mod.title}</h3>
