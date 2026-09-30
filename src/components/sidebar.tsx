@@ -37,10 +37,6 @@ import { cn } from "@/lib/utils";
 // etc.) para que el mismo módulo se reconozca por color en toda la app.
 // Dashboard y Caja Chica no están en esa grilla, así que les tocó un
 // color propio (celeste y lima) que no pisa a ningún otro.
-//
-// `row` = fondo tenue + texto del mismo color, para la píldora completa en
-// reposo/hover. `activeRow` = versión sólida (el mismo degradé del chip)
-// con texto blanco, para cuando el ítem está seleccionado.
 const navItems = [
   {
     href: "/",
@@ -48,8 +44,6 @@ const navItems = [
     icon: LayoutDashboard,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-sky-400 to-sky-600 shadow-md shadow-sky-500/30",
-    row: "bg-sky-500/10 text-sky-700 hover:bg-sky-500/20",
-    activeRow: "bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/30",
   },
   {
     href: "/empleados",
@@ -58,8 +52,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "empleados",
     chip: "bg-gradient-to-br from-blue-400 to-blue-600 shadow-md shadow-blue-500/30",
-    row: "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20",
-    activeRow: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30",
   },
   {
     href: "/clientes",
@@ -67,8 +59,6 @@ const navItems = [
     icon: Building2,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md shadow-indigo-500/30",
-    row: "bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20",
-    activeRow: "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-500/30",
   },
   {
     href: "/proveedores",
@@ -76,8 +66,6 @@ const navItems = [
     icon: Truck,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-purple-400 to-purple-600 shadow-md shadow-purple-500/30",
-    row: "bg-purple-500/10 text-purple-700 hover:bg-purple-500/20",
-    activeRow: "bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md shadow-purple-500/30",
   },
   {
     href: "/ventas",
@@ -85,8 +73,6 @@ const navItems = [
     icon: TrendingUp,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-teal-400 to-teal-600 shadow-md shadow-teal-500/30",
-    row: "bg-teal-500/10 text-teal-700 hover:bg-teal-500/20",
-    activeRow: "bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md shadow-teal-500/30",
   },
   {
     href: "/compras",
@@ -94,8 +80,6 @@ const navItems = [
     icon: ShoppingCart,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-orange-400 to-orange-600 shadow-md shadow-orange-500/30",
-    row: "bg-orange-500/10 text-orange-700 hover:bg-orange-500/20",
-    activeRow: "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30",
   },
   {
     href: "/sueldos",
@@ -104,8 +88,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "sueldos",
     chip: "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/30",
-    row: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20",
-    activeRow: "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/30",
   },
   {
     href: "/costos-fijos",
@@ -114,8 +96,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "costos-fijos",
     chip: "bg-gradient-to-br from-amber-400 to-amber-600 shadow-md shadow-amber-500/30",
-    row: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20",
-    activeRow: "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/30",
   },
   {
     href: "/cheques",
@@ -124,8 +104,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "cheques",
     chip: "bg-gradient-to-br from-rose-400 to-rose-600 shadow-md shadow-rose-500/30",
-    row: "bg-rose-500/10 text-rose-700 hover:bg-rose-500/20",
-    activeRow: "bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/30",
   },
   {
     href: "/caja-chica",
@@ -134,8 +112,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "caja-chica",
     chip: "bg-gradient-to-br from-lime-400 to-lime-600 shadow-md shadow-lime-500/30",
-    row: "bg-lime-500/10 text-lime-700 hover:bg-lime-500/20",
-    activeRow: "bg-gradient-to-br from-lime-500 to-lime-600 text-white shadow-md shadow-lime-500/30",
   },
   {
     href: "/agenda",
@@ -143,8 +119,6 @@ const navItems = [
     icon: CalendarClock,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-violet-400 to-violet-600 shadow-md shadow-violet-500/30",
-    row: "bg-violet-500/10 text-violet-700 hover:bg-violet-500/20",
-    activeRow: "bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md shadow-violet-500/30",
   },
   {
     href: "/calendario",
@@ -152,8 +126,6 @@ const navItems = [
     icon: CalendarDays,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-md shadow-cyan-500/30",
-    row: "bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20",
-    activeRow: "bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-md shadow-cyan-500/30",
   },
   {
     href: "/reportes",
@@ -162,8 +134,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
     chip: "bg-gradient-to-br from-slate-400 to-slate-600 shadow-md shadow-slate-500/30",
-    row: "bg-slate-500/10 text-slate-700 hover:bg-slate-500/20",
-    activeRow: "bg-gradient-to-br from-slate-500 to-slate-600 text-white shadow-md shadow-slate-500/30",
   },
   {
     href: "/vault",
@@ -172,8 +142,6 @@ const navItems = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "vault",
     chip: "bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 shadow-md shadow-fuchsia-500/30",
-    row: "bg-fuchsia-500/10 text-fuchsia-700 hover:bg-fuchsia-500/20",
-    activeRow: "bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/30",
   },
   {
     href: "/notas",
@@ -181,8 +149,6 @@ const navItems = [
     icon: StickyNote,
     roles: ["OWNER", "ACCOUNTANT"],
     chip: "bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-md shadow-yellow-500/30",
-    row: "bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20",
-    activeRow: "bg-gradient-to-br from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/30",
   },
 ];
 
@@ -267,14 +233,16 @@ export function Sidebar({
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
-                    active ? cn(item.activeRow, "font-semibold") : item.row
+                    "flex items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-muted font-semibold text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <div
                     className={cn(
                       "relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full",
-                      active ? "bg-white/20" : item.chip
+                      item.chip
                     )}
                   >
                     {/* Brillo glossy arriba de la píldora — la mitad superior
