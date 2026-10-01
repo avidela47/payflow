@@ -277,7 +277,7 @@ export function ComprasClient({
                 name="providerId"
                 required
                 defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="" disabled>
                   Elegir...
@@ -301,7 +301,7 @@ export function ComprasClient({
                 id="paymentMethod"
                 name="paymentMethod"
                 defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="">Elegir...</option>
                 {PAYMENT_METHODS.map((method) => (
@@ -324,7 +324,7 @@ export function ComprasClient({
                 name="currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
@@ -456,7 +456,7 @@ export function ComprasClient({
         </span>
       </div>
 
-            <Table compact>
+      <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Proveedor</TableHead>
@@ -570,7 +570,7 @@ export function ComprasClient({
                 name="providerId"
                 required
                 defaultValue={editing.providerId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {providers.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -597,7 +597,7 @@ export function ComprasClient({
                   id="editPaymentMethod"
                   name="paymentMethod"
                   defaultValue={editing.paymentMethod ?? ""}
-                  className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <option value="">Elegir...</option>
                   {PAYMENT_METHODS.map((method) => (
@@ -626,7 +626,7 @@ export function ComprasClient({
                 name="currency"
                 value={editCurrency}
                 onChange={(e) => setEditCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>

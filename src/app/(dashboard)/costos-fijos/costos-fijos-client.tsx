@@ -218,7 +218,7 @@ export function CostosFijosClient({
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="">Elegir...</option>
                 {categories.map((c) => (
@@ -247,7 +247,7 @@ export function CostosFijosClient({
                 name="currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
@@ -296,7 +296,7 @@ export function CostosFijosClient({
                 id="paymentMode"
                 name="paymentMode"
                 defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="">Elegir...</option>
                 {PAYMENT_MODES.map((mode) => (
@@ -420,7 +420,7 @@ export function CostosFijosClient({
               id="kind"
               name="kind"
               defaultValue=""
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <option value="">Sin especificar</option>
               {CATEGORY_KINDS.map((k) => (
@@ -459,7 +459,7 @@ export function CostosFijosClient({
                 name="categoryId"
                 required
                 defaultValue={editing.categoryId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -485,7 +485,7 @@ export function CostosFijosClient({
                 name="currency"
                 value={editCurrency}
                 onChange={(e) => setEditCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
@@ -546,7 +546,7 @@ export function CostosFijosClient({
                 id="editPaymentMode"
                 name="paymentMode"
                 defaultValue={editing.paymentMode ?? ""}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="">Elegir...</option>
                 {PAYMENT_MODES.map((mode) => (

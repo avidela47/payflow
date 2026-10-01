@@ -104,7 +104,7 @@ export function CajaChicaClient({
                 name="type"
                 value={type}
                 onChange={(e) => setType(e.target.value as "ingreso" | "egreso")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="egreso">Egreso (gasto)</option>
                 <option value="ingreso">Ingreso</option>

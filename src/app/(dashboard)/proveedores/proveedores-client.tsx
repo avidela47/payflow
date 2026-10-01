@@ -114,7 +114,7 @@ function ProviderForm({
             id="condicionIva"
             name="condicionIva"
             defaultValue={defaultValues?.condicionIva ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Sin especificar</option>
             {IVA_CONDITIONS.map((cond) => (
@@ -173,7 +173,7 @@ function ProviderForm({
             id="provincia"
             name="provincia"
             defaultValue={defaultValues?.provincia ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Seleccionar...</option>
             {ARGENTINA_PROVINCES.map((prov) => (

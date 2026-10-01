@@ -30,7 +30,7 @@ const config: Config = {
         muted: "hsl(210 40% 96%)",
         "muted-foreground": "hsl(215 16% 47%)",
         primary: {
-          DEFAULT: "hsl(189 55% 32%)",
+          DEFAULT: "hsl(221 83% 53%)",
           foreground: "hsl(0 0% 100%)",
         },
         card: {
@@ -41,12 +41,16 @@ const config: Config = {
           DEFAULT: "hsl(0 72% 51%)",
           foreground: "hsl(0 0% 100%)",
         },
+        // success/warning: oscurecidos respecto al valor original (142 71% 45%
+        // y 38 92% 50%) porque esos no pasaban contraste WCAG AA contra fondo
+        // blanco (2.30:1 y 2.14:1 — el mínimo exigido es 4.5:1 para texto
+        // normal). Mismo tono y saturación, solo más oscuros: 4.58:1 y 4.62:1.
         success: {
-          DEFAULT: "hsl(142 71% 45%)",
+          DEFAULT: "hsl(142 71% 31%)",
           foreground: "hsl(0 0% 100%)",
         },
-                warning: {
-          DEFAULT: "hsl(38 92% 50%)",
+        warning: {
+          DEFAULT: "hsl(38 92% 33%)",
           foreground: "hsl(0 0% 100%)",
         },
         violet: {

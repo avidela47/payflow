@@ -27,9 +27,9 @@ export type CheckItem = {
   id: string;
   type: CheckType;
   direction: CheckDirection;
-  issueDateISO: string;
+  issueDateISO: string; // "YYYY-MM-DD"
   issueDateLabel: string;
-  paymentDateISO: string;
+  paymentDateISO: string; // "YYYY-MM-DD"
   paymentDateLabel: string;
   checkNumber: string;
   echeqId?: string;
@@ -55,7 +55,7 @@ const STATUS_OPTIONS: { value: CheckStatus; label: string }[] = [
 ];
 
 function selectClass() {
-  return "h-10 rounded-md border border-border bg-background px-3 text-sm";
+  return "h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 }
 
 function DueBadge({ item }: { item: CheckItem }) {
@@ -72,6 +72,9 @@ function DueBadge({ item }: { item: CheckItem }) {
   return null;
 }
 
+// Tipo y Dirección ya no se eligen acá: los define la pantalla donde
+// estás parado (/cheques/fisicos/emitidos, etc.) y viajan como inputs
+// ocultos — por eso no hay selects para eso en este formulario.
 function CheckFormFields({
   lockedType,
   lockedDirection,
@@ -88,7 +91,12 @@ function CheckFormFields({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="checkNumber">Número de cheque</Label>
-        <Input id="checkNumber" name="checkNumber" required defaultValue={defaultValues?.checkNumber} />
+        <Input
+          id="checkNumber"
+          name="checkNumber"
+          required
+          defaultValue={defaultValues?.checkNumber}
+        />
       </div>
 
       {lockedType === "ELECTRONICO" && (
@@ -102,7 +110,12 @@ function CheckFormFields({
         <Label htmlFor="issuerName">
           {lockedDirection === "EMITIDO" ? "A nombre de quién (beneficiario)" : "Librador"}
         </Label>
-        <Input id="issuerName" name="issuerName" required defaultValue={defaultValues?.issuerName} />
+        <Input
+          id="issuerName"
+          name="issuerName"
+          required
+          defaultValue={defaultValues?.issuerName}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -117,31 +130,62 @@ function CheckFormFields({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="amount">Monto</Label>
-        <Input id="amount" name="amount" type="number" step="0.01" min="0" required defaultValue={defaultValues?.amount} />
+        <Input
+          id="amount"
+          name="amount"
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          defaultValue={defaultValues?.amount}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="issueDate">Fecha de emisión</Label>
-        <Input id="issueDate" name="issueDate" type="date" required defaultValue={defaultValues?.issueDateISO} />
+        <Input
+          id="issueDate"
+          name="issueDate"
+          type="date"
+          required
+          defaultValue={defaultValues?.issueDateISO}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="paymentDate">Fecha de pago</Label>
-        <Input id="paymentDate" name="paymentDate" type="date" required defaultValue={defaultValues?.paymentDateISO} />
+        <Input
+          id="paymentDate"
+          name="paymentDate"
+          type="date"
+          required
+          defaultValue={defaultValues?.paymentDateISO}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="status">Estado</Label>
-        <select id="status" name="status" defaultValue={defaultValues?.status ?? "ACTIVO"} className={selectClass()}>
+        <select
+          id="status"
+          name="status"
+          defaultValue={defaultValues?.status ?? "ACTIVO"}
+          className={selectClass()}
+        >
           {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
           ))}
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="currentHolder">Quién lo tiene</Label>
-        <Input id="currentHolder" name="currentHolder" defaultValue={defaultValues?.currentHolder} />
+        <Input
+          id="currentHolder"
+          name="currentHolder"
+          defaultValue={defaultValues?.currentHolder}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -182,7 +226,12 @@ export function ChequesClient({
     const formData = new FormData(e.currentTarget);
     const result = await createCheck(formData);
     setCreating(false);
-    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+
     toast.success("Cheque guardado.");
     (e.target as HTMLFormElement).reset();
     router.refresh();
@@ -192,18 +241,28 @@ export function ChequesClient({
     setChangingStatusId(check.id);
     const result = await setCheckStatus(check.id, status);
     setChangingStatusId(null);
-    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
     router.refresh();
   }
 
   async function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editing) return;
+
     setSavingEdit(true);
     const formData = new FormData(e.currentTarget);
     const result = await updateCheck(editing.id, formData);
     setSavingEdit(false);
-    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+
     toast.success("Cheque actualizado.");
     setEditing(null);
     router.refresh();
@@ -213,7 +272,12 @@ export function ChequesClient({
     setDeletingId(check.id);
     const result = await deleteCheck(check.id);
     setDeletingId(null);
-    if (!result.ok) { toast.error(result.error ?? "Ocurrió un error."); return; }
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+
     toast.success("Cheque borrado.");
     setConfirmTarget(null);
     router.refresh();
@@ -277,19 +341,31 @@ export function ChequesClient({
                   value={check.status}
                   disabled={changingStatusId === check.id}
                   onChange={(e) => handleStatusChange(check, e.target.value as CheckStatus)}
-                  className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                  className="h-8 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
                   ))}
                 </select>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setEditing(check)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-primary hover:bg-primary/10"
+                    onClick={() => setEditing(check)}
+                  >
                     Editar
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setConfirmTarget(check)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => setConfirmTarget(check)}
+                  >
                     Borrar
                   </Button>
                 </div>
@@ -301,13 +377,19 @@ export function ChequesClient({
 
       <Dialog
         open={editing !== null}
-        onOpenChange={(open) => { if (!open) setEditing(null); }}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
         title={editing ? `Editar cheque — ${editing.issuerName}` : undefined}
         className="max-w-2xl"
       >
         {editing && (
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-            <CheckFormFields lockedType={lockedType} lockedDirection={lockedDirection} defaultValues={editing} />
+            <CheckFormFields
+              lockedType={lockedType}
+              lockedDirection={lockedDirection}
+              defaultValues={editing}
+            />
             <div>
               <Button type="submit" disabled={savingEdit}>
                 {savingEdit ? "Guardando..." : "Guardar cambios"}
@@ -319,7 +401,9 @@ export function ChequesClient({
 
       <Dialog
         open={confirmTarget !== null}
-        onOpenChange={(open) => { if (!open) setConfirmTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
         title="Borrar cheque"
         className="max-w-md"
       >
@@ -328,12 +412,20 @@ export function ChequesClient({
             <p className="text-sm text-muted-foreground">
               ¿Seguro que querés borrar el cheque de{" "}
               <span className="font-medium text-foreground">{confirmTarget.issuerName}</span> por{" "}
-              <span className="font-medium text-foreground">{formatCurrency(confirmTarget.amount)}</span>
+              <span className="font-medium text-foreground">
+                {formatCurrency(confirmTarget.amount)}
+              </span>
               ? No se puede deshacer.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmTarget(null)}>Cancelar</Button>
-              <Button variant="destructive" disabled={deletingId === confirmTarget.id} onClick={() => performDelete(confirmTarget)}>
+              <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deletingId === confirmTarget.id}
+                onClick={() => performDelete(confirmTarget)}
+              >
                 {deletingId === confirmTarget.id ? "Borrando..." : "Sí, borrar"}
               </Button>
             </div>

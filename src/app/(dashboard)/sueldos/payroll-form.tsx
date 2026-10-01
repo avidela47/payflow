@@ -102,7 +102,7 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
             required
             value={employeeId}
             onChange={(e) => selectEmployee(e.target.value)}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Elegir...</option>
             {employees.map((e) => (
