@@ -11,6 +11,14 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { requireModuleAccess } from "@/lib/auth";
 
+// Rediseño (vuelta a neutro, igual que Dashboard/Sidebar): antes cada
+// reporte tenía su propio color (primary/violet/success/warning/
+// destructive) solo para diferenciarse a simple vista — pero usar tokens
+// de estado (success, warning, destructive) como paleta decorativa es
+// justo lo que se dejó de hacer: ningún reporte está "vencido" o
+// "aprobado", así que no correspondía ese color. Ahora las 5 tarjetas
+// comparten el mismo acento (primary); se distinguen por ícono y texto,
+// no por color.
 export default async function ReportesPage() {
   await requireModuleAccess("reportes");
 
@@ -32,8 +40,8 @@ export default async function ReportesPage() {
         <Link href="/reportes/ventas" className="group">
           <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-md shadow-primary/25">
-                <TrendingUp className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Ventas</p>
@@ -47,10 +55,10 @@ export default async function ReportesPage() {
         </Link>
 
         <Link href="/reportes/compras" className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-violet/40 hover:shadow-lg hover:shadow-violet/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet to-violet/70 shadow-md shadow-violet/25">
-                <ShoppingCart className="h-6 w-6 text-violet-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <ShoppingCart className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Compras</p>
@@ -58,16 +66,16 @@ export default async function ReportesPage() {
                   Por mes: total, pagadas/pendientes, formas de pago y estado de recepción.
                 </p>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-violet" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/reportes/sueldos" className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-success to-success/70 shadow-md shadow-success/25">
-                <Wallet className="h-6 w-6 text-success-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Wallet className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Sueldos</p>
@@ -75,16 +83,16 @@ export default async function ReportesPage() {
                   Por período: Monotributo, Registrado e Informal/Viáticos, por empleado.
                 </p>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-success" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/reportes/gastos" className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-warning/40 hover:shadow-lg hover:shadow-warning/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning to-warning/70 shadow-md shadow-warning/25">
-                <Receipt className="h-6 w-6 text-warning-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Receipt className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Costos Fijos / Gastos</p>
@@ -92,16 +100,16 @@ export default async function ReportesPage() {
                   Por rango de meses: resumen por categoría y detalle cronológico.
                 </p>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-warning" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/reportes/cheques" className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/40 hover:shadow-lg hover:shadow-destructive/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-destructive/70 shadow-md shadow-destructive/25">
-                <Landmark className="h-6 w-6 text-destructive-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Landmark className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Cheques</p>
@@ -109,7 +117,7 @@ export default async function ReportesPage() {
                   Por mes de vencimiento: totales por estado y por tipo.
                 </p>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-destructive" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
             </CardContent>
           </Card>
         </Link>
