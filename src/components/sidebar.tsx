@@ -30,64 +30,31 @@ import { cn } from "@/lib/utils";
 // por rol) — Dashboard, Clientes, Proveedores, Ventas, Compras, Agenda,
 // Calendario y Notas quedan siempre visibles para OWNER/ACCOUNTANT.
 //
-// `chip` es el mismo lenguaje visual que ya tienen /reportes y el
-// Dashboard: un ícono en un chip con degradé de color, uno distinto por
-// módulo. Los colores coinciden con los que ya usa la grilla "Todos los
-// módulos" del Dashboard (Empleados azul, Sueldos verde, Cheques rosa,
-// etc.) para que el mismo módulo se reconozca por color en toda la app.
-// Dashboard y Caja Chica no están en esa grilla, así que les tocó un
-// color propio (celeste y lima) que no pisa a ningún otro.
+// Rediseño (vuelta a neutro, igual que el Dashboard): un solo acento
+// (primary) para todos los íconos, fila activa con fondo gris neutro en
+// vez de color por módulo. Única excepción a propósito: Notas mantiene su
+// ícono amarillo porque ahí el color es parte de la metáfora visual
+// ("post-it"), no decoración de módulo — Ariel pidió explícitamente no
+// tocar esa.
 const navItems = [
-  {
-    href: "/",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-sky-400 to-sky-600 shadow-md shadow-sky-500/30",
-  },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
   {
     href: "/empleados",
     label: "Empleados",
     icon: Users,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "empleados",
-    chip: "bg-gradient-to-br from-blue-400 to-blue-600 shadow-md shadow-blue-500/30",
   },
-  {
-    href: "/clientes",
-    label: "Clientes",
-    icon: Building2,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md shadow-indigo-500/30",
-  },
-  {
-    href: "/proveedores",
-    label: "Proveedores",
-    icon: Truck,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-purple-400 to-purple-600 shadow-md shadow-purple-500/30",
-  },
-  {
-    href: "/ventas",
-    label: "Ventas",
-    icon: TrendingUp,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-teal-400 to-teal-600 shadow-md shadow-teal-500/30",
-  },
-  {
-    href: "/compras",
-    label: "Compras",
-    icon: ShoppingCart,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-orange-400 to-orange-600 shadow-md shadow-orange-500/30",
-  },
+  { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"] },
   {
     href: "/sueldos",
     label: "Sueldos",
     icon: Wallet,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "sueldos",
-    chip: "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/30",
   },
   {
     href: "/costos-fijos",
@@ -95,7 +62,6 @@ const navItems = [
     icon: Receipt,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "costos-fijos",
-    chip: "bg-gradient-to-br from-amber-400 to-amber-600 shadow-md shadow-amber-500/30",
   },
   {
     href: "/cheques",
@@ -103,7 +69,6 @@ const navItems = [
     icon: Landmark,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "cheques",
-    chip: "bg-gradient-to-br from-rose-400 to-rose-600 shadow-md shadow-rose-500/30",
   },
   {
     href: "/caja-chica",
@@ -111,29 +76,15 @@ const navItems = [
     icon: Banknote,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "caja-chica",
-    chip: "bg-gradient-to-br from-lime-400 to-lime-600 shadow-md shadow-lime-500/30",
   },
-  {
-    href: "/agenda",
-    label: "Agenda",
-    icon: CalendarClock,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-violet-400 to-violet-600 shadow-md shadow-violet-500/30",
-  },
-  {
-    href: "/calendario",
-    label: "Calendario",
-    icon: CalendarDays,
-    roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-md shadow-cyan-500/30",
-  },
+  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
   {
     href: "/reportes",
     label: "Reportes",
     icon: FileBarChart,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
-    chip: "bg-gradient-to-br from-slate-400 to-slate-600 shadow-md shadow-slate-500/30",
   },
   {
     href: "/vault",
@@ -141,14 +92,14 @@ const navItems = [
     icon: KeyRound,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "vault",
-    chip: "bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 shadow-md shadow-fuchsia-500/30",
   },
   {
     href: "/notas",
     label: "Notas",
     icon: StickyNote,
     roles: ["OWNER", "ACCOUNTANT"],
-    chip: "bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-md shadow-yellow-500/30",
+    // Única excepción al acento único: post-it amarillo a propósito.
+    special: "bg-yellow-100 text-yellow-700",
   },
 ];
 
@@ -241,14 +192,11 @@ export function Sidebar({
                 >
                   <div
                     className={cn(
-                      "relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full",
-                      item.chip
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                      item.special ?? "bg-primary/10 text-primary"
                     )}
                   >
-                    {/* Brillo glossy arriba de la píldora — la mitad superior
-                        más clara, como en botones 3D tipo Web 2.0. */}
-                    <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-gradient-to-b from-white/40 to-transparent" />
-                    <Icon className="relative h-4 w-4 text-white" />
+                    <Icon className="h-4 w-4" />
                   </div>
                   {item.label}
                 </Link>
