@@ -63,16 +63,13 @@ function firstName(fullName: string) {
 // arriba. Notas sigue siendo privado por usuario — ese conteo se filtra
 // por session.user.id, nunca se muestra el total de todos.
 //
-// Rediseño (v3, visual): mismo lenguaje que /reportes — chips de ícono
-// con degradé de color, borde y sombra tintados al hover, flecha que se
-// desliza — aplicado a KPIs, accesos rápidos y la grilla de módulos.
-//
-// Rediseño (v4, visual): KPIs, accesos rápidos y grilla de módulos pasan
-// de tarjeta blanca + chip de ícono a tarjeta entera con fondo sólido de
-// color (mismo degradé que antes tenía el chip) y texto blanco — estilo
-// dashboard de stats. El ícono ahora vive en un círculo translúcido
-// blanco (bg-white/20) en vez de un cuadrado con su propio degradé.
-// Ninguna lógica de datos cambia acá, solo las clases de Tailwind.
+// Rediseño (v3→v5, visual): se probaron chips con degradé por módulo y
+// después tarjetas con fondo sólido de color (una por módulo). Se volvió
+// atrás: tarjeta blanca con borde, ícono en círculo bg-primary/10, un
+// solo color de acento (primary) en todos lados. El color deja de ser
+// decorativo y se reserva para estado real — success/warning/destructive,
+// como en `captionTone` de Cheques más abajo y en `alerts`. Ninguna
+// lógica de datos cambia acá, solo las clases de Tailwind.
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
@@ -258,16 +255,15 @@ export default async function DashboardPage() {
     .filter((a): a is { text: string; tone: string; moduleKey: string | null } => Boolean(a))
     .filter((a) => !a.moduleKey || !restrictedModules.includes(a.moduleKey as never));
 
-  // Las 4 tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio
-  // que el resto de la app); Costos Fijos queda a la vista, como antes.
-  // `chip` ahora es el fondo sólido de toda la tarjeta (antes era solo
-  // el cuadrado del ícono).
+  // Las tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio que
+  // el resto de la app); Costos Fijos queda a la vista, como antes. Todas
+  // comparten el mismo ícono en círculo bg-primary/10 — ya no hay un color
+  // distinto por KPI.
   const kpis = [
     {
       title: "Empleados activos",
       icon: Users,
-      chip: "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{activeEmployees}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{activeEmployees}</p>,
       delta:
         newEmployeesThisMonth > 0
           ? { text: `${newEmployeesThisMonth} este mes`, up: true }
@@ -277,8 +273,7 @@ export default async function DashboardPage() {
     {
       title: "Clientes",
       icon: Building2,
-      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{totalClients}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{totalClients}</p>,
       delta:
         newClientsThisMonth > 0 ? { text: `${newClientsThisMonth} este mes`, up: true } : null,
       moduleKey: null,
@@ -286,8 +281,7 @@ export default async function DashboardPage() {
     {
       title: "Sueldos del mes",
       icon: Wallet,
-      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
-      value: <MaskedAmount value={formatCurrency(totalPayroll)} className="text-2xl font-semibold tracking-tight text-white" />,
+      value: <MaskedAmount value={formatCurrency(totalPayroll)} className="text-2xl font-semibold tracking-tight" />,
       delta:
         payrollDeltaPct !== null
           ? { text: `${Math.abs(payrollDeltaPct)}% vs mes anterior`, up: payrollDeltaPct >= 0 }
@@ -297,8 +291,7 @@ export default async function DashboardPage() {
     {
       title: "Costos fijos pendientes",
       icon: Receipt,
-      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{formatCurrency(totalPendingFixedCosts)}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPendingFixedCosts)}</p>,
       delta:
         pendingFixedCosts.length > 0
           ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
@@ -308,8 +301,7 @@ export default async function DashboardPage() {
     {
       title: "Ventas del mes",
       icon: TrendingUp,
-      chip: "bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{formatCurrency(totalSalesThisMonth)}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalSalesThisMonth)}</p>,
       delta:
         salesThisMonth.length > 0
           ? { text: `${salesThisMonth.length} venta${salesThisMonth.length === 1 ? "" : "s"}`, up: true }
@@ -319,9 +311,8 @@ export default async function DashboardPage() {
     {
       title: "Pendiente de cobro",
       icon: Receipt,
-      chip: "bg-gradient-to-br from-pink-500 to-pink-600 shadow-md shadow-pink-500/25",
       value: (
-        <p className="text-2xl font-semibold tracking-tight text-white">
+        <p className="text-2xl font-semibold tracking-tight">
           {formatCurrency(totalPendingCollectionSalesThisMonth)}
         </p>
       ),
@@ -339,8 +330,7 @@ export default async function DashboardPage() {
     {
       title: "Compras del mes",
       icon: ShoppingCart,
-      chip: "bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{formatCurrency(totalPurchasesThisMonth)}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPurchasesThisMonth)}</p>,
       delta:
         purchasesThisMonth.length > 0
           ? { text: `${purchasesThisMonth.length} compra${purchasesThisMonth.length === 1 ? "" : "s"}`, up: true }
@@ -350,9 +340,8 @@ export default async function DashboardPage() {
     {
       title: "Pendiente de pago (compras)",
       icon: Receipt,
-      chip: "bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25",
       value: (
-        <p className="text-2xl font-semibold tracking-tight text-white">
+        <p className="text-2xl font-semibold tracking-tight">
           {formatCurrency(totalPendingPaymentPurchasesThisMonth)}
         </p>
       ),
@@ -370,8 +359,7 @@ export default async function DashboardPage() {
     {
       title: "En curso / por recibir",
       icon: Truck,
-      chip: "bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md shadow-cyan-500/25",
-      value: <p className="text-2xl font-semibold tracking-tight text-white">{inProgressPurchasesCount}</p>,
+      value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
       delta: null,
       moduleKey: null,
     },
@@ -386,8 +374,6 @@ export default async function DashboardPage() {
       title: "Nueva liquidación",
       description: "Cargar sueldo de un empleado",
       icon: Wallet,
-      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
-      hover: "hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10",
       moduleKey: "sueldos",
     },
     {
@@ -395,8 +381,6 @@ export default async function DashboardPage() {
       title: "Nuevo costo fijo",
       description: "Registrar un gasto del mes",
       icon: Receipt,
-      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
-      hover: "hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10",
       moduleKey: "costos-fijos",
     },
     {
@@ -404,8 +388,6 @@ export default async function DashboardPage() {
       title: "Nuevo cliente",
       description: "Sumar a la cartera",
       icon: Building2,
-      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
-      hover: "hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10",
       moduleKey: null,
     },
   ].filter((action) => !action.moduleKey || !restrictedModules.includes(action.moduleKey as never));
@@ -418,9 +400,6 @@ export default async function DashboardPage() {
       value: String(activeEmployees),
       caption: "activos",
       icon: Users,
-      chip: "bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/25",
-      hover: "hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10",
-      arrowHover: "group-hover:text-blue-600",
       moduleKey: "empleados",
     },
     {
@@ -430,9 +409,6 @@ export default async function DashboardPage() {
       value: String(totalClients),
       caption: totalClients === 1 ? "cliente" : "clientes",
       icon: Building2,
-      chip: "bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-md shadow-indigo-500/25",
-      hover: "hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10",
-      arrowHover: "group-hover:text-indigo-600",
       moduleKey: null,
     },
     {
@@ -442,9 +418,6 @@ export default async function DashboardPage() {
       value: String(totalProviders),
       caption: totalProviders === 1 ? "proveedor" : "proveedores",
       icon: Truck,
-      chip: "bg-gradient-to-br from-purple-500 to-purple-600 shadow-md shadow-purple-500/25",
-      hover: "hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10",
-      arrowHover: "group-hover:text-purple-600",
       moduleKey: null,
     },
     {
@@ -454,9 +427,6 @@ export default async function DashboardPage() {
       value: formatCurrency(totalSalesThisMonth),
       caption: "este mes",
       icon: TrendingUp,
-      chip: "bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/25",
-      hover: "hover:border-teal-500/40 hover:shadow-lg hover:shadow-teal-500/10",
-      arrowHover: "group-hover:text-teal-600",
       moduleKey: null,
     },
     {
@@ -466,9 +436,6 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPurchasesThisMonth),
       caption: "este mes",
       icon: ShoppingCart,
-      chip: "bg-gradient-to-br from-orange-500 to-orange-600 shadow-md shadow-orange-500/25",
-      hover: "hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10",
-      arrowHover: "group-hover:text-orange-600",
       moduleKey: null,
     },
     {
@@ -478,9 +445,6 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPayroll),
       caption: "este mes",
       icon: Wallet,
-      chip: "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-500/25",
-      hover: "hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10",
-      arrowHover: "group-hover:text-emerald-600",
       moduleKey: "sueldos",
     },
     {
@@ -490,9 +454,6 @@ export default async function DashboardPage() {
       value: formatCurrency(totalPendingFixedCosts),
       caption: "pendiente este mes",
       icon: Receipt,
-      chip: "bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/25",
-      hover: "hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10",
-      arrowHover: "group-hover:text-amber-600",
       moduleKey: "costos-fijos",
     },
     {
@@ -506,10 +467,11 @@ export default async function DashboardPage() {
           : checksDueSoon > 0
             ? `${checksDueSoon} por vencer`
             : "activos, todo en orden",
+      // Único lugar de la grilla donde el color dice algo (no decora): rojo
+      // si hay vencidos, ámbar si hay por vencer esta semana, gris si está
+      // todo en orden — mismo criterio que las alertas de arriba.
+      captionTone: checksOverdue > 0 ? "text-destructive" : checksDueSoon > 0 ? "text-warning" : undefined,
       icon: Landmark,
-      chip: "bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25",
-      hover: "hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/10",
-      arrowHover: "group-hover:text-rose-600",
       moduleKey: "cheques",
     },
     {
@@ -519,9 +481,6 @@ export default async function DashboardPage() {
       value: formatCurrency(pettyCashBalance),
       caption: "saldo actual",
       icon: Banknote,
-      chip: "bg-gradient-to-br from-lime-500 to-lime-600 shadow-md shadow-lime-500/25",
-      hover: "hover:border-lime-500/40 hover:shadow-lg hover:shadow-lime-500/10",
-      arrowHover: "group-hover:text-lime-600",
       moduleKey: "caja-chica",
     },
     {
@@ -531,9 +490,6 @@ export default async function DashboardPage() {
       value: String(pendingAgenda),
       caption: "pendientes esta semana",
       icon: CalendarClock,
-      chip: "bg-gradient-to-br from-violet-500 to-violet-600 shadow-md shadow-violet-500/25",
-      hover: "hover:border-violet-500/40 hover:shadow-lg hover:shadow-violet-500/10",
-      arrowHover: "group-hover:text-violet-600",
       moduleKey: null,
     },
     {
@@ -543,9 +499,6 @@ export default async function DashboardPage() {
       value: String(weekEvents),
       caption: "eventos esta semana",
       icon: CalendarDays,
-      chip: "bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-md shadow-cyan-500/25",
-      hover: "hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10",
-      arrowHover: "group-hover:text-cyan-600",
       moduleKey: null,
     },
     {
@@ -555,9 +508,6 @@ export default async function DashboardPage() {
       value: "PDF",
       caption: "reportes disponibles",
       icon: FileBarChart,
-      chip: "bg-gradient-to-br from-slate-500 to-slate-600 shadow-md shadow-slate-500/25",
-      hover: "hover:border-slate-500/40 hover:shadow-lg hover:shadow-slate-500/10",
-      arrowHover: "group-hover:text-slate-600",
       moduleKey: "reportes",
     },
     {
@@ -567,9 +517,6 @@ export default async function DashboardPage() {
       value: String(vaultCount),
       caption: vaultCount === 1 ? "credencial guardada" : "credenciales guardadas",
       icon: KeyRound,
-      chip: "bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 shadow-md shadow-fuchsia-500/25",
-      hover: "hover:border-fuchsia-500/40 hover:shadow-lg hover:shadow-fuchsia-500/10",
-      arrowHover: "group-hover:text-fuchsia-600",
       moduleKey: "vault",
     },
     {
@@ -579,9 +526,6 @@ export default async function DashboardPage() {
       value: String(myNotesCount),
       caption: myNotesCount === 1 ? "nota tuya" : "notas tuyas",
       icon: StickyNote,
-      chip: "bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-md shadow-yellow-500/25",
-      hover: "hover:border-yellow-500/40 hover:shadow-lg hover:shadow-yellow-500/10",
-      arrowHover: "group-hover:text-yellow-600",
       moduleKey: null,
     },
   ].filter((mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never));
@@ -617,20 +561,22 @@ export default async function DashboardPage() {
           return (
             <div
               key={kpi.title}
-              className={cn(
-                "relative flex flex-col gap-3 overflow-hidden rounded-2xl p-5 text-white shadow-md",
-                kpi.chip
-              )}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm"
             >
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-                  <Icon className="h-4 w-4 text-white" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
                 </div>
-                <span className="text-sm text-white/80">{kpi.title}</span>
+                <span className="text-sm text-muted-foreground">{kpi.title}</span>
               </div>
               {kpi.value}
               {kpi.delta && (
-                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium text-white">
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-xs font-medium",
+                    kpi.delta.up ? "text-success" : "text-destructive"
+                  )}
+                >
                   {kpi.delta.up ? (
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   ) : (
@@ -656,17 +602,14 @@ export default async function DashboardPage() {
               <Link
                 key={action.href}
                 href={action.href}
-                className={cn(
-                  "group relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4 text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
-                  action.chip
-                )}
+                className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-                  <Icon className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <span className="font-medium text-white">{action.title}</span>
-                  <p className="text-xs text-white/80">{action.description}</p>
+                  <span className="font-medium">{action.title}</span>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
                 </div>
               </Link>
             );
@@ -690,31 +633,30 @@ export default async function DashboardPage() {
               <Link
                 key={mod.href}
                 href={mod.href}
-                className={cn(
-                  "group relative flex flex-col gap-3 overflow-hidden rounded-2xl p-5 text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
-                  mod.chip
-                )}
+                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20">
-                    <Icon className="h-5 w-5 text-white" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-white/80 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-white" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">{mod.title}</h3>
-                  <p className="text-xs text-white/80">{mod.description}</p>
+                  <h3 className="font-semibold">{mod.title}</h3>
+                  <p className="text-xs text-muted-foreground">{mod.description}</p>
                 </div>
                 <div>
                   {mod.href === "/sueldos" ? (
                     <MaskedAmount
                       value={mod.value}
-                      className="text-xl font-semibold tracking-tight text-white"
+                      className="text-xl font-semibold tracking-tight"
                     />
                   ) : (
-                    <p className="text-xl font-semibold tracking-tight text-white">{mod.value}</p>
+                    <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
                   )}
-                  <p className="text-xs text-white/80">{mod.caption}</p>
+                  <p className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
+                    {mod.caption}
+                  </p>
                 </div>
               </Link>
             );
