@@ -68,7 +68,7 @@ export default async function ReporteVentasPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Cobradas</p>
-            <p className="text-2xl font-semibold text-emerald-600">
+            <p className="text-2xl font-semibold text-success">
               {formatCurrency(report.collectedAmount)}
             </p>
             <p className="text-xs text-muted-foreground">{report.collectedCount} venta(s)</p>
@@ -77,7 +77,7 @@ export default async function ReporteVentasPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Falta por cobrar</p>
-            <p className="text-2xl font-semibold text-amber-600">
+            <p className="text-2xl font-semibold text-warning">
               {formatCurrency(report.pendingAmount)}
             </p>
             <p className="text-xs text-muted-foreground">{report.pendingCount} venta(s)</p>

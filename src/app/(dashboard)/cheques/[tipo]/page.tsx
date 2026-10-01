@@ -7,6 +7,12 @@ import { requireModuleAccess } from "@/lib/auth";
 import { Check } from "@/models/Check";
 import { isTipoSlug, TIPO_LABELS, checkFilterFor, type TipoSlug } from "../shared";
 
+// Rediseño (vuelta a neutro, igual que Dashboard/Sidebar/Reportes): antes
+// Recibidos/Emitidos/Endosados tenían primary/destructive/warning solo para
+// diferenciarse a simple vista — pero ninguno de los tres es un estado real
+// (un cheque emitido no es un error, uno endosado no es una alerta), así que
+// usar esos tokens ahí era el mismo anti-patrón que se corrigió en
+// Reportes. Ahora las 3 tarjetas comparten el mismo acento (primary).
 export default async function ChequesTipoPage({ params }: { params: { tipo: string } }) {
   await requireModuleAccess("cheques");
 
@@ -43,8 +49,8 @@ export default async function ChequesTipoPage({ params }: { params: { tipo: stri
           <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex flex-col gap-3 pt-6">
               <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-md shadow-primary/25">
-                  <Inbox className="h-5 w-5 text-primary-foreground" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+                  <Inbox className="h-5 w-5 text-primary" />
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
               </div>
@@ -58,13 +64,13 @@ export default async function ChequesTipoPage({ params }: { params: { tipo: stri
         </Link>
 
         <Link href={`/cheques/${tipo}/emitidos`} className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive/40 hover:shadow-lg hover:shadow-destructive/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex flex-col gap-3 pt-6">
               <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-destructive/70 shadow-md shadow-destructive/25">
-                  <Send className="h-5 w-5 text-destructive-foreground" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+                  <Send className="h-5 w-5 text-primary" />
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-destructive" />
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
               </div>
               <div>
                 <p className="font-semibold">Emitidos</p>
@@ -76,13 +82,13 @@ export default async function ChequesTipoPage({ params }: { params: { tipo: stri
         </Link>
 
         <Link href={`/cheques/${tipo}/endosados`} className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-warning/40 hover:shadow-lg hover:shadow-warning/5">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex flex-col gap-3 pt-6">
               <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-warning to-warning/70 shadow-md shadow-warning/25">
-                  <Stamp className="h-5 w-5 text-warning-foreground" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+                  <Stamp className="h-5 w-5 text-primary" />
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-warning" />
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
               </div>
               <div>
                 <p className="font-semibold">Endosados</p>

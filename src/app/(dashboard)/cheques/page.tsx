@@ -11,6 +11,12 @@ import { Check } from "@/models/Check";
 // filtrada. Antes esto era una sola página con una tabla gigante mezclando
 // todo — a pedido de Ariel, ahora es la misma navegación en cascada que
 // tiene la app de Galicia para e-cheqs.
+//
+// Rediseño (vuelta a neutro, igual que Dashboard/Sidebar/Reportes): Físicos
+// tenía un chip rosa y Electrónicos un gradiente propio, solo para
+// diferenciarse — ninguno de los dos es un estado real, así que ahora
+// comparten el mismo acento (primary) en chip plano, distinguiéndose por
+// ícono y texto.
 export default async function ChequesPage() {
   await requireModuleAccess("cheques");
   await connectDB();
@@ -31,10 +37,10 @@ export default async function ChequesPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link href="/cheques/fisicos" className="group">
-          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/10">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-md shadow-rose-500/25">
-                <Landmark className="h-6 w-6 text-white" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Landmark className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Físicos</p>
@@ -43,7 +49,7 @@ export default async function ChequesPage() {
                   {fisicosCount === 1 ? "" : "s"}.
                 </p>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-rose-600" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
             </CardContent>
           </Card>
         </Link>
@@ -51,8 +57,8 @@ export default async function ChequesPage() {
         <Link href="/cheques/electronicos" className="group">
           <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
             <CardContent className="flex items-start gap-4 pt-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-md shadow-primary/25">
-                <FileDigit className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <FileDigit className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="font-semibold">Electrónicos (e-cheq)</p>

@@ -92,7 +92,7 @@ export default async function ReporteChequesPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Activos (todavía sin cobrar/depositar)</p>
-            <p className="text-2xl font-semibold text-amber-600">
+            <p className="text-2xl font-semibold text-warning">
               {formatCurrency(report.byStatus.find((s) => s.status === "ACTIVO")?.amount ?? 0)}
             </p>
             <p className="text-xs text-muted-foreground">

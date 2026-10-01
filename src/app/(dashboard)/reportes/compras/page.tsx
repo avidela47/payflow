@@ -75,7 +75,7 @@ export default async function ReporteComprasPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Pagadas</p>
-            <p className="text-2xl font-semibold text-emerald-600">
+            <p className="text-2xl font-semibold text-success">
               {formatCurrency(report.paidAmount)}
             </p>
             <p className="text-xs text-muted-foreground">{report.paidCount} compra(s)</p>
@@ -84,7 +84,7 @@ export default async function ReporteComprasPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Falta por pagar</p>
-            <p className="text-2xl font-semibold text-amber-600">
+            <p className="text-2xl font-semibold text-warning">
               {formatCurrency(report.pendingAmount)}
             </p>
             <p className="text-xs text-muted-foreground">{report.pendingCount} compra(s)</p>
