@@ -6,19 +6,61 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatPeriod } from "@/lib/utils";
 import { PayrollForm } from "./payroll-form";
 import { PayrollEntriesTable, type PayrollGroupItem } from "./payroll-entries-table";
+import { PayrollPeriodFilter } from "./payroll-period-filter";
 
-export default async function SueldosPage() {
+function dateToPeriodParam(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Último recurso si todavía no hay NINGÚN pago cargado — ahí no hay de
+// dónde sacar "el período más reciente", así que mostramos el mes
+// anterior al actual (lo más probable que se vaya a cargar primero).
+function previousMonthParam() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return dateToPeriodParam(prev);
+}
+
+export default async function SueldosPage({
+  searchParams,
+}: {
+  searchParams: { period?: string };
+}) {
   await requireModuleAccess("sueldos");
   await connectDB();
 
-  const [employees, entries] = await Promise.all([
-    Employee.find({ active: true }).sort({ apellido: 1, nombre: 1 }).lean(),
-    PayrollEntry.find({})
+  const periodParam = searchParams?.period;
+  const showAll = periodParam === "all";
+  const validParam = periodParam && /^\d{4}-\d{2}$/.test(periodParam) ? periodParam : null;
+
+  let selectedPeriod: string | null;
+  if (showAll) {
+    selectedPeriod = null;
+  } else if (validParam) {
+    selectedPeriod = validParam;
+  } else {
+    // Sin filtro explícito en la URL: mostramos por default el período
+    // del pago más reciente cargado — NO "el mes actual", porque la
+    // imputación siempre va un mes atrás del mes de pago, así que "mes
+    // actual" casi nunca tiene nada cargado y parece que no se guardó.
+    const latest = await PayrollEntry.findOne({}).sort({ period: -1 }).lean();
+    selectedPeriod = latest ? dateToPeriodParam(latest.period) : previousMonthParam();
+  }
+
+  const employees = await Employee.find({ active: true }).sort({ apellido: 1, nombre: 1 }).lean();
+
+  let entries;
+  if (selectedPeriod) {
+    const [year, month] = selectedPeriod.split("-").map(Number);
+    const period = new Date(year, month - 1, 1);
+    entries = await PayrollEntry.find({ period }).populate("employee").sort({ period: -1 }).lean();
+  } else {
+    entries = await PayrollEntry.find({})
       .populate("employee")
       .sort({ period: -1 })
       .limit(100)
-      .lean(),
-  ]);
+      .lean();
+  }
 
   // Agrupamos las liquidaciones registrado/informal de un mismo
   // empleado+período en una sola fila (con el total combinado). El
@@ -82,11 +124,14 @@ export default async function SueldosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Sueldos</h1>
-        <p className="text-sm text-muted-foreground">
-          Empleados asalariados, monotributistas y por hora.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Sueldos</h1>
+          <p className="text-sm text-muted-foreground">
+            Empleados asalariados, monotributistas y por hora.
+          </p>
+        </div>
+        <PayrollPeriodFilter selectedPeriod={selectedPeriod} />
       </div>
 
       <Card>
