@@ -116,6 +116,7 @@ export async function setPayrollGroupPaid(employeeId: string, periodISO: string,
 }
 
 const groupSchema = z.object({
+  period: z.string().min(1), // "YYYY-MM" — permite corregir a mano el período de imputación
   registradoAmount: z.coerce.number().nonnegative().optional(),
   informalAmount: z.coerce.number().nonnegative().optional(),
   paidBy: z.string().optional(),
@@ -133,6 +134,7 @@ export async function updatePayrollGroup(
   }
 
   const parsed = groupSchema.safeParse({
+    period: formData.get("period"),
     registradoAmount: formData.get("registradoAmount") || undefined,
     informalAmount: formData.get("informalAmount") || undefined,
     paidBy: formData.get("paidBy") || undefined,
@@ -145,45 +147,70 @@ export async function updatePayrollGroup(
 
   const registrado = parsed.data.registradoAmount ?? 0;
   const informal = parsed.data.informalAmount ?? 0;
-  const period = new Date(periodISO);
+  const oldPeriod = new Date(periodISO);
+
+  const [newYear, newMonth] = parsed.data.period.split("-").map(Number);
+  const newPeriod = new Date(newYear, newMonth - 1, 1);
+  const periodChanged = newPeriod.getTime() !== oldPeriod.getTime();
 
   try {
     await connectDB();
 
+    // Si se corrige el período a mano, primero rescatamos el estado
+    // "pagado" de cada modalidad en el período viejo (si no, al mudar la
+    // liquidación se perdería ese dato) y liberamos esa clave vieja —
+    // necesario porque empleado+período+modalidad es único.
+    const prevPaid: Record<string, { paid: boolean; paidAt?: Date }> = {};
+    if (periodChanged) {
+      const existing = await PayrollEntry.find({
+        employee: employeeId,
+        period: oldPeriod,
+      }).lean();
+      for (const doc of existing) {
+        prevPaid[doc.modality] = { paid: doc.paid, paidAt: doc.paidAt };
+      }
+      await PayrollEntry.deleteMany({ employee: employeeId, period: oldPeriod });
+    }
+
+    const targetPeriod = periodChanged ? newPeriod : oldPeriod;
+
     if (registrado > 0) {
       await PayrollEntry.findOneAndUpdate(
-        { employee: employeeId, period, modality: "REGISTRADO" },
+        { employee: employeeId, period: targetPeriod, modality: "REGISTRADO" },
         {
           employee: employeeId,
-          period,
+          period: targetPeriod,
           modality: "REGISTRADO",
           amount: registrado,
           paidBy: parsed.data.paidBy,
           notes: parsed.data.notes,
+          ...(prevPaid.REGISTRADO ?? {}),
         },
         { upsert: true, new: true }
       );
-    } else {
+    } else if (!periodChanged) {
       // Dejar el monto en 0 borra esa parte (así se puede sacar el
-      // "informal" de un pago sin tener que borrar todo).
-      await PayrollEntry.deleteOne({ employee: employeeId, period, modality: "REGISTRADO" });
+      // "informal" de un pago sin tener que borrar todo). Si el período
+      // cambió, el deleteMany de arriba ya se encargó.
+      await PayrollEntry.deleteOne({ employee: employeeId, period: oldPeriod, modality: "REGISTRADO" });
     }
 
     if (informal > 0) {
       await PayrollEntry.findOneAndUpdate(
-        { employee: employeeId, period, modality: "INFORMAL" },
+        { employee: employeeId, period: targetPeriod, modality: "INFORMAL" },
         {
           employee: employeeId,
-          period,
+          period: targetPeriod,
           modality: "INFORMAL",
           amount: informal,
           paidBy: parsed.data.paidBy,
           notes: parsed.data.notes,
+          ...(prevPaid.INFORMAL ?? {}),
         },
         { upsert: true, new: true }
       );
-    } else {
-      await PayrollEntry.deleteOne({ employee: employeeId, period, modality: "INFORMAL" });
+    } else if (!periodChanged) {
+      await PayrollEntry.deleteOne({ employee: employeeId, period: oldPeriod, modality: "INFORMAL" });
     }
   } catch (err) {
     console.error("updatePayrollGroup error:", err);

@@ -39,6 +39,17 @@ function groupKey(g: { employeeId: string; periodISO: string }) {
   return `${g.employeeId}-${g.periodISO}`;
 }
 
+// periodISO se generó server-side con entry.period.toISOString(), sobre
+// una fecha construida en la zona horaria del servidor (UTC). Para
+// recuperar el mes correcto acá en el navegador (que puede estar en
+// otra zona horaria, ej. Argentina) hay que leerlo con los getters UTC
+// — si se usa el local, un período guardado como "2026-09-01T00:00:00Z"
+// se ve como agosto en un navegador UTC-3.
+function isoToMonthInput(periodISO: string) {
+  const d = new Date(periodISO);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) {
   const router = useRouter();
   const [breakdownTarget, setBreakdownTarget] = useState<PayrollGroupItem | null>(null);
@@ -210,6 +221,16 @@ export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) 
       >
         {editing && (
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="period">Período</Label>
+              <Input
+                id="period"
+                name="period"
+                type="month"
+                required
+                defaultValue={isoToMonthInput(editing.periodISO)}
+              />
+            </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="registradoAmount">Registrado</Label>
               <Input
