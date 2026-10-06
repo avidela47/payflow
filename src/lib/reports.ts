@@ -202,6 +202,12 @@ export async function getFixedCostReport(
   const detail: FixedCostDetailRow[] = [];
 
   for (const entry of entries) {
+    // Un costo en USD "sin conversión" es un gasto aparte, en dólares
+    // puros, que a propósito no tiene equivalente en pesos (amount=0) —
+    // se deja afuera de este reporte (que es en pesos) en vez de meter
+    // una fila en $0 que se vería como un error.
+    if (entry.noConversion) continue;
+
     const categoryDoc =
       entry.category && typeof entry.category === "object" && "name" in entry.category
         ? (entry.category as unknown as { _id: { toString(): string }; name: string })

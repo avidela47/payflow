@@ -40,6 +40,7 @@ export type FixedCostEntryItem = {
   currency: "ARS" | "USD";
   usdAmount?: number;
   exchangeRate?: number;
+  noConversion?: boolean;
   paymentMode?: string;
   dueDateISO?: string; // "YYYY-MM-DD"
   dueDateLabel?: string;
@@ -86,6 +87,7 @@ export function CostosFijosClient({
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [usdAmount, setUsdAmount] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
+  const [noConversion, setNoConversion] = useState(false);
 
   // Modal de nueva categoría
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -96,6 +98,7 @@ export function CostosFijosClient({
   const [editCurrency, setEditCurrency] = useState<"ARS" | "USD">("ARS");
   const [editUsdAmount, setEditUsdAmount] = useState("");
   const [editExchangeRate, setEditExchangeRate] = useState("");
+  const [editNoConversion, setEditNoConversion] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<FixedCostEntryItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -106,6 +109,7 @@ export function CostosFijosClient({
     setEditCurrency(entry.currency);
     setEditUsdAmount(entry.usdAmount != null ? String(entry.usdAmount) : "");
     setEditExchangeRate(entry.exchangeRate != null ? String(entry.exchangeRate) : "");
+    setEditNoConversion(entry.noConversion ?? false);
   }
 
   async function handleCreateSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -126,6 +130,7 @@ export function CostosFijosClient({
     setCurrency("ARS");
     setUsdAmount("");
     setExchangeRate("");
+    setNoConversion(false);
     router.refresh();
   }
 
@@ -274,18 +279,33 @@ export function CostosFijosClient({
                     onChange={(e) => setUsdAmount(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="exchangeRate">Cotización ($ por USD)</Label>
-                  <Input
-                    id="exchangeRate"
-                    name="exchangeRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={exchangeRate}
-                    onChange={(e) => setExchangeRate(e.target.value)}
+                {!noConversion && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="exchangeRate">Cotización ($ por USD)</Label>
+                    <Input
+                      id="exchangeRate"
+                      name="exchangeRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={exchangeRate}
+                      onChange={(e) => setExchangeRate(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
+                  <input
+                    id="noConversion"
+                    name="noConversion"
+                    type="checkbox"
+                    checked={noConversion}
+                    onChange={(e) => setNoConversion(e.target.checked)}
+                    className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   />
+                  <Label htmlFor="noConversion" className="cursor-pointer font-normal">
+                    Sin conversión (queda aparte, no suma al total en pesos)
+                  </Label>
                 </div>
               </>
             )}
@@ -318,9 +338,15 @@ export function CostosFijosClient({
             </div>
           </div>
 
-          {currency === "USD" && Number(usdAmount) > 0 && Number(exchangeRate) > 0 && (
+          {currency === "USD" && !noConversion && Number(usdAmount) > 0 && Number(exchangeRate) > 0 && (
             <p className="text-sm text-muted-foreground">
               Equivale a {formatCurrency(Number(usdAmount) * Number(exchangeRate))}
+            </p>
+          )}
+          {currency === "USD" && noConversion && (
+            <p className="text-sm text-muted-foreground">
+              Este costo queda registrado solo en dólares — no se suma al total en pesos de
+              Reportes ni del dashboard.
             </p>
           )}
 
@@ -357,11 +383,22 @@ export function CostosFijosClient({
               <TableCell className="font-medium">{entry.categoryName}</TableCell>
               <TableCell className="capitalize">{entry.periodLabel}</TableCell>
               <TableCell>
-                {formatCurrency(entry.amount)}
-                {entry.currency === "USD" && entry.usdAmount != null && entry.exchangeRate != null && (
-                  <div className="text-xs text-muted-foreground">
-                    U$D {formatUsd(entry.usdAmount)} × {formatUsd(entry.exchangeRate)}
-                  </div>
+                {entry.currency === "USD" && entry.noConversion ? (
+                  <>
+                    U$D {formatUsd(entry.usdAmount ?? 0)}
+                    <div className="text-xs text-muted-foreground">
+                      Sin conversión — no suma al total en pesos
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {formatCurrency(entry.amount)}
+                    {entry.currency === "USD" && entry.usdAmount != null && entry.exchangeRate != null && (
+                      <div className="text-xs text-muted-foreground">
+                        U$D {formatUsd(entry.usdAmount)} × {formatUsd(entry.exchangeRate)}
+                      </div>
+                    )}
+                  </>
                 )}
               </TableCell>
               <TableCell>{entry.paymentMode ?? "—"}</TableCell>
@@ -520,22 +557,43 @@ export function CostosFijosClient({
                     onChange={(e) => setEditUsdAmount(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="editExchangeRate">Cotización ($ por USD)</Label>
-                  <Input
-                    id="editExchangeRate"
-                    name="exchangeRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={editExchangeRate}
-                    onChange={(e) => setEditExchangeRate(e.target.value)}
+                {!editNoConversion && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editExchangeRate">Cotización ($ por USD)</Label>
+                    <Input
+                      id="editExchangeRate"
+                      name="exchangeRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={editExchangeRate}
+                      onChange={(e) => setEditExchangeRate(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    id="editNoConversion"
+                    name="noConversion"
+                    type="checkbox"
+                    checked={editNoConversion}
+                    onChange={(e) => setEditNoConversion(e.target.checked)}
+                    className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   />
+                  <Label htmlFor="editNoConversion" className="cursor-pointer font-normal">
+                    Sin conversión (queda aparte, no suma al total en pesos)
+                  </Label>
                 </div>
-                {Number(editUsdAmount) > 0 && Number(editExchangeRate) > 0 && (
+                {!editNoConversion && Number(editUsdAmount) > 0 && Number(editExchangeRate) > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Equivale a {formatCurrency(Number(editUsdAmount) * Number(editExchangeRate))}
+                  </p>
+                )}
+                {editNoConversion && (
+                  <p className="text-sm text-muted-foreground">
+                    Este costo queda registrado solo en dólares — no se suma al total en pesos de
+                    Reportes ni del dashboard.
                   </p>
                 )}
               </>

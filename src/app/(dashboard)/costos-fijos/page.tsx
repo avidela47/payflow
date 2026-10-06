@@ -40,6 +40,7 @@ export default async function CostosFijosPage() {
       currency: entry.currency ?? "ARS",
       usdAmount: entry.usdAmount,
       exchangeRate: entry.exchangeRate,
+      noConversion: entry.noConversion ?? false,
       paymentMode: entry.paymentMode,
       dueDateISO: entry.dueDate ? entry.dueDate.toISOString().slice(0, 10) : undefined,
       dueDateLabel: entry.dueDate ? formatDueDate(entry.dueDate) : undefined,

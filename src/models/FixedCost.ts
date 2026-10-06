@@ -28,6 +28,11 @@ export interface IFixedCostEntry {
   currency: "ARS" | "USD";
   usdAmount?: number;
   exchangeRate?: number;
+  // true solo cuando currency="USD" y se cargó "sin conversión": `amount`
+  // queda en 0 (no se calcula equivalente en pesos) y no hay `exchangeRate`.
+  // Es un gasto aparte, en dólares puros — no suma al total en pesos de
+  // Reportes/Dashboard (ver getFixedCostReport en reports.ts).
+  noConversion?: boolean;
   paymentMode?: string; // "VEP" | "Tarjeta" | "Débito automático" | ...
   dueDate?: Date;
   paid: boolean;
@@ -42,6 +47,7 @@ const FixedCostEntrySchema = new Schema<IFixedCostEntry>({
   currency: { type: String, enum: ["ARS", "USD"], default: "ARS" },
   usdAmount: Number,
   exchangeRate: Number,
+  noConversion: { type: Boolean, default: false },
   paymentMode: String,
   dueDate: Date,
   paid: { type: Boolean, default: false },
@@ -49,7 +55,12 @@ const FixedCostEntrySchema = new Schema<IFixedCostEntry>({
   createdAt: { type: Date, default: Date.now },
 });
 
-FixedCostEntrySchema.index({ category: 1, period: 1 }, { unique: true });
+// Antes era category+período únicamente (un solo costo por categoría y
+// mes). Se amplía con la moneda para poder cargar, por ejemplo, el
+// alquiler en dos partes el mismo mes: una en pesos y otra en dólares
+// (con o sin conversión) — cada combinación moneda+categoría+período
+// sigue siendo única, así que no se puede cargar el mismo par dos veces.
+FixedCostEntrySchema.index({ category: 1, period: 1, currency: 1 }, { unique: true });
 
 export const FixedCostEntry =
   (models.FixedCostEntry as Model<IFixedCostEntry>) ||

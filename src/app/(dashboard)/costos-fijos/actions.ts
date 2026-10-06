@@ -127,8 +127,11 @@ const entrySchema = z.object({
   categoryId: z.string().min(1, "Elegí una categoría."),
   period: z.string().min(1, "Falta el período."), // "YYYY-MM"
   currency: z.enum(["ARS", "USD"]).default("ARS"),
-  // Uno u otro según `currency` — se valida a mano abajo, no acá, porque
-  // cuál es obligatorio depende del valor de currency.
+  // Solo aplica con currency="USD": no pide cotización, no calcula
+  // equivalente en pesos — queda como gasto aparte, en dólares puros.
+  noConversion: z.boolean().optional().default(false),
+  // Uno u otro según `currency` (y `noConversion`) — se valida a mano
+  // abajo, no acá, porque cuál es obligatorio depende de esos valores.
   amount: z.coerce.number().positive().optional(),
   usdAmount: z.coerce.number().positive().optional(),
   exchangeRate: z.coerce.number().positive().optional(),
@@ -142,6 +145,7 @@ function parseEntryForm(formData: FormData) {
     categoryId: formData.get("categoryId"),
     period: formData.get("period"),
     currency: formData.get("currency") || "ARS",
+    noConversion: formData.get("noConversion") === "on",
     amount: formData.get("amount") || undefined,
     usdAmount: formData.get("usdAmount") || undefined,
     exchangeRate: formData.get("exchangeRate") || undefined,
@@ -151,15 +155,39 @@ function parseEntryForm(formData: FormData) {
   });
 }
 
-// Calcula el monto en pesos a guardar según la moneda elegida. Si es USD,
-// exige monto en USD + cotización y calcula el equivalente; si es ARS, exige
-// el monto directo. Devuelve un error legible si falta algo.
+// Calcula el monto en pesos a guardar según la moneda elegida. Si es USD
+// "sin conversión", no calcula nada — queda en 0 y el monto real vive
+// solo en `usdAmount` (gasto aparte, no entra a los totales en pesos). Si
+// es USD normal, exige monto en USD + cotización y calcula el
+// equivalente; si es ARS, exige el monto directo. Devuelve un error
+// legible si falta algo.
 function resolveAmount(data: z.infer<typeof entrySchema>):
-  | { ok: true; amount: number; currency: "ARS" | "USD"; usdAmount?: number; exchangeRate?: number }
+  | {
+      ok: true;
+      amount: number;
+      currency: "ARS" | "USD";
+      usdAmount?: number;
+      exchangeRate?: number;
+      noConversion: boolean;
+    }
   | { ok: false; error: string } {
   if (data.currency === "USD") {
-    if (!data.usdAmount || !data.exchangeRate) {
-      return { ok: false, error: "Falta el monto en USD o la cotización." };
+    if (!data.usdAmount) {
+      return { ok: false, error: "Falta el monto en USD." };
+    }
+
+    if (data.noConversion) {
+      return {
+        ok: true,
+        amount: 0,
+        currency: "USD",
+        usdAmount: data.usdAmount,
+        noConversion: true,
+      };
+    }
+
+    if (!data.exchangeRate) {
+      return { ok: false, error: "Falta la cotización (o tildá \"Sin conversión\")." };
     }
     return {
       ok: true,
@@ -167,13 +195,14 @@ function resolveAmount(data: z.infer<typeof entrySchema>):
       currency: "USD",
       usdAmount: data.usdAmount,
       exchangeRate: data.exchangeRate,
+      noConversion: false,
     };
   }
 
   if (!data.amount) {
     return { ok: false, error: "El monto tiene que ser mayor a cero." };
   }
-  return { ok: true, amount: data.amount, currency: "ARS" };
+  return { ok: true, amount: data.amount, currency: "ARS", noConversion: false };
 }
 
 export async function createFixedCostEntry(formData: FormData) {
@@ -197,20 +226,36 @@ export async function createFixedCostEntry(formData: FormData) {
 
   try {
     await connectDB();
-    // Un solo costo por categoría+período — si ya existe, lo actualiza en
-    // vez de tirar error de clave duplicada (misma idea que en Sueldos).
+    // Un solo costo por categoría+período+moneda — si ya existe ESE par
+    // exacto, lo actualiza en vez de tirar error de clave duplicada
+    // (misma idea que en Sueldos). Por moneda, no solo por categoría+
+    // período, para que una misma categoría pueda tener a la vez un
+    // costo en pesos y otro en dólares el mismo mes (ej. alquiler).
+    //
+    // $set/$unset explícito (no un objeto plano) para poder borrar
+    // exchangeRate si ya existía un costo en USD convertido y ahora se
+    // vuelve a cargar "sin conversión" — con un objeto plano, Mongoose
+    // deja los campos no incluidos tal cual estaban, no los borra.
     await FixedCostEntry.findOneAndUpdate(
-      { category: parsed.data.categoryId, period },
+      { category: parsed.data.categoryId, period, currency: resolved.currency },
       {
-        category: parsed.data.categoryId,
-        period,
-        amount: resolved.amount,
-        currency: resolved.currency,
-        usdAmount: resolved.usdAmount,
-        exchangeRate: resolved.exchangeRate,
-        paymentMode: parsed.data.paymentMode,
-        dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
-        notes: parsed.data.notes,
+        $set: {
+          category: parsed.data.categoryId,
+          period,
+          amount: resolved.amount,
+          currency: resolved.currency,
+          noConversion: resolved.noConversion,
+          paymentMode: parsed.data.paymentMode,
+          dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
+          notes: parsed.data.notes,
+          ...(resolved.currency === "USD" ? { usdAmount: resolved.usdAmount } : {}),
+          ...(resolved.currency === "USD" && !resolved.noConversion
+            ? { exchangeRate: resolved.exchangeRate }
+            : {}),
+        },
+        ...(resolved.currency === "USD" && resolved.noConversion
+          ? { $unset: { exchangeRate: "" } }
+          : {}),
       },
       { upsert: true, new: true }
     );
@@ -245,23 +290,34 @@ export async function updateFixedCostEntry(entryId: string, formData: FormData) 
 
   try {
     await connectDB();
-    // $set explícito acá (a diferencia del create de arriba) porque, al
-    // pasar de USD a ARS, necesitamos poder BORRAR usdAmount/exchangeRate
-    // viejos — con $unset, no dejándolos pegados con el valor anterior.
+    // $set explícito acá porque, al pasar de USD a ARS (o de USD
+    // convertido a USD "sin conversión"), necesitamos poder BORRAR
+    // usdAmount/exchangeRate viejos — con un objeto plano quedarían
+    // pegados con el valor anterior en vez de borrarse.
+    const unsetFields: Record<string, ""> = {};
+    if (resolved.currency === "ARS") {
+      unsetFields.usdAmount = "";
+      unsetFields.exchangeRate = "";
+    } else if (resolved.noConversion) {
+      unsetFields.exchangeRate = "";
+    }
+
     await FixedCostEntry.findByIdAndUpdate(entryId, {
       $set: {
         category: parsed.data.categoryId,
         period,
         amount: resolved.amount,
         currency: resolved.currency,
+        noConversion: resolved.noConversion,
         paymentMode: parsed.data.paymentMode,
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         notes: parsed.data.notes,
-        ...(resolved.currency === "USD"
-          ? { usdAmount: resolved.usdAmount, exchangeRate: resolved.exchangeRate }
+        ...(resolved.currency === "USD" ? { usdAmount: resolved.usdAmount } : {}),
+        ...(resolved.currency === "USD" && !resolved.noConversion
+          ? { exchangeRate: resolved.exchangeRate }
           : {}),
       },
-      ...(resolved.currency === "ARS" ? { $unset: { usdAmount: "", exchangeRate: "" } } : {}),
+      ...(Object.keys(unsetFields).length > 0 ? { $unset: unsetFields } : {}),
     });
   } catch (err) {
     console.error("updateFixedCostEntry error:", err);
