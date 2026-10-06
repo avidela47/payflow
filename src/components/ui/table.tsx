@@ -17,7 +17,7 @@ const Table = ({
   ...props
 }: React.HTMLAttributes<HTMLTableElement> & { compact?: boolean }) => (
   <TableDensityContext.Provider value={compact}>
-    <div className="w-full overflow-auto rounded-lg border border-border">
+    <div className="w-full overflow-auto rounded-lg border border-border shadow-sm">
       <table className={cn("w-full", compact ? "text-xs" : "text-sm", className)} {...props} />
     </div>
   </TableDensityContext.Provider>

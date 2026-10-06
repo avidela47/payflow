@@ -16,10 +16,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { IVA_CONDITIONS, type IvaCondition } from "@/lib/iva-conditions";
 import { ARGENTINA_PROVINCES } from "@/lib/argentina-provinces";
 import { createClient, updateClient, deleteClient } from "./actions";
+
+// ---------- helpers visuales (avatar con iniciales, color por cliente, badge por condición IVA) ----------
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+// Mismo cliente = mismo color siempre (hash simple del nombre sobre una
+// paleta chica de colores de marca ya definidos en tailwind.config.ts) —
+// nada de random en cada render.
+const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
+
+function avatarColorClass(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
+function ivaBadgeVariant(cond?: IvaCondition): "default" | "success" | "warning" | "primary" {
+  switch (cond) {
+    case "Responsable Inscripto":
+      return "success";
+    case "Monotributo":
+      return "warning";
+    case "Exento":
+      return "primary";
+    default:
+      return "default";
+  }
+}
 
 export type ClientItem = {
   id: string;
@@ -111,11 +149,10 @@ function ClientForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="condicionIva">Condición IVA</Label>
-          <select
+          <Select
             id="condicionIva"
             name="condicionIva"
             defaultValue={defaultValues?.condicionIva ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Sin especificar</option>
             {IVA_CONDITIONS.map((cond) => (
@@ -123,7 +160,7 @@ function ClientForm({
                 {cond}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -170,11 +207,10 @@ function ClientForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="provincia">Provincia</Label>
-          <select
+          <Select
             id="provincia"
             name="provincia"
             defaultValue={defaultValues?.provincia ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Seleccionar...</option>
             {ARGENTINA_PROVINCES.map((prov) => (
@@ -182,7 +218,7 @@ function ClientForm({
                 {prov}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -303,17 +339,34 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
           {filtered.map((client) => (
             <TableRow key={client.id}>
               <TableCell className="text-muted-foreground">{client.codigo}</TableCell>
-              <TableCell className="font-medium">
-                {client.nombre}
-                {client.razonSocial && (
-                  <div className="text-xs text-muted-foreground">{client.razonSocial}</div>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white ${avatarColorClass(
+                      client.id
+                    )}`}
+                  >
+                    {getInitials(client.nombre)}
+                  </div>
+                  <div>
+                    <div className="font-medium">{client.nombre}</div>
+                    {client.razonSocial && (
+                      <div className="text-xs text-muted-foreground">{client.razonSocial}</div>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-muted-foreground">{client.cuit ?? "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{client.localidad ?? "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{client.telefono ?? "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{client.email ?? "—"}</TableCell>
+              <TableCell>
+                {client.condicionIva ? (
+                  <Badge variant={ivaBadgeVariant(client.condicionIva)}>{client.condicionIva}</Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell>{client.cuit ?? "—"}</TableCell>
-              <TableCell>{client.localidad ?? "—"}</TableCell>
-              <TableCell>{client.telefono ?? "—"}</TableCell>
-              <TableCell>{client.email ?? "—"}</TableCell>
-              <TableCell>{client.condicionIva ?? "—"}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Button
