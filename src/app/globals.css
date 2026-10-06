@@ -5,3 +5,12 @@
 body {
   @apply bg-page text-foreground;
 }
+
+/* Sora solo en títulos (h1/h2/h3) y en los números grandes de las tarjetas
+   del dashboard (.font-heading) — el resto del texto usa la fuente de
+   sistema para que tablas y formularios se sigan viendo compactos. */
+h1,
+h2,
+h3 {
+  @apply font-heading;
+}

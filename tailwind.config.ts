@@ -11,18 +11,26 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // "var(--font-sora)" la define next/font/google en layout.tsx (así
-      // queda autohosteada en el build, sin pedirla a Google en cada visita).
-      // Si por lo que sea no cargó, cae al stack de sistema de siempre.
+      // Sora queda reservada a títulos (ver globals.css, regla h1/h2/h3) —
+      // a los mismos px se lee más grande/pesada que la fuente de sistema,
+      // así que para texto normal (tablas, inputs, botones) seguimos con
+      // el stack de siempre, que es más compacto y legible en denso.
       fontFamily: {
         sans: [
-          "var(--font-sora)",
           "Segoe UI",
           "-apple-system",
           "system-ui",
           "Roboto",
           "Helvetica Neue",
           "Arial",
+          "sans-serif",
+        ],
+        // "var(--font-sora)" la define next/font/google en layout.tsx.
+        heading: [
+          "var(--font-sora)",
+          "Segoe UI",
+          "-apple-system",
+          "system-ui",
           "sans-serif",
         ],
       },
