@@ -3,5 +3,5 @@
 @tailwind utilities;
 
 body {
-  @apply bg-muted text-foreground;
+  @apply bg-page text-foreground;
 }

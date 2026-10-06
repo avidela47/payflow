@@ -1,6 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Sora } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+
+// `variable` expone la fuente como --font-sora (referenciada en
+// tailwind.config.ts); Next la descarga una vez en build time y la sirve
+// desde el propio dominio, no desde fonts.googleapis.com en cada visita.
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sora",
+});
 
 export const metadata: Metadata = {
   title: "PayFlow — ITELSA",
@@ -22,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className={sora.variable}>
       <body className="font-sans">
         {children}
         <Toaster richColors position="top-right" />
