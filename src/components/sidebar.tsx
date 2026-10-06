@@ -186,14 +186,14 @@ export function Sidebar({
                   className={cn(
                     "flex items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
                     active
-                      ? "bg-muted font-semibold text-foreground"
+                      ? "bg-primary/10 font-semibold text-primary"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      item.special ?? "bg-primary/10 text-primary"
+                      item.special ?? (active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")
                     )}
                   >
                     <Icon className="h-4 w-4" />
