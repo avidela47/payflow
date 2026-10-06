@@ -22,6 +22,25 @@ export type EmployeeListItem = EmployeeFormValues & {
   active: boolean;
 };
 
+// Mismos helpers que clientes-client.tsx: iniciales + color determinístico
+// por id, para que cada fila tenga el mismo avatar siempre (sin azar).
+function getInitials(nombre?: string, apellido?: string): string {
+  const first = (nombre ?? "").trim();
+  const last = (apellido ?? "").trim();
+  if (first && last) return (first[0] + last[0]).toUpperCase();
+  if (first) return first.slice(0, 2).toUpperCase();
+  return "?";
+}
+const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
+function avatarColorClass(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
 export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -56,7 +75,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
         <Button onClick={() => setCreateOpen(true)}>Nuevo empleado</Button>
       </div>
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
@@ -65,7 +84,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
             <TableHead>Forma de pago</TableHead>
             <TableHead>Contacto</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -78,10 +97,19 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
           )}
           {employees.map((emp) => (
             <TableRow key={emp.id}>
-              <TableCell className="font-medium">
-                {emp.nombre} {emp.apellido}
+              <TableCell>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(emp.id)}`}
+                  >
+                    {getInitials(emp.nombre, emp.apellido)}
+                  </div>
+                  <div className="min-w-0 truncate font-medium">
+                    {emp.nombre} {emp.apellido}
+                  </div>
+                </div>
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="truncate text-muted-foreground">
                 {emp.dni ?? emp.cuit ?? "—"}
               </TableCell>
               <TableCell>
@@ -91,14 +119,14 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
                     : "Empleado"}
                 </Badge>
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="truncate text-muted-foreground">
                 {emp.category === "EMPLEADO"
                   ? emp.paymentType === "POR_HORA"
                     ? "Por hora"
                     : "Sueldo fijo"
                   : "—"}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="truncate text-muted-foreground">
                 {emp.telefono || emp.email || "—"}
               </TableCell>
               <TableCell>
@@ -107,7 +135,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
