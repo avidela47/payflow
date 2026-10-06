@@ -33,6 +33,7 @@ export type ClientItem = {
   localidad?: string;
   provincia?: string;
   contacto?: string;
+  formaPago?: string;
   condicionIva?: IvaCondition;
   notas?: string;
 };
@@ -185,14 +186,25 @@ function ClientForm({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="contacto">Contacto</Label>
-        <Input
-          id="contacto"
-          name="contacto"
-          placeholder="Persona de contacto"
-          defaultValue={defaultValues?.contacto}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="contacto">Contacto</Label>
+          <Input
+            id="contacto"
+            name="contacto"
+            placeholder="Persona de contacto"
+            defaultValue={defaultValues?.contacto}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="formaPago">Forma de pago</Label>
+          <Input
+            id="formaPago"
+            name="formaPago"
+            placeholder="Ej: Transferencia, cheque a 30 días"
+            defaultValue={defaultValues?.formaPago}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

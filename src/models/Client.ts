@@ -16,6 +16,7 @@ export interface IClient {
   localidad?: string;
   provincia?: string;
   contacto?: string;
+  formaPago?: string;
   condicionIva?: IvaCondition;
   notas?: string;
   createdAt: Date;
@@ -44,6 +45,10 @@ const ClientSchema = new Schema<IClient>(
     localidad: String,
     provincia: String,
     contacto: String,
+    // Texto libre, no un select fijo: la contadora/Ariel lo completa a
+    // mano con lo que corresponda a ese cliente (transferencia, cheque a
+    // 30 días, efectivo, etc.) sin estar atado a una lista cerrada.
+    formaPago: String,
     condicionIva: { type: String, enum: IVA_CONDITIONS },
     notas: String,
   },

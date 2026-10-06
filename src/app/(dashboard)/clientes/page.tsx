@@ -19,6 +19,7 @@ export default async function ClientesPage() {
     localidad: client.localidad,
     provincia: client.provincia,
     contacto: client.contacto,
+    formaPago: client.formaPago,
     condicionIva: client.condicionIva,
     notas: client.notas,
   }));

@@ -40,6 +40,7 @@ const clientSchema = z.object({
   localidad: z.string().optional(),
   provincia: z.string().optional(),
   contacto: z.string().optional(),
+  formaPago: z.string().optional(),
   condicionIva: z.enum(IVA_CONDITIONS).optional().or(z.literal("")),
   notas: z.string().optional(),
 });
@@ -55,6 +56,7 @@ function parseClientForm(formData: FormData) {
     localidad: formData.get("localidad") || undefined,
     provincia: formData.get("provincia") || undefined,
     contacto: formData.get("contacto") || undefined,
+    formaPago: formData.get("formaPago") || undefined,
     condicionIva: formData.get("condicionIva") || undefined,
     notas: formData.get("notas") || undefined,
   });
