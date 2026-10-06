@@ -313,11 +313,10 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
         </Button>
       </div>
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Nombre / Razón social</TableHead>
+            <TableHead>Cliente</TableHead>
             <TableHead>CUIT</TableHead>
             <TableHead>Localidad</TableHead>
             <TableHead>Teléfono</TableHead>
@@ -329,7 +328,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 {clients.length === 0
                   ? "Todavía no hay clientes cargados."
                   : "No se encontró ningún cliente con esa búsqueda."}
@@ -338,21 +337,21 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
           )}
           {filtered.map((client) => (
             <TableRow key={client.id}>
-              <TableCell className="text-muted-foreground">{client.codigo}</TableCell>
               <TableCell>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white ${avatarColorClass(
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(
                       client.id
                     )}`}
                   >
                     {getInitials(client.nombre)}
                   </div>
-                  <div>
-                    <div className="font-medium">{client.nombre}</div>
-                    {client.razonSocial && (
-                      <div className="text-xs text-muted-foreground">{client.razonSocial}</div>
-                    )}
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{client.nombre}</div>
+                    <div className="truncate text-muted-foreground">
+                      {client.codigo}
+                      {client.razonSocial ? ` · ${client.razonSocial}` : ""}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -368,7 +367,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex gap-1">
+                <div className="flex justify-end gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
