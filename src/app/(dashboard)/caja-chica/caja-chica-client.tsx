@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { createPettyCashMovement, deletePettyCashMovement } from "./actions";
@@ -92,23 +93,22 @@ export function CajaChicaClient({
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <span className="text-sm font-medium">Cargar movimiento</span>
 
         <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="type">Tipo</Label>
-              <select
+              <Select
                 id="type"
                 name="type"
                 value={type}
                 onChange={(e) => setType(e.target.value as "ingreso" | "egreso")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="egreso">Egreso (gasto)</option>
                 <option value="ingreso">Ingreso</option>
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -142,7 +142,7 @@ export function CajaChicaClient({
             <TableHead>Concepto</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Monto</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -166,7 +166,7 @@ export function CajaChicaClient({
                 {m.type === "ingreso" ? "+" : "−"}
                 {formatCurrency(m.amount)}
               </TableCell>
-              <TableCell>
+              <TableCell className="text-right">
                 <Button
                   size="sm"
                   variant="ghost"
