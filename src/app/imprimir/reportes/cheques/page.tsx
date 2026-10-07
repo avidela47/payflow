@@ -4,7 +4,7 @@ import { getCheckReport, currentPeriodString } from "@/lib/reports";
 import { formatCurrency } from "@/lib/utils";
 import { COMPANY } from "@/lib/company";
 import { PrintButton } from "@/components/print-button";
-import type { CheckStatus, CheckType } from "@/models/Check";
+import type { CheckStatus, CheckType, CheckDirection } from "@/models/Check";
 
 const STATUS_LABELS: Record<CheckStatus, string> = {
   ACTIVO: "Activo",
@@ -18,6 +18,19 @@ const STATUS_LABELS: Record<CheckStatus, string> = {
 const TYPE_LABELS: Record<CheckType, string> = {
   ELECTRONICO: "E-cheq",
   FISICO: "Físico",
+};
+
+const DIRECTION_LABELS: Record<CheckDirection, string> = {
+  RECIBIDO: "Recibido",
+  EMITIDO: "Emitido",
+};
+
+// Mismo campo de datos (`issuerName`), significado distinto según
+// dirección: en RECIBIDO es el librador que nos dio el cheque (emisor);
+// en EMITIDO es a quién ITELSA se lo entregó (beneficiario).
+const PARTY_LABEL_BY_DIRECTION: Record<CheckDirection, string> = {
+  RECIBIDO: "Emisor",
+  EMITIDO: "Beneficiario",
 };
 
 // Igual que /imprimir/reportes/compras y /ventas: fuera de (dashboard),
@@ -118,6 +131,35 @@ export default async function ImprimirReporteChequesPage({
       </section>
 
       <section className="mt-8">
+        <p className="mb-2 text-sm font-semibold">Recibidos vs. Emitidos</p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-900 text-left text-white">
+              <th className="p-2">Dirección</th>
+              <th className="p-2 text-right">Cantidad</th>
+              <th className="p-2 text-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.byDirection.map((row) => (
+              <tr key={row.direction} className="border-b border-gray-200">
+                <td className="p-2">{DIRECTION_LABELS[row.direction]}</td>
+                <td className="p-2 text-right">{row.count}</td>
+                <td className="p-2 text-right">{formatCurrency(row.amount)}</td>
+              </tr>
+            ))}
+            {report.byDirection.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-4 text-center text-gray-500">
+                  No hay cheques con vencimiento en este mes.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-8">
         <p className="mb-2 text-sm font-semibold">Por tipo</p>
         <table className="w-full text-sm">
           <thead>
@@ -151,7 +193,8 @@ export default async function ImprimirReporteChequesPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900 text-left text-white">
-              <th className="p-2">Emisor</th>
+              <th className="p-2">Dirección</th>
+              <th className="p-2">Emisor / Beneficiario</th>
               <th className="p-2">Tipo</th>
               <th className="p-2">N° cheque</th>
               <th className="p-2">Vencimiento</th>
@@ -162,7 +205,13 @@ export default async function ImprimirReporteChequesPage({
           <tbody>
             {report.detail.map((entry) => (
               <tr key={entry.id} className="border-b border-gray-200">
-                <td className="p-2">{entry.issuerName}</td>
+                <td className="p-2">{DIRECTION_LABELS[entry.direction]}</td>
+                <td className="p-2">
+                  {entry.issuerName}{" "}
+                  <span className="text-xs text-gray-500">
+                    ({PARTY_LABEL_BY_DIRECTION[entry.direction]})
+                  </span>
+                </td>
                 <td className="p-2">{TYPE_LABELS[entry.type]}</td>
                 <td className="p-2">{entry.checkNumber}</td>
                 <td className="p-2">{entry.paymentDateISO}</td>
@@ -172,7 +221,7 @@ export default async function ImprimirReporteChequesPage({
             ))}
             {report.detail.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-gray-500">
+                <td colSpan={7} className="p-4 text-center text-gray-500">
                   No hay cheques con vencimiento en este mes.
                 </td>
               </tr>

@@ -16,7 +16,25 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getCheckReport, currentPeriodString } from "@/lib/reports";
 import { requireModuleAccess } from "@/lib/auth";
-import type { CheckStatus, CheckType } from "@/models/Check";
+import type { CheckStatus, CheckType, CheckDirection } from "@/models/Check";
+
+const DIRECTION_LABELS: Record<CheckDirection, string> = {
+  RECIBIDO: "Recibido",
+  EMITIDO: "Emitido",
+};
+
+// Mismo campo de datos (`issuerName`), significado distinto según
+// dirección: en RECIBIDO es el librador que nos dio el cheque (emisor);
+// en EMITIDO es a quién ITELSA se lo entregó (beneficiario).
+const PARTY_LABEL_BY_DIRECTION: Record<CheckDirection, string> = {
+  RECIBIDO: "Emisor",
+  EMITIDO: "Beneficiario",
+};
+
+const DIRECTION_BADGE_VARIANT: Record<CheckDirection, "primary" | "default"> = {
+  RECIBIDO: "primary",
+  EMITIDO: "default",
+};
 
 const STATUS_LABELS: Record<CheckStatus, string> = {
   ACTIVO: "Activo",
@@ -117,6 +135,35 @@ export default async function ReporteChequesPage({
       {report.totalAmount > 0 && (
         <Card>
           <CardContent className="pt-6">
+            <p className="mb-3 text-sm font-medium">Recibidos vs. Emitidos</p>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              {report.byDirection.map((row) => (
+                <div
+                  key={row.direction}
+                  className={row.direction === "RECIBIDO" ? "h-full bg-primary" : "h-full bg-violet"}
+                  style={{ width: `${(row.amount / report.totalAmount) * 100}%` }}
+                />
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+              {report.byDirection.map((row) => (
+                <span key={row.direction} className="flex items-center gap-1.5">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      row.direction === "RECIBIDO" ? "bg-primary" : "bg-violet"
+                    }`}
+                  />
+                  {DIRECTION_LABELS[row.direction]} — {formatCurrency(row.amount)} ({row.count})
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {report.totalAmount > 0 && (
+        <Card>
+          <CardContent className="pt-6">
             <p className="mb-3 text-sm font-medium">Composición por estado</p>
             <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
               {report.byStatus.map((row) => (
@@ -201,10 +248,11 @@ export default async function ReporteChequesPage({
 
       <div>
         <p className="mb-2 text-sm font-medium">Detalle cronológico</p>
-        <Table>
+        <Table compact>
           <TableHeader>
             <TableRow>
-              <TableHead>Emisor</TableHead>
+              <TableHead>Dirección</TableHead>
+              <TableHead>Emisor / Beneficiario</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>N° cheque</TableHead>
               <TableHead>Vencimiento</TableHead>
@@ -215,14 +263,24 @@ export default async function ReporteChequesPage({
           <TableBody>
             {report.detail.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No hay cheques con vencimiento en este mes.
                 </TableCell>
               </TableRow>
             )}
             {report.detail.map((entry) => (
               <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.issuerName}</TableCell>
+                <TableCell>
+                  <Badge variant={DIRECTION_BADGE_VARIANT[entry.direction]}>
+                    {DIRECTION_LABELS[entry.direction]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div>{entry.issuerName}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {PARTY_LABEL_BY_DIRECTION[entry.direction]}
+                  </div>
+                </TableCell>
                 <TableCell>{TYPE_LABELS[entry.type]}</TableCell>
                 <TableCell>{entry.checkNumber}</TableCell>
                 <TableCell>{entry.paymentDateISO}</TableCell>
