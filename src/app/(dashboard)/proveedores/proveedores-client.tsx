@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { IVA_CONDITIONS, type IvaCondition } from "@/lib/iva-conditions";
 import { ARGENTINA_PROVINCES } from "@/lib/argentina-provinces";
@@ -36,6 +38,37 @@ export type ProviderItem = {
   condicionIva?: IvaCondition;
   notas?: string;
 };
+
+// Mismos helpers que clientes-client.tsx/employees-client.tsx: iniciales +
+// color determinístico por id para el avatar, y variante de Badge según
+// condición de IVA.
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
+function avatarColorClass(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+function ivaBadgeVariant(cond?: IvaCondition): "default" | "success" | "warning" | "primary" {
+  switch (cond) {
+    case "Responsable Inscripto":
+      return "success";
+    case "Monotributo":
+      return "warning";
+    case "Exento":
+      return "primary";
+    default:
+      return "default";
+  }
+}
 
 // ---------- formulario de crear/editar (contenido del Dialog) ----------
 
@@ -110,11 +143,10 @@ function ProviderForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="condicionIva">Condición IVA</Label>
-          <select
+          <Select
             id="condicionIva"
             name="condicionIva"
             defaultValue={defaultValues?.condicionIva ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Sin especificar</option>
             {IVA_CONDITIONS.map((cond) => (
@@ -122,7 +154,7 @@ function ProviderForm({
                 {cond}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -169,11 +201,10 @@ function ProviderForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="provincia">Provincia</Label>
-          <select
+          <Select
             id="provincia"
             name="provincia"
             defaultValue={defaultValues?.provincia ?? ""}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Seleccionar...</option>
             {ARGENTINA_PROVINCES.map((prov) => (
@@ -181,7 +212,7 @@ function ProviderForm({
                 {prov}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -265,23 +296,22 @@ export function ProvidersClient({ providers }: { providers: ProviderItem[] }) {
         </Button>
       </div>
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Nombre / Razón social</TableHead>
+            <TableHead>Proveedor</TableHead>
             <TableHead>CUIT</TableHead>
             <TableHead>Localidad</TableHead>
             <TableHead>Teléfono</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Condición IVA</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 {providers.length === 0
                   ? "Todavía no hay proveedores cargados."
                   : "No se encontró ningún proveedor con esa búsqueda."}
@@ -290,20 +320,37 @@ export function ProvidersClient({ providers }: { providers: ProviderItem[] }) {
           )}
           {filtered.map((provider) => (
             <TableRow key={provider.id}>
-              <TableCell className="text-muted-foreground">{provider.codigo}</TableCell>
-              <TableCell className="font-medium">
-                {provider.nombre}
-                {provider.razonSocial && (
-                  <div className="text-xs text-muted-foreground">{provider.razonSocial}</div>
+              <TableCell>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(provider.id)}`}
+                  >
+                    {getInitials(provider.nombre)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{provider.nombre}</div>
+                    <div className="truncate text-muted-foreground">
+                      {provider.codigo}
+                      {provider.razonSocial ? ` · ${provider.razonSocial}` : ""}
+                    </div>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="truncate">{provider.cuit ?? "—"}</TableCell>
+              <TableCell className="truncate">{provider.localidad ?? "—"}</TableCell>
+              <TableCell className="truncate">{provider.telefono ?? "—"}</TableCell>
+              <TableCell className="truncate">{provider.email ?? "—"}</TableCell>
+              <TableCell>
+                {provider.condicionIva ? (
+                  <Badge variant={ivaBadgeVariant(provider.condicionIva)}>
+                    {provider.condicionIva}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell>{provider.cuit ?? "—"}</TableCell>
-              <TableCell>{provider.localidad ?? "—"}</TableCell>
-              <TableCell>{provider.telefono ?? "—"}</TableCell>
-              <TableCell>{provider.email ?? "—"}</TableCell>
-              <TableCell>{provider.condicionIva ?? "—"}</TableCell>
               <TableCell>
-                <div className="flex gap-1">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
