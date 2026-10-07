@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -199,7 +200,7 @@ export function CostosFijosClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Cargar costo</span>
           <Button
@@ -217,13 +218,12 @@ export function CostosFijosClient({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="categoryId">Categoría</Label>
-              <select
+              <Select
                 id="categoryId"
                 name="categoryId"
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="">Elegir...</option>
                 {categories.map((c) => (
@@ -231,7 +231,7 @@ export function CostosFijosClient({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -247,16 +247,15 @@ export function CostosFijosClient({
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="currency">Moneda</Label>
-              <select
+              <Select
                 id="currency"
                 name="currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
-              </select>
+              </Select>
             </div>
 
             {currency === "ARS" ? (
@@ -312,19 +311,14 @@ export function CostosFijosClient({
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="paymentMode">Forma de pago</Label>
-              <select
-                id="paymentMode"
-                name="paymentMode"
-                defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="paymentMode" name="paymentMode" defaultValue="">
                 <option value="">Elegir...</option>
                 {PAYMENT_MODES.map((mode) => (
                   <option key={mode} value={mode}>
                     {mode}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -358,7 +352,7 @@ export function CostosFijosClient({
         </form>
       </div>
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Categoría</TableHead>
@@ -367,7 +361,7 @@ export function CostosFijosClient({
             <TableHead>Forma de pago</TableHead>
             <TableHead>Vencimiento</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -415,7 +409,7 @@ export function CostosFijosClient({
                 </button>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -453,19 +447,14 @@ export function CostosFijosClient({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="kind">Tipo</Label>
-            <select
-              id="kind"
-              name="kind"
-              defaultValue=""
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
+            <Select id="kind" name="kind" defaultValue="">
               <option value="">Sin especificar</option>
               {CATEGORY_KINDS.map((k) => (
                 <option key={k.value} value={k.value}>
                   {k.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="categoryNotes">Notas</Label>
@@ -491,19 +480,13 @@ export function CostosFijosClient({
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editCategoryId">Categoría</Label>
-              <select
-                id="editCategoryId"
-                name="categoryId"
-                required
-                defaultValue={editing.categoryId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="editCategoryId" name="categoryId" required defaultValue={editing.categoryId}>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editPeriod">Período</Label>
@@ -517,16 +500,15 @@ export function CostosFijosClient({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editCurrency">Moneda</Label>
-              <select
+              <Select
                 id="editCurrency"
                 name="currency"
                 value={editCurrency}
                 onChange={(e) => setEditCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
-              </select>
+              </Select>
             </div>
 
             {editCurrency === "ARS" ? (
@@ -600,19 +582,14 @@ export function CostosFijosClient({
             )}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editPaymentMode">Forma de pago</Label>
-              <select
-                id="editPaymentMode"
-                name="paymentMode"
-                defaultValue={editing.paymentMode ?? ""}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="editPaymentMode" name="paymentMode" defaultValue={editing.paymentMode ?? ""}>
                 <option value="">Elegir...</option>
                 {PAYMENT_MODES.map((mode) => (
                   <option key={mode} value={mode}>
                     {mode}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editDueDate">Vencimiento</Label>
