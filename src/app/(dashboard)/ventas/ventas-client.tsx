@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { createSale, updateSale, deleteSale, setSaleCollected } from "./actions";
@@ -196,20 +197,14 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
 
   return (
     <>
-      <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <span className="text-sm font-medium">Cargar venta</span>
 
         <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="clientId">Cliente</Label>
-              <select
-                id="clientId"
-                name="clientId"
-                required
-                defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="clientId" name="clientId" required defaultValue="">
                 <option value="" disabled>
                   Elegir...
                 </option>
@@ -218,7 +213,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
                     {c.nombre}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -228,19 +223,14 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="paymentMethod">Forma de pago</Label>
-              <select
-                id="paymentMethod"
-                name="paymentMethod"
-                defaultValue=""
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="paymentMethod" name="paymentMethod" defaultValue="">
                 <option value="">Elegir...</option>
                 {PAYMENT_METHODS.map((method) => (
                   <option key={method} value={method}>
                     {method}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -250,16 +240,15 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="currency">Moneda</Label>
-              <select
+              <Select
                 id="currency"
                 name="currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
-              </select>
+              </Select>
             </div>
 
             {currency === "ARS" ? (
@@ -462,19 +451,13 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editClientId">Cliente</Label>
-              <select
-                id="editClientId"
-                name="clientId"
-                required
-                defaultValue={editing.clientId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <Select id="editClientId" name="clientId" required defaultValue={editing.clientId}>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nombre}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -490,11 +473,10 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="editPaymentMethod">Forma de pago</Label>
-                <select
+                <Select
                   id="editPaymentMethod"
                   name="paymentMethod"
                   defaultValue={editing.paymentMethod ?? ""}
-                  className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <option value="">Elegir...</option>
                   {PAYMENT_METHODS.map((method) => (
@@ -502,7 +484,7 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
                       {method}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -518,16 +500,15 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editCurrency">Moneda</Label>
-              <select
+              <Select
                 id="editCurrency"
                 name="currency"
                 value={editCurrency}
                 onChange={(e) => setEditCurrency(e.target.value as "ARS" | "USD")}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="ARS">Pesos</option>
                 <option value="USD">Dólares</option>
-              </select>
+              </Select>
             </div>
 
             {editCurrency === "ARS" ? (
