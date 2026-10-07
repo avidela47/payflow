@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
@@ -34,7 +35,7 @@ export default async function ReporteSueldosPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <form method="GET" className="flex items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="period">Período</Label>
@@ -53,8 +54,75 @@ export default async function ReporteSueldosPage({
         </Button>
       </div>
 
+      <p className="text-sm font-medium capitalize">{report.periodLabel}</p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Total del período</p>
+            <p className="text-2xl font-semibold">{formatCurrency(report.totals.total)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Monotributo</p>
+            <p className="text-2xl font-semibold text-violet">
+              {formatCurrency(report.totals.monotributo)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Registrado</p>
+            <p className="text-2xl font-semibold text-primary">
+              {formatCurrency(report.totals.registrado)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Informal / Viáticos</p>
+            <p className="text-2xl font-semibold text-success">
+              {formatCurrency(report.totals.informal)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {report.totals.total > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="mb-3 text-sm font-medium">Composición del período</p>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-violet"
+                style={{ width: `${(report.totals.monotributo / report.totals.total) * 100}%` }}
+              />
+              <div
+                className="h-full bg-primary"
+                style={{ width: `${(report.totals.registrado / report.totals.total) * 100}%` }}
+              />
+              <div
+                className="h-full bg-success"
+                style={{ width: `${(report.totals.informal / report.totals.total) * 100}%` }}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-violet" /> Monotributo
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-primary" /> Registrado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-success" /> Informal / Viáticos
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div>
-        <p className="mb-2 text-sm font-medium capitalize">{report.periodLabel}</p>
         <Table>
           <TableHeader>
             <TableRow>
