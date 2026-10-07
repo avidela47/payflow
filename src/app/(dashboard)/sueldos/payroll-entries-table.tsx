@@ -39,6 +39,24 @@ function groupKey(g: { employeeId: string; periodISO: string }) {
   return `${g.employeeId}-${g.periodISO}`;
 }
 
+// Mismos helpers que clientes/empleados/proveedores: iniciales + color
+// determinístico por id de empleado para el avatar.
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
+function avatarColorClass(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
 // periodISO se generó server-side con entry.period.toISOString(), sobre
 // una fecha construida en la zona horaria del servidor (UTC). Para
 // recuperar el mes correcto acá en el navegador (que puede estar en
@@ -136,9 +154,14 @@ export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) 
                 <TableCell className="font-medium">
                   <button
                     type="button"
-                    className="cursor-pointer rounded transition-colors hover:text-primary"
+                    className="flex items-center gap-2 rounded transition-colors hover:text-primary"
                     onClick={() => setBreakdownTarget(group)}
                   >
+                    <div
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(group.employeeId)}`}
+                    >
+                      {getInitials(group.employeeName)}
+                    </div>
                     {group.employeeName}
                   </button>
                 </TableCell>

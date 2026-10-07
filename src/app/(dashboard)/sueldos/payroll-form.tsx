@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { formatCurrency, formatPeriod } from "@/lib/utils";
 import { createPayrollEntry } from "./actions";
 
@@ -128,13 +129,12 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="employeeId">Empleado</Label>
-          <select
+          <Select
             id="employeeId"
             name="employeeId"
             required
             value={employeeId}
             onChange={(e) => selectEmployee(e.target.value)}
-            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">Elegir...</option>
             {employees.map((e) => (
@@ -142,7 +142,7 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
                 {e.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1.5">
