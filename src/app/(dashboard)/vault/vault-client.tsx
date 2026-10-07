@@ -146,7 +146,7 @@ export function VaultClient({ entries }: { entries: VaultEntryItem[] }) {
         </Button>
       </div>
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Servicio</TableHead>
@@ -155,7 +155,7 @@ export function VaultClient({ entries }: { entries: VaultEntryItem[] }) {
             <TableHead>Link</TableHead>
             <TableHead>Notas</TableHead>
             <TableHead>Actualizado</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -211,7 +211,7 @@ export function VaultClient({ entries }: { entries: VaultEntryItem[] }) {
                 </TableCell>
                 <TableCell>
                   {entry.link ? (
-                      <a
+                    <a
                       href={entry.link}
                       target="_blank"
                       rel="noreferrer"
@@ -227,8 +227,8 @@ export function VaultClient({ entries }: { entries: VaultEntryItem[] }) {
                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                   {entry.updatedAtLabel}
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
                     <Button
                       size="sm"
                       variant="ghost"
