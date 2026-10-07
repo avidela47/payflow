@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { createCheck, deleteCheck, setCheckStatus, updateCheck } from "../../actions";
@@ -53,10 +54,6 @@ const STATUS_OPTIONS: { value: CheckStatus; label: string }[] = [
   { value: "CADUCADO", label: "Caducado" },
   { value: "OTRO", label: "Otro" },
 ];
-
-function selectClass() {
-  return "h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
-}
 
 function DueBadge({ item }: { item: CheckItem }) {
   if (item.dueAlert === "vencido") {
@@ -165,18 +162,13 @@ function CheckFormFields({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="status">Estado</Label>
-        <select
-          id="status"
-          name="status"
-          defaultValue={defaultValues?.status ?? "ACTIVO"}
-          className={selectClass()}
-        >
+        <Select id="status" name="status" defaultValue={defaultValues?.status ?? "ACTIVO"}>
           {STATUS_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -286,7 +278,7 @@ export function ChequesClient({
   return (
     <>
       {allowCreate && (
-        <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
           <span className="text-sm font-medium">Cargar cheque</span>
           <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
             <CheckFormFields lockedType={lockedType} lockedDirection={lockedDirection} />
@@ -306,7 +298,7 @@ export function ChequesClient({
         </p>
       )}
 
-      <Table>
+      <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead>Librador</TableHead>
@@ -314,7 +306,7 @@ export function ChequesClient({
             <TableHead>Emisión</TableHead>
             <TableHead>Pago</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -337,21 +329,21 @@ export function ChequesClient({
                 </div>
               </TableCell>
               <TableCell>
-                <select
+                <Select
                   value={check.status}
                   disabled={changingStatusId === check.id}
                   onChange={(e) => handleStatusChange(check, e.target.value as CheckStatus)}
-                  className="h-8 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="h-8 text-xs"
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
