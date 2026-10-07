@@ -3,7 +3,7 @@ import { PayrollEntry } from "@/models/PayrollEntry";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { Sale } from "@/models/Sale";
 import { Purchase, type PurchaseReceiptStatus } from "@/models/Purchase";
-import { Check, type CheckStatus, type CheckType } from "@/models/Check";
+import { Check, type CheckStatus, type CheckType, type CheckDirection } from "@/models/Check";
 import { formatPeriod } from "@/lib/utils";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
@@ -533,8 +533,15 @@ export type ChecksTypeRow = {
   amount: number;
 };
 
+export type ChecksDirectionRow = {
+  direction: CheckDirection;
+  count: number;
+  amount: number;
+};
+
 export type ChecksReportDetailRow = {
   id: string;
+  direction: CheckDirection;
   issuerName: string;
   type: CheckType;
   checkNumber: string;
@@ -550,6 +557,13 @@ export type ChecksReportResult = {
   totalAmount: number;
   byStatus: ChecksStatusRow[];
   byType: ChecksTypeRow[];
+  // Nuevo: `issuerName` es el mismo campo de datos tanto para RECIBIDO
+  // (ahí sí es el librador/emisor real) como para EMITIDO (ahí guarda el
+  // beneficiario — ITELSA es quien emite). Mezclarlos en un solo total
+  // también mezclaba "plata que entra" con "plata que sale" bajo un
+  // mismo número — separado acá para que el reporte distinga de verdad
+  // entre emisor y beneficiario, no solo en el detalle.
+  byDirection: ChecksDirectionRow[];
   detail: ChecksReportDetailRow[];
 };
 
@@ -565,6 +579,7 @@ export async function getCheckReport(periodISO: string): Promise<ChecksReportRes
   let totalAmount = 0;
   const statusMap = new Map<CheckStatus, ChecksStatusRow>();
   const typeMap = new Map<CheckType, ChecksTypeRow>();
+  const directionMap = new Map<CheckDirection, ChecksDirectionRow>();
   const detail: ChecksReportDetailRow[] = [];
 
   for (const check of checks) {
@@ -580,8 +595,18 @@ export async function getCheckReport(periodISO: string): Promise<ChecksReportRes
     typeRow.amount += check.amount;
     typeMap.set(check.type, typeRow);
 
+    const directionRow = directionMap.get(check.direction) ?? {
+      direction: check.direction,
+      count: 0,
+      amount: 0,
+    };
+    directionRow.count += 1;
+    directionRow.amount += check.amount;
+    directionMap.set(check.direction, directionRow);
+
     detail.push({
       id: check._id.toString(),
+      direction: check.direction,
       issuerName: check.issuerName,
       type: check.type,
       checkNumber: check.checkNumber,
@@ -593,6 +618,7 @@ export async function getCheckReport(periodISO: string): Promise<ChecksReportRes
 
   const byStatus = Array.from(statusMap.values()).sort((a, b) => b.amount - a.amount);
   const byType = Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);
+  const byDirection = Array.from(directionMap.values()).sort((a, b) => b.amount - a.amount);
 
   return {
     periodISO,
@@ -601,6 +627,7 @@ export async function getCheckReport(periodISO: string): Promise<ChecksReportRes
     totalAmount,
     byStatus,
     byType,
+    byDirection,
     detail,
   };
 }
