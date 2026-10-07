@@ -88,7 +88,7 @@ export function AgendaClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <span className="text-sm font-medium">Nuevo recordatorio</span>
@@ -140,7 +140,7 @@ export function AgendaClient({
             <TableHead>Fecha</TableHead>
             <TableHead>Notas</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -161,7 +161,7 @@ export function AgendaClient({
                   {entry.sent ? "Avisado" : "Pendiente"}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-right">
                 <Button
                   size="sm"
                   variant="ghost"
