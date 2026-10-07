@@ -36,6 +36,18 @@ const STATUS_BADGE_VARIANT: Record<CheckStatus, "success" | "default" | "destruc
   OTRO: "default",
 };
 
+// Colores para la barra de composición por estado (distintos entre sí,
+// a diferencia de STATUS_BADGE_VARIANT que agrupa varios estados bajo
+// el mismo variant de Badge).
+const STATUS_BAR_COLOR: Record<CheckStatus, string> = {
+  ACTIVO: "bg-warning",
+  COBRADO: "bg-success",
+  ENDOSADO: "bg-violet",
+  DEPOSITADO: "bg-primary",
+  CADUCADO: "bg-destructive",
+  OTRO: "bg-border",
+};
+
 const TYPE_LABELS: Record<CheckType, string> = {
   ELECTRONICO: "E-cheq",
   FISICO: "Físico",
@@ -60,7 +72,7 @@ export default async function ReporteChequesPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <form method="GET" className="flex items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="period">Período</Label>
@@ -101,6 +113,31 @@ export default async function ReporteChequesPage({
           </CardContent>
         </Card>
       </div>
+
+      {report.totalAmount > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="mb-3 text-sm font-medium">Composición por estado</p>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              {report.byStatus.map((row) => (
+                <div
+                  key={row.status}
+                  className={`h-full ${STATUS_BAR_COLOR[row.status]}`}
+                  style={{ width: `${(row.amount / report.totalAmount) * 100}%` }}
+                />
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+              {report.byStatus.map((row) => (
+                <span key={row.status} className="flex items-center gap-1.5">
+                  <span className={`h-2 w-2 rounded-full ${STATUS_BAR_COLOR[row.status]}`} />
+                  {STATUS_LABELS[row.status]}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <p className="mb-2 text-sm font-medium">Por estado</p>
