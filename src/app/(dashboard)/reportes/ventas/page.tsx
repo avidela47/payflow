@@ -36,7 +36,7 @@ export default async function ReporteVentasPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <form method="GET" className="flex items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="period">Período</Label>
@@ -84,6 +84,29 @@ export default async function ReporteVentasPage({
           </CardContent>
         </Card>
       </div>
+
+      {report.totalAmount > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between text-sm">
+              <p className="font-medium">Cobro del mes</p>
+              <p className="text-muted-foreground">
+                {Math.round((report.collectedAmount / report.totalAmount) * 100)}% cobrado
+              </p>
+            </div>
+            <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-success"
+                style={{ width: `${(report.collectedAmount / report.totalAmount) * 100}%` }}
+              />
+              <div
+                className="h-full bg-warning"
+                style={{ width: `${(report.pendingAmount / report.totalAmount) * 100}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <p className="mb-2 text-sm font-medium">Formas de pago del mes</p>
