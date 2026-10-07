@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatPeriod } from "@/lib/utils";
@@ -37,7 +38,7 @@ export default async function ReporteGastosPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <form method="GET" className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="from">Desde</Label>
@@ -63,15 +64,22 @@ export default async function ReporteGastosPage({
         </Button>
       </div>
 
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">
+            Total del rango —{" "}
+            <span className="capitalize">
+              {formatPeriod(periodStringToDate(report.fromISO))} a{" "}
+              {formatPeriod(periodStringToDate(report.toISO))}
+            </span>
+          </p>
+          <p className="text-2xl font-semibold">{formatCurrency(report.grandTotal)}</p>
+        </CardContent>
+      </Card>
+
       <div>
-        <p className="mb-2 text-sm font-medium">
-          Resumen por categoría —{" "}
-          <span className="capitalize">
-            {formatPeriod(periodStringToDate(report.fromISO))} a{" "}
-            {formatPeriod(periodStringToDate(report.toISO))}
-          </span>
-        </p>
-        <Table>
+        <p className="mb-2 text-sm font-medium">Resumen por categoría</p>
+        <Table compact>
           <TableHeader>
             <TableRow>
               <TableHead>Categoría</TableHead>
