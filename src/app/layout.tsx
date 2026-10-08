@@ -13,7 +13,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "PayFlow — ITELSA",
+  title: "ITELSA SAS | PayFlow — ",
   description: "Sueldos, costos fijos, cheques y horas en un solo lugar.",
 };
 
