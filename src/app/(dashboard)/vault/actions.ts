@@ -79,6 +79,11 @@ export async function createVaultEntry(formData: FormData) {
   }
 
   revalidatePath("/vault");
+  // Igual que Sueldos/Costos Fijos/Cheques/Caja Chica/Agenda: el
+  // Dashboard ("/") muestra la cantidad de credenciales guardadas y
+  // tiene su propio caché de ruta en Next — sin este revalidate, seguía
+  // mostrando el valor viejo hasta el próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -156,6 +161,7 @@ export async function deleteVaultEntry(entryId: string) {
   }
 
   revalidatePath("/vault");
+  revalidatePath("/");
   return { ok: true };
 }
 
