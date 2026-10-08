@@ -71,6 +71,11 @@ export async function createPettyCashMovement(formData: FormData) {
   }
 
   revalidatePath("/caja-chica");
+  // Igual que Sueldos/Costos Fijos/Cheques: el Dashboard ("/") también lee
+  // estos datos y tiene su propio caché de ruta en Next — sin este
+  // revalidate, sus tarjetas seguían mostrando el valor viejo hasta el
+  // próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -90,5 +95,6 @@ export async function deletePettyCashMovement(movementId: string) {
   }
 
   revalidatePath("/caja-chica");
+  revalidatePath("/");
   return { ok: true };
 }
