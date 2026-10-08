@@ -85,6 +85,11 @@ export async function createEmployee(formData: FormData) {
 
   revalidatePath("/empleados");
   revalidatePath("/sueldos");
+  // Igual que Sueldos/Costos Fijos/Cheques/Caja Chica/Agenda/Vault: el
+  // Dashboard ("/") también lee empleados activos (para armar la lista de
+  // Sueldos del mes) y tiene su propio caché de ruta en Next — sin este
+  // revalidate, seguía mostrando el valor viejo hasta el próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -113,6 +118,7 @@ export async function updateEmployee(employeeId: string, formData: FormData) {
 
   revalidatePath("/empleados");
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -127,6 +133,7 @@ export async function setEmployeeActive(employeeId: string, active: boolean) {
 
   revalidatePath("/empleados");
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -147,5 +154,6 @@ export async function deleteEmployee(employeeId: string) {
 
   revalidatePath("/empleados");
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }
