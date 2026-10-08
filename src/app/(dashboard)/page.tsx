@@ -35,7 +35,7 @@ import {
   Truck,
   Banknote,
 } from "lucide-react";
-import { formatCurrency, formatFullDate, cn } from "@/lib/utils";
+import { formatCurrency, formatFullDate, formatPeriod, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
 import { DashboardCharts, type SueldosLinePoint, type CostosDonutSlice } from "@/components/dashboard-charts";
 
@@ -81,12 +81,21 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const periodStart = startOfMonth(now);
-  const prevPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth() - 1, 1);
   const todayStart = startOfToday();
   const in7Days = new Date(todayStart);
   in7Days.setDate(in7Days.getDate() + 7);
   const daysInMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
   const nextPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
+
+  // Sueldos: igual que en /sueldos, la imputación siempre va un mes atrás
+  // del mes en que se paga, así que "mes calendario actual" casi nunca
+  // tiene nada cargado. Usamos el ÚLTIMO período con datos (mismo criterio
+  // que esa página) en vez del mes calendario, para no mostrar $0 en el
+  // Dashboard mientras /sueldos sí tiene los datos reales cargados.
+  const latestPayrollEntry = await PayrollEntry.findOne({}).sort({ period: -1 }).lean();
+  const payrollPeriod = latestPayrollEntry ? latestPayrollEntry.period : periodStart;
+  const prevPayrollPeriod = new Date(payrollPeriod.getFullYear(), payrollPeriod.getMonth() - 1, 1);
+  const payrollPeriodLabel = formatPeriod(payrollPeriod);
 
   const [
     activeEmployees,
@@ -133,12 +142,27 @@ export default async function DashboardPage() {
     // sin llegar sigue siendo relevante hoy, igual que overdueSalesCount
     // más abajo tampoco se filtra por mes.
     Purchase.countDocuments({ receiptStatus: { $in: ["EN_CURSO", "RECIBIDA_PARCIAL"] } }),
-    PayrollEntry.find({ period: periodStart }).lean(),
-    PayrollEntry.find({ period: prevPeriodStart }).lean(),
+    PayrollEntry.find({ period: payrollPeriod }).lean(),
+    PayrollEntry.find({ period: prevPayrollPeriod }).lean(),
     FixedCostEntry.find({ period: periodStart, paid: false }).populate("category").lean(),
     Check.find({ status: "ACTIVO" }).lean(),
-    AgendaEntry.countDocuments({ sent: false, date: { $gte: todayStart, $lte: in7Days } }),
-    CalendarEvent.countDocuments({ startsAt: { $gte: todayStart, $lte: in7Days } }),
+    // Agenda y Calendario son privados por usuario (ver
+    // migrar-agenda-calendario-florencia.ts) — sin el filtro por user, este
+    // conteo mostraba recordatorios/eventos de CUALQUIER usuario (ej. los
+    // de la contadora aparecían también en el Dashboard de Ariel).
+    session?.user
+      ? AgendaEntry.countDocuments({
+          user: session.user.id,
+          sent: false,
+          date: { $gte: todayStart, $lte: in7Days },
+        })
+      : Promise.resolve(0),
+    session?.user
+      ? CalendarEvent.countDocuments({
+          user: session.user.id,
+          startsAt: { $gte: todayStart, $lte: in7Days },
+        })
+      : Promise.resolve(0),
     VaultEntry.countDocuments({}),
     session?.user ? Note.countDocuments({ user: session.user.id }) : Promise.resolve(0),
     // Mismo criterio que caja-chica/page.tsx: el saldo sale de TODOS los
@@ -279,12 +303,12 @@ export default async function DashboardPage() {
       moduleKey: null,
     },
     {
-      title: "Sueldos del mes",
+      title: `Sueldos (${payrollPeriodLabel})`,
       icon: Wallet,
       value: <MaskedAmount value={formatCurrency(totalPayroll)} className="text-2xl font-semibold tracking-tight" />,
       delta:
         payrollDeltaPct !== null
-          ? { text: `${Math.abs(payrollDeltaPct)}% vs mes anterior`, up: payrollDeltaPct >= 0 }
+          ? { text: `${Math.abs(payrollDeltaPct)}% vs período anterior`, up: payrollDeltaPct >= 0 }
           : null,
       moduleKey: "sueldos",
     },
@@ -443,7 +467,7 @@ export default async function DashboardPage() {
       title: "Sueldos",
       description: "Liquidación mensual",
       value: formatCurrency(totalPayroll),
-      caption: "este mes",
+      caption: payrollPeriodLabel,
       icon: Wallet,
       moduleKey: "sueldos",
     },
