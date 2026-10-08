@@ -71,6 +71,10 @@ export async function createCheck(formData: FormData) {
   // esto invalida todo ese árbol de una sola vez, sin importar desde cuál
   // se llamó a la acción.
   revalidatePath("/cheques", "layout");
+  // Igual que Sueldos/Costos Fijos: el Dashboard ("/") también lee estos
+  // datos y tiene su propio caché de ruta en Next — sin este revalidate,
+  // sus tarjetas seguían mostrando el valor viejo hasta el próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -99,6 +103,7 @@ export async function updateCheck(checkId: string, formData: FormData) {
   }
 
   revalidatePath("/cheques", "layout");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -121,6 +126,7 @@ export async function setCheckStatus(
   }
 
   revalidatePath("/cheques", "layout");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -140,5 +146,6 @@ export async function deleteCheck(checkId: string) {
   }
 
   revalidatePath("/cheques", "layout");
+  revalidatePath("/");
   return { ok: true };
 }
