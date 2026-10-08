@@ -44,6 +44,11 @@ export async function createAgendaEntry(formData: FormData) {
   }
 
   revalidatePath("/agenda");
+  // Igual que Sueldos/Costos Fijos/Cheques/Caja Chica: el Dashboard ("/")
+  // también lee estos datos (alertas de agenda) y tiene su propio caché
+  // de ruta en Next — sin este revalidate, seguía mostrando el valor
+  // viejo hasta el próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -65,6 +70,7 @@ export async function deleteAgendaEntry(entryId: string) {
   }
 
   revalidatePath("/agenda");
+  revalidatePath("/");
   return { ok: true };
 }
 
