@@ -85,6 +85,12 @@ export async function createPayrollEntry(formData: FormData) {
   }
 
   revalidatePath("/sueldos");
+  // Igual que Ventas/Compras: el Dashboard ("/") lee PayrollEntry
+  // directo y tiene su propio caché de ruta en Next — sin este
+  // revalidate, las tarjetas "Sueldos del mes" y "Sueldos" (más el
+  // gráfico de sueldos por día) seguían mostrando el valor viejo hasta
+  // el próximo deploy, aunque /sueldos ya mostraba el dato correcto.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -112,6 +118,7 @@ export async function setPayrollGroupPaid(employeeId: string, periodISO: string,
   }
 
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -219,6 +226,7 @@ export async function updatePayrollGroup(
   }
 
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -239,5 +247,6 @@ export async function deletePayrollGroup(employeeId: string, periodISO: string) 
   }
 
   revalidatePath("/sueldos");
+  revalidatePath("/");
   return { ok: true };
 }

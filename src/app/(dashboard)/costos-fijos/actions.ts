@@ -63,6 +63,10 @@ export async function createFixedCostCategory(formData: FormData) {
   }
 
   revalidatePath("/costos-fijos");
+  // Igual que Sueldos: el Dashboard ("/") también lee estos datos y
+  // tiene su propio caché de ruta en Next — sin este revalidate, sus
+  // tarjetas seguían mostrando el valor viejo hasta el próximo deploy.
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -92,6 +96,7 @@ export async function updateFixedCostCategory(categoryId: string, formData: Form
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -118,6 +123,7 @@ export async function deleteFixedCostCategory(categoryId: string) {
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -266,6 +272,7 @@ export async function createFixedCostEntry(formData: FormData) {
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -294,7 +301,7 @@ export async function updateFixedCostEntry(entryId: string, formData: FormData) 
     // convertido a USD "sin conversión"), necesitamos poder BORRAR
     // usdAmount/exchangeRate viejos — con un objeto plano quedarían
     // pegados con el valor anterior en vez de borrarse.
-    const unsetFields: Record<string, ""> = {};
+    const unsetFields: Record<string, "" > = {};
     if (resolved.currency === "ARS") {
       unsetFields.usdAmount = "";
       unsetFields.exchangeRate = "";
@@ -326,6 +333,7 @@ export async function updateFixedCostEntry(entryId: string, formData: FormData) 
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -345,6 +353,7 @@ export async function setFixedCostEntryPaid(entryId: string, paid: boolean) {
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -364,5 +373,6 @@ export async function deleteFixedCostEntry(entryId: string) {
   }
 
   revalidatePath("/costos-fijos");
+  revalidatePath("/");
   return { ok: true };
 }
