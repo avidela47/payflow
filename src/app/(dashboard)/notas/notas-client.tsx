@@ -174,13 +174,19 @@ export function NotasClient({ notes }: { notes: NoteItem[] }) {
           Todavía no tenés notas. Creá la primera con &quot;Nueva nota&quot;.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        // Columnas tipo post-it (CSS columns, no grid): cada nota ocupa
+        // solo el alto que necesita su propio texto — una corta no se
+        // estira para igualar a la más larga del costado, como pasaba con
+        // grid (ahí todas las tarjetas de una misma fila quedaban de la
+        // altura de la más alta). break-inside-avoid evita que una nota
+        // se corte entre dos columnas.
+        <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
           {notes.map((note) => {
             const styles = COLOR_STYLES[note.color];
             return (
               <div
                 key={note.id}
-                className={`flex flex-col gap-2 rounded-lg border p-4 shadow-sm ${styles.card}`}
+                className={`mb-4 flex flex-col gap-2 break-inside-avoid rounded-lg border p-4 shadow-sm ${styles.card}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   {note.title ? (
