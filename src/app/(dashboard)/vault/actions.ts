@@ -7,9 +7,11 @@ import { getSession } from "@/lib/auth";
 import { VaultEntry, VaultAccessLog } from "@/models/Vault";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 
-// Entran OWNER y ACCOUNTANT (ver ARCHITECTURE.md sección 4/2) — cada
-// acción revalida el rol server-side, no confiamos solo en el redirect de
-// la página.
+// Entran OWNER y ACCOUNTANT (ver ARCHITECTURE.md sección 4/2), pero esto
+// solo confirma que el usuario puede usar el módulo Vault — no que una
+// entrada puntual sea suya. Esa segunda verificación va en cada acción de
+// abajo, filtrando por `owner: session.user.id` (mismo criterio que
+// Agenda/Calendario/Notas).
 async function requireVaultAccess() {
   const session = await getSession();
   if (session?.user?.role !== "OWNER" && session?.user?.role !== "ACCOUNTANT") {
@@ -63,6 +65,7 @@ export async function createVaultEntry(formData: FormData) {
     await connectDB();
     const { encryptedValue, iv, authTag } = encryptSecret(parsed.data.value);
     const entry = await VaultEntry.create({
+      owner: session.user.id,
       service: parsed.data.service,
       username: parsed.data.username,
       encryptedValue,
@@ -127,7 +130,12 @@ export async function updateVaultEntry(entryId: string, formData: FormData) {
       update.iv = iv;
       update.authTag = authTag;
     }
-    const entry = await VaultEntry.findByIdAndUpdate(entryId, update);
+    // Filtrar por owner acá, no solo por _id: si la entrada es de otro
+    // usuario, findOneAndUpdate no encuentra nada y no la toca.
+    const entry = await VaultEntry.findOneAndUpdate(
+      { _id: entryId, owner: session.user.id },
+      update
+    );
     if (!entry) {
       return { ok: false, error: "La credencial ya no existe." };
     }
@@ -150,10 +158,15 @@ export async function deleteVaultEntry(entryId: string) {
 
   try {
     await connectDB();
+    // Mismo criterio que updateVaultEntry: filtrar por owner acá, no solo
+    // por _id. Logueamos DELETE recién si realmente era suya y se borró.
+    const entry = await VaultEntry.findOneAndDelete({ _id: entryId, owner: session.user.id });
+    if (!entry) {
+      return { ok: false, error: "La credencial ya no existe." };
+    }
     // El log de auditoría queda como historial propio aunque se borre la
     // entrada referenciada — no lo borramos en cascada.
     await logAccess(entryId, session.user.id, "DELETE");
-    await VaultEntry.findByIdAndDelete(entryId);
   } catch (err) {
     console.error("deleteVaultEntry error:", err);
     const message = err instanceof Error ? err.message : String(err);
@@ -173,7 +186,9 @@ export async function revealVaultEntry(entryId: string) {
 
   try {
     await connectDB();
-    const entry = await VaultEntry.findById(entryId);
+    // Filtrar por owner acá también: si la entrada es de otro usuario,
+    // findOne no la encuentra y no se revela nada.
+    const entry = await VaultEntry.findOne({ _id: entryId, owner: session.user.id });
     if (!entry) {
       return { ok: false as const, error: "La credencial ya no existe." };
     }

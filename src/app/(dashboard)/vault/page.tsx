@@ -14,18 +14,18 @@ function formatDateTime(date: Date) {
 }
 
 // Módulo aparte — ver ARCHITECTURE.md, sección 4. Entran OWNER y
-// ACCOUNTANT (ella es quien gestiona las claves del día a día); ambos
-// roles ven y pueden crear/editar/borrar cualquier credencial, no hay
+// ACCOUNTANT, pero cada uno ve solo sus propias credenciales (mismo
+// criterio que Agenda/Calendario/Notas) — se filtra por `owner`. No hay
 // grants por entrada individual (el modelo VaultGrant queda sin usar).
 export default async function VaultPage() {
-  await requireModuleAccess("vault");
+  const session = await requireModuleAccess("vault");
 
   await connectDB();
 
   // Ojo: nunca pedimos encryptedValue/iv/authTag acá — la lista solo
   // necesita metadata. El valor real se descifra server-side y solo al
   // pedir "Revelar" (ver actions.ts).
-  const entries = await VaultEntry.find({})
+  const entries = await VaultEntry.find({ owner: session.user.id })
     .select("service username link notes updatedAt")
     .sort({ service: 1 })
     .lean();
@@ -44,8 +44,8 @@ export default async function VaultPage() {
       <div>
         <h1 className="text-2xl font-semibold">Vault de Credenciales</h1>
         <p className="text-sm text-muted-foreground">
-          Acceso restringido a OWNER y ACCOUNTANT. Cifrado con AES-256-GCM — la clave nunca se
-          muestra sin pedirlo explícitamente.
+          Tus credenciales, privadas — cifradas con AES-256-GCM. La clave nunca se muestra sin
+          pedirlo explícitamente.
         </p>
       </div>
 

@@ -3,8 +3,14 @@ import mongoose, { Schema, models, model, Model } from "mongoose";
 // Vault de credenciales — ver ARCHITECTURE.md sección 4. El valor nunca se
 // guarda en texto plano: se cifra con AES-256-GCM antes de llegar acá
 // (ver src/lib/crypto.ts).
+// Privado por usuario (mismo criterio que AgendaEntry/CalendarEvent/Note):
+// cada credencial tiene un `owner` y solo ese usuario la ve, la edita, la
+// borra o la revela — ver actions.ts. VaultAccessLog sigue siendo
+// auditoría general; VaultGrant queda sin usar (no hay compartir puntual
+// entre OWNER y ACCOUNTANT).
 export interface IVaultEntry {
   _id: mongoose.Types.ObjectId;
+  owner: mongoose.Types.ObjectId;
   service: string;
   username?: string;
   encryptedValue: string;
@@ -18,6 +24,7 @@ export interface IVaultEntry {
 
 const VaultEntrySchema = new Schema<IVaultEntry>(
   {
+    owner: { type: Schema.Types.ObjectId, ref: "User", required: true },
     service: { type: String, required: true },
     username: String,
     encryptedValue: { type: String, required: true },
@@ -28,6 +35,8 @@ const VaultEntrySchema = new Schema<IVaultEntry>(
   },
   { timestamps: true }
 );
+
+VaultEntrySchema.index({ owner: 1 });
 
 export const VaultEntry =
   (models.VaultEntry as Model<IVaultEntry>) || model<IVaultEntry>("VaultEntry", VaultEntrySchema);
@@ -51,7 +60,9 @@ export const VaultAccessLog =
   (models.VaultAccessLog as Model<IVaultAccessLog>) ||
   model<IVaultAccessLog>("VaultAccessLog", VaultAccessLogSchema);
 
-// Otorga acceso puntual a una entrada del vault a alguien que no es OWNER.
+// Otorga acceso puntual a una entrada del vault a alguien que no es el
+// owner. No se usa por ahora (ver actions.ts) — queda la estructura por si
+// en el futuro hace falta compartir una credencial puntual.
 export interface IVaultGrant {
   _id: mongoose.Types.ObjectId;
   vaultEntry: mongoose.Types.ObjectId;

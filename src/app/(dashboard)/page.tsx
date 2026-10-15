@@ -163,7 +163,13 @@ export default async function DashboardPage() {
           startsAt: { $gte: todayStart, $lte: in7Days },
         })
       : Promise.resolve(0),
-    VaultEntry.countDocuments({}),
+    // Vault es privado por usuario desde este cambio (ver
+    // migrar-vault-contadora.ts) — mismo motivo que Agenda/Calendario
+    // arriba: sin el filtro por owner, este conteo mostraba las
+    // credenciales de CUALQUIER usuario.
+    session?.user
+      ? VaultEntry.countDocuments({ owner: session.user.id })
+      : Promise.resolve(0),
     session?.user ? Note.countDocuments({ user: session.user.id }) : Promise.resolve(0),
     // Mismo criterio que caja-chica/page.tsx: el saldo sale de TODOS los
     // movimientos vía agregación, no de una lectura parcial.
@@ -539,7 +545,7 @@ export default async function DashboardPage() {
       title: "Vault",
       description: "Credenciales cifradas",
       value: String(vaultCount),
-      caption: vaultCount === 1 ? "credencial guardada" : "credenciales guardadas",
+      caption: vaultCount === 1 ? "credencial tuya" : "credenciales tuyas",
       icon: KeyRound,
       moduleKey: "vault",
     },
