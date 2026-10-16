@@ -277,11 +277,13 @@ function MonthView({
   eventsByDay,
   onDayClick,
   onEventClick,
+  onShowMore,
 }: {
   anchor: Date;
   eventsByDay: Map<string, EventVM[]>;
   onDayClick: (day: Date) => void;
   onEventClick: (event: EventVM) => void;
+  onShowMore: (day: Date, dayEvents: EventVM[]) => void;
 }) {
   const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const gridStart = startOfWeekMonday(monthStart);
@@ -340,7 +342,15 @@ function MonthView({
                   </span>
                 ))}
                 {extra > 0 && (
-                  <span className="px-1 text-[11px] text-muted-foreground">+{extra} más</span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShowMore(day, dayEvents);
+                    }}
+                    className="cursor-pointer rounded px-1 text-[11px] font-medium text-muted-foreground hover:bg-muted"
+                  >
+                    +{extra} más
+                  </span>
                 )}
               </div>
             </button>
@@ -481,6 +491,7 @@ function TimeGridView({
 type View = "month" | "week" | "day";
 
 type FormState = { mode: "create"; defaultDate: Date } | { mode: "edit"; event: EventVM };
+type DayDetailsState = { day: Date; events: EventVM[] } | null;
 
 export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
   const [view, setView] = useState<View>("month");
@@ -488,6 +499,7 @@ export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
   const [formState, setFormState] = useState<FormState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EventVM | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [dayDetails, setDayDetails] = useState<DayDetailsState>(null);
   const router = useRouter();
 
   const eventVMs: EventVM[] = useMemo(
@@ -541,6 +553,14 @@ export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
 
   function openEdit(event: EventVM) {
     setFormState({ mode: "edit", event });
+  }
+
+  // Se abre al tocar el "+N más" de un día en la vista Mes — muestra TODOS
+  // los eventos de ese día (los 3 visibles más los que estaban tapados),
+  // para elegir cuál editar sin que el click se escape hacia "día entero"
+  // y abra por error el formulario de evento nuevo.
+  function openDayDetails(day: Date, dayEvents: EventVM[]) {
+    setDayDetails({ day, events: dayEvents });
   }
 
   async function performDelete(event: EventVM) {
@@ -612,6 +632,7 @@ export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
           eventsByDay={eventsByDay}
           onDayClick={openCreate}
           onEventClick={openEdit}
+          onShowMore={openDayDetails}
         />
       )}
       {view === "week" && (
@@ -660,6 +681,50 @@ export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
               }}
             >
               Borrar evento
+            </Button>
+          </div>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={dayDetails !== null}
+        onOpenChange={(open) => {
+          if (!open) setDayDetails(null);
+        }}
+        title={dayDetails ? formatDayHeaderLabel(dayDetails.day) : ""}
+        className="max-w-md"
+      >
+        {dayDetails && (
+          <div className="flex flex-col gap-2">
+            {dayDetails.events.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => {
+                  setDayDetails(null);
+                  openEdit(event);
+                }}
+                className={`flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:opacity-90 ${COLOR_STYLES[event.color].chip}`}
+              >
+                {!event.allDay && (
+                  <span className="shrink-0 text-xs font-medium">{formatHM(event.startsAt)}</span>
+                )}
+                <span className="truncate">{event.title}</span>
+              </button>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-1 self-start"
+              onClick={() => {
+                const day = dayDetails.day;
+                setDayDetails(null);
+                openCreate(day);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nuevo evento este día
             </Button>
           </div>
         )}
