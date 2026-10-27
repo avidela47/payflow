@@ -22,8 +22,7 @@ export type EmployeeListItem = EmployeeFormValues & {
   active: boolean;
 };
 
-// Mismos helpers que clientes-client.tsx: iniciales + color determinístico
-// por id, para que cada fila tenga el mismo avatar siempre (sin azar).
+// Iniciales del nombre para el avatar circular.
 function getInitials(nombre?: string, apellido?: string): string {
   const first = (nombre ?? "").trim();
   const last = (apellido ?? "").trim();
@@ -31,14 +30,11 @@ function getInitials(nombre?: string, apellido?: string): string {
   if (first) return first.slice(0, 2).toUpperCase();
   return "?";
 }
-const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
-function avatarColorClass(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+
+// Color del avatar según el tipo de empleado (no por id como antes):
+// rojo = monotributista, verde = relación de dependencia.
+function avatarColorClass(category?: string): string {
+  return category === "MONOTRIBUTISTA" ? "bg-destructive" : "bg-success";
 }
 
 export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }) {
@@ -100,7 +96,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
               <TableCell>
                 <div className="flex min-w-0 items-center gap-2">
                   <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(emp.id)}`}
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(emp.category)}`}
                   >
                     {getInitials(emp.nombre, emp.apellido)}
                   </div>
