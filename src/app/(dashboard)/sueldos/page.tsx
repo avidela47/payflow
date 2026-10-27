@@ -78,7 +78,12 @@ export default async function SueldosPage({
     // propia fila en vez de romper el render.
     const employeeDoc =
       entry.employee && typeof entry.employee === "object" && "nombre" in entry.employee
-        ? (entry.employee as unknown as { _id: { toString(): string }; nombre: string; apellido: string })
+        ? (entry.employee as unknown as {
+            _id: { toString(): string };
+            nombre: string;
+            apellido: string;
+            category?: string;
+          })
         : null;
 
     const employeeId = employeeDoc
@@ -96,6 +101,7 @@ export default async function SueldosPage({
         employeeName: employeeDoc
           ? `${employeeDoc.nombre} ${employeeDoc.apellido}`
           : "Empleado eliminado",
+        category: employeeDoc?.category,
         periodLabel: formatPeriod(entry.period),
         registradoAmount: 0,
         informalAmount: 0,

@@ -26,6 +26,7 @@ export type PayrollGroupItem = {
   employeeId: string;
   periodISO: string;
   employeeName: string;
+  category?: string;
   periodLabel: string;
   registradoAmount: number;
   informalAmount: number;
@@ -39,22 +40,18 @@ function groupKey(g: { employeeId: string; periodISO: string }) {
   return `${g.employeeId}-${g.periodISO}`;
 }
 
-// Mismos helpers que clientes/empleados/proveedores: iniciales + color
-// determinístico por id de empleado para el avatar.
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
-const AVATAR_PALETTE = ["bg-primary", "bg-violet", "bg-success", "bg-warning"];
-function avatarColorClass(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+
+// Color del avatar según el tipo de empleado (igual que en
+// empleados/employees-client.tsx): rojo = monotributista, verde =
+// relación de dependencia.
+function avatarColorClass(category?: string): string {
+  return category === "MONOTRIBUTISTA" ? "bg-destructive" : "bg-success";
 }
 
 // periodISO se generó server-side con entry.period.toISOString(), sobre
@@ -158,7 +155,7 @@ export function PayrollEntriesTable({ groups }: { groups: PayrollGroupItem[] }) 
                     onClick={() => setBreakdownTarget(group)}
                   >
                     <div
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(group.employeeId)}`}
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white ${avatarColorClass(group.category)}`}
                     >
                       {getInitials(group.employeeName)}
                     </div>
