@@ -55,7 +55,15 @@ function formatUsd(value: number): string {
   );
 }
 
-const PAYMENT_MODES = ["VEP", "Tarjeta", "Débito automático", "Transferencia", "Efectivo", "Otro"];
+const PAYMENT_MODES = [
+  "VEP",
+  "Tarjeta",
+  "Débito automático",
+  "Transferencia",
+  "Mercado Pago",
+  "Efectivo",
+  "Otro",
+];
 const CATEGORY_KINDS = [
   { value: "impuesto", label: "Impuesto" },
   { value: "seguro", label: "Seguro" },
