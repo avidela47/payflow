@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { formatCurrency, formatPeriod } from "@/lib/utils";
+import { formatCurrency, formatPeriod, parseAmount } from "@/lib/utils";
 import { createPayrollEntry } from "./actions";
 
 export type PayrollEmployeeOption = {
@@ -58,6 +58,11 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
   // Registrado/Informal con sueldo fijo (empleado). La parte "informal"
   // (Viáticos) SIEMPRE es un monto directo, incluso si el empleado es
   // por hora — los viáticos no se calculan por hora.
+  //
+  // Estos 4 campos son texto libre (no type="number") a propósito: así
+  // aceptan coma O punto como separador decimal sin que el navegador
+  // rechace la coma (que es como se escribe acá). parseAmount() los
+  // normaliza al calcular.
   const [registradoAmount, setRegistradoAmount] = useState("");
   const [informalAmount, setInformalAmount] = useState("");
 
@@ -71,9 +76,9 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
   const isPorHora = employee?.category === "EMPLEADO" && employee.paymentType === "POR_HORA";
 
   const finalRegistrado = isPorHora
-    ? (Number(registradoRate) || 0) * (Number(registradoHours) || 0)
-    : Number(registradoAmount) || 0;
-  const finalInformal = Number(informalAmount) || 0;
+    ? parseAmount(registradoRate) * parseAmount(registradoHours)
+    : parseAmount(registradoAmount);
+  const finalInformal = parseAmount(informalAmount);
   const total = finalRegistrado + finalInformal;
 
   function resetAmounts() {
@@ -179,8 +184,9 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
                   <Label htmlFor="registradoRate">Valor hora</Label>
                   <Input
                     id="registradoRate"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
                     value={registradoRate}
                     onChange={(e) => setRegistradoRate(e.target.value)}
                   />
@@ -189,8 +195,9 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
                   <Label htmlFor="registradoHours">Cant. horas</Label>
                   <Input
                     id="registradoHours"
-                    type="number"
-                    step="0.5"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
                     value={registradoHours}
                     onChange={(e) => setRegistradoHours(e.target.value)}
                   />
@@ -198,8 +205,9 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
               </div>
             ) : (
               <Input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
                 value={registradoAmount}
                 onChange={(e) => setRegistradoAmount(e.target.value)}
               />
@@ -219,8 +227,9 @@ export function PayrollForm({ employees }: { employees: PayrollEmployeeOption[] 
               {isMonotributista || isPorHora ? "Viáticos" : "Informal"}
             </span>
             <Input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
               value={informalAmount}
               onChange={(e) => setInformalAmount(e.target.value)}
             />
