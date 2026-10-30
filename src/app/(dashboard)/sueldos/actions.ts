@@ -49,34 +49,44 @@ export async function createPayrollEntry(formData: FormData) {
   try {
     await connectDB();
 
+    // Si ya existe CUALQUIER liquidación de este empleado para este
+    // período (registrado o informal), no se pisa desde el alta nueva —
+    // hay que editarla explícitamente desde "Editar" en la tabla. Esto
+    // evita que un error de mes (ej. elegir "octubre" en vez de
+    // "noviembre" como Mes de pago, que se imputa a septiembre ya
+    // cargado) sobreescriba en silencio un pago existente sin avisar.
+    const existing = await PayrollEntry.findOne({
+      employee: parsed.data.employeeId,
+      period,
+    }).lean();
+
+    if (existing) {
+      return {
+        ok: false,
+        error: 'Ese mes ya está cargado para este empleado. Para modificarlo, usá "Editar" en la tabla.',
+      };
+    }
+
     if (registrado > 0) {
-      await PayrollEntry.findOneAndUpdate(
-        { employee: parsed.data.employeeId, period, modality: "REGISTRADO" },
-        {
-          employee: parsed.data.employeeId,
-          period,
-          modality: "REGISTRADO",
-          amount: registrado,
-          paidBy: parsed.data.paidBy,
-          notes: parsed.data.notes,
-        },
-        { upsert: true, new: true }
-      );
+      await PayrollEntry.create({
+        employee: parsed.data.employeeId,
+        period,
+        modality: "REGISTRADO",
+        amount: registrado,
+        paidBy: parsed.data.paidBy,
+        notes: parsed.data.notes,
+      });
     }
 
     if (informal > 0) {
-      await PayrollEntry.findOneAndUpdate(
-        { employee: parsed.data.employeeId, period, modality: "INFORMAL" },
-        {
-          employee: parsed.data.employeeId,
-          period,
-          modality: "INFORMAL",
-          amount: informal,
-          paidBy: parsed.data.paidBy,
-          notes: parsed.data.notes,
-        },
-        { upsert: true, new: true }
-      );
+      await PayrollEntry.create({
+        employee: parsed.data.employeeId,
+        period,
+        modality: "INFORMAL",
+        amount: informal,
+        paidBy: parsed.data.paidBy,
+        notes: parsed.data.notes,
+      });
     }
   } catch (err) {
     console.error("createPayrollEntry error:", err);
