@@ -38,6 +38,14 @@ export default async function VentasPage() {
       invoiceNumber: sale.invoiceNumber,
       purchaseOrderNumber: sale.purchaseOrderNumber,
       notes: sale.notes,
+      channel: sale.channel ?? "OFICINA",
+      mlCommission: sale.mlCommission,
+      mlShipping: sale.mlShipping,
+      mlTaxes: sale.mlTaxes,
+      profitPct: sale.profitPct,
+      iibbPct: sale.iibbPct,
+      ivaPct: sale.ivaPct,
+      otherPct: sale.otherPct,
     };
   });
 

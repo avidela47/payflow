@@ -5,15 +5,9 @@ export interface ISale {
   client: mongoose.Types.ObjectId;
   saleDate: Date;
   paymentMethod?: string;
-  // Fecha en la que se espera cobrar — se carga a mano (no se calcula
-  // sola a partir de la forma de pago, porque los plazos reales pueden
-  // variar caso a caso). Editable siempre.
   expectedCollectionDate?: Date;
   collected: boolean;
   collectedDate?: Date;
-  // Igual que en Costos Fijos: `amount` siempre en pesos (lo que usan
-  // reportes y dashboard). Si la venta se cargó en dólares, se guarda
-  // también el monto en USD y la cotización usada.
   amount: number;
   currency: "ARS" | "USD";
   usdAmount?: number;
@@ -22,6 +16,19 @@ export interface ISale {
   invoiceNumber?: string;
   purchaseOrderNumber?: string;
   notes?: string;
+  // Canal de venta: define qué desglose aplica. Es informativo — no
+  // modifica `amount`, que sigue siendo el precio de venta real.
+  channel: "OFICINA" | "MERCADO_LIBRE";
+  // Mercado Libre — montos fijos deducidos del precio de venta.
+  mlCommission?: number;
+  mlShipping?: number;
+  mlTaxes?: number;
+  // Oficina — porcentajes aplicados sobre `amount` (suma directa, no en
+  // cascada) para llegar a un "costo neto" informativo.
+  profitPct?: number;
+  iibbPct?: number;
+  ivaPct?: number;
+  otherPct?: number;
   createdAt: Date;
 }
 
@@ -40,6 +47,14 @@ const SaleSchema = new Schema<ISale>({
   invoiceNumber: String,
   purchaseOrderNumber: String,
   notes: String,
+  channel: { type: String, enum: ["OFICINA", "MERCADO_LIBRE"], default: "OFICINA" },
+  mlCommission: Number,
+  mlShipping: Number,
+  mlTaxes: Number,
+  profitPct: Number,
+  iibbPct: Number,
+  ivaPct: Number,
+  otherPct: Number,
   createdAt: { type: Date, default: Date.now },
 });
 

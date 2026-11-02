@@ -40,9 +40,22 @@ export type SaleItem = {
   invoiceNumber?: string;
   purchaseOrderNumber?: string;
   notes?: string;
+  channel: "OFICINA" | "MERCADO_LIBRE";
+  mlCommission?: number;
+  mlShipping?: number;
+  mlTaxes?: number;
+  profitPct?: number;
+  iibbPct?: number;
+  ivaPct?: number;
+  otherPct?: number;
 };
 
 const PAYMENT_METHODS = ["Efectivo", "Transferencia", "Cheque", "Cuenta corriente", "Tarjeta", "Otro"];
+
+const CHANNELS: { value: "OFICINA" | "MERCADO_LIBRE"; label: string }[] = [
+  { value: "OFICINA", label: "Oficina" },
+  { value: "MERCADO_LIBRE", label: "Mercado Libre" },
+];
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(
@@ -78,20 +91,65 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
   // Form de carga
   const [creating, setCreating] = useState(false);
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+  const [amountArs, setAmountArs] = useState("");
   const [usdAmount, setUsdAmount] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
+  const [channel, setChannel] = useState<"OFICINA" | "MERCADO_LIBRE">("OFICINA");
+  const [mlCommission, setMlCommission] = useState("");
+  const [mlShipping, setMlShipping] = useState("");
+  const [mlTaxes, setMlTaxes] = useState("");
+  const [profitPct, setProfitPct] = useState("");
+  const [iibbPct, setIibbPct] = useState("");
+  const [ivaPct, setIvaPct] = useState("");
+  const [otherPct, setOtherPct] = useState("");
 
   // Edición / borrado
   const [editing, setEditing] = useState<SaleItem | null>(null);
   const [editCurrency, setEditCurrency] = useState<"ARS" | "USD">("ARS");
+  const [editAmountArs, setEditAmountArs] = useState("");
   const [editUsdAmount, setEditUsdAmount] = useState("");
   const [editExchangeRate, setEditExchangeRate] = useState("");
+  const [editChannel, setEditChannel] = useState<"OFICINA" | "MERCADO_LIBRE">("OFICINA");
+  const [editMlCommission, setEditMlCommission] = useState("");
+  const [editMlShipping, setEditMlShipping] = useState("");
+  const [editMlTaxes, setEditMlTaxes] = useState("");
+  const [editProfitPct, setEditProfitPct] = useState("");
+  const [editIibbPct, setEditIibbPct] = useState("");
+  const [editIvaPct, setEditIvaPct] = useState("");
+  const [editOtherPct, setEditOtherPct] = useState("");
   const [confirmTarget, setConfirmTarget] = useState<SaleItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const today = todayISO();
+
+  // Previews en vivo del desglose por canal (informativo — no se guarda
+  // como tal, se recalcula siempre a partir del monto + porcentajes/montos
+  // fijos cargados).
+  const createPreviewAmount =
+    currency === "ARS" ? Number(amountArs) || 0 : (Number(usdAmount) || 0) * (Number(exchangeRate) || 0);
+  const createNetoRealML =
+    createPreviewAmount - (Number(mlCommission) || 0) - (Number(mlShipping) || 0) - (Number(mlTaxes) || 0);
+  const createPctTotal =
+    (Number(profitPct) || 0) + (Number(iibbPct) || 0) + (Number(ivaPct) || 0) + (Number(otherPct) || 0);
+  const createCostoNetoOficina = createPreviewAmount - (createPreviewAmount * createPctTotal) / 100;
+
+  const editPreviewAmount =
+    editCurrency === "ARS"
+      ? Number(editAmountArs) || 0
+      : (Number(editUsdAmount) || 0) * (Number(editExchangeRate) || 0);
+  const editNetoRealML =
+    editPreviewAmount -
+    (Number(editMlCommission) || 0) -
+    (Number(editMlShipping) || 0) -
+    (Number(editMlTaxes) || 0);
+  const editPctTotal =
+    (Number(editProfitPct) || 0) +
+    (Number(editIibbPct) || 0) +
+    (Number(editIvaPct) || 0) +
+    (Number(editOtherPct) || 0);
+  const editCostoNetoOficina = editPreviewAmount - (editPreviewAmount * editPctTotal) / 100;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -125,8 +183,17 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
   function openEdit(sale: SaleItem) {
     setEditing(sale);
     setEditCurrency(sale.currency);
+    setEditAmountArs(sale.currency === "ARS" ? String(sale.amount) : "");
     setEditUsdAmount(sale.usdAmount != null ? String(sale.usdAmount) : "");
     setEditExchangeRate(sale.exchangeRate != null ? String(sale.exchangeRate) : "");
+    setEditChannel(sale.channel);
+    setEditMlCommission(sale.mlCommission != null ? String(sale.mlCommission) : "");
+    setEditMlShipping(sale.mlShipping != null ? String(sale.mlShipping) : "");
+    setEditMlTaxes(sale.mlTaxes != null ? String(sale.mlTaxes) : "");
+    setEditProfitPct(sale.profitPct != null ? String(sale.profitPct) : "");
+    setEditIibbPct(sale.iibbPct != null ? String(sale.iibbPct) : "");
+    setEditIvaPct(sale.ivaPct != null ? String(sale.ivaPct) : "");
+    setEditOtherPct(sale.otherPct != null ? String(sale.otherPct) : "");
   }
 
   async function handleCreateSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -144,8 +211,17 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
     toast.success("Venta guardada.");
     (e.target as HTMLFormElement).reset();
     setCurrency("ARS");
+    setAmountArs("");
     setUsdAmount("");
     setExchangeRate("");
+    setChannel("OFICINA");
+    setMlCommission("");
+    setMlShipping("");
+    setMlTaxes("");
+    setProfitPct("");
+    setIibbPct("");
+    setIvaPct("");
+    setOtherPct("");
     router.refresh();
   }
 
@@ -254,7 +330,16 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
             {currency === "ARS" ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="amount">Monto</Label>
-                <Input id="amount" name="amount" type="number" step="0.01" min="0" required />
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={amountArs}
+                  onChange={(e) => setAmountArs(e.target.value)}
+                />
               </div>
             ) : (
               <>
@@ -288,6 +373,22 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
             )}
 
             <div className="flex flex-col gap-1.5">
+              <Label htmlFor="channel">Canal</Label>
+              <Select
+                id="channel"
+                name="channel"
+                value={channel}
+                onChange={(e) => setChannel(e.target.value as "OFICINA" | "MERCADO_LIBRE")}
+              >
+                {CHANNELS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="remitoNumber">Número de remito</Label>
               <Input id="remitoNumber" name="remitoNumber" />
             </div>
@@ -312,6 +413,116 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
             <p className="text-sm text-muted-foreground">
               Equivale a {formatCurrency(Number(usdAmount) * Number(exchangeRate))}
             </p>
+          )}
+
+          {channel === "MERCADO_LIBRE" ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+              <span className="text-sm font-medium">Desglose Mercado Libre (montos fijos, opcional)</span>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="mlCommission">Comisión ML</Label>
+                  <Input
+                    id="mlCommission"
+                    name="mlCommission"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={mlCommission}
+                    onChange={(e) => setMlCommission(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="mlShipping">Envío</Label>
+                  <Input
+                    id="mlShipping"
+                    name="mlShipping"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={mlShipping}
+                    onChange={(e) => setMlShipping(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="mlTaxes">Impuestos</Label>
+                  <Input
+                    id="mlTaxes"
+                    name="mlTaxes"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={mlTaxes}
+                    onChange={(e) => setMlTaxes(e.target.value)}
+                  />
+                </div>
+              </div>
+              {createPreviewAmount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Precio neto real:{" "}
+                  <span className="font-medium text-foreground">{formatCurrency(createNetoRealML)}</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+              <span className="text-sm font-medium">Desglose Oficina (porcentajes, opcional)</span>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="profitPct">Ganancia %</Label>
+                  <Input
+                    id="profitPct"
+                    name="profitPct"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={profitPct}
+                    onChange={(e) => setProfitPct(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="iibbPct">IIBB %</Label>
+                  <Input
+                    id="iibbPct"
+                    name="iibbPct"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={iibbPct}
+                    onChange={(e) => setIibbPct(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ivaPct">IVA %</Label>
+                  <Input
+                    id="ivaPct"
+                    name="ivaPct"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={ivaPct}
+                    onChange={(e) => setIvaPct(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="otherPct">Otros %</Label>
+                  <Input
+                    id="otherPct"
+                    name="otherPct"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={otherPct}
+                    onChange={(e) => setOtherPct(e.target.value)}
+                  />
+                </div>
+              </div>
+              {createPreviewAmount > 0 && createPctTotal > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Costo neto:{" "}
+                  <span className="font-medium text-foreground">{formatCurrency(createCostoNetoOficina)}</span>
+                </p>
+              )}
+            </div>
           )}
 
           <div>
@@ -521,7 +732,8 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
                   step="0.01"
                   min="0"
                   required
-                  defaultValue={editing.currency === "ARS" ? editing.amount : undefined}
+                  value={editAmountArs}
+                  onChange={(e) => setEditAmountArs(e.target.value)}
                 />
               </div>
             ) : (
@@ -558,6 +770,132 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
                   </p>
                 )}
               </>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="editChannel">Canal</Label>
+              <Select
+                id="editChannel"
+                name="channel"
+                value={editChannel}
+                onChange={(e) => setEditChannel(e.target.value as "OFICINA" | "MERCADO_LIBRE")}
+              >
+                {CHANNELS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {editChannel === "MERCADO_LIBRE" ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <span className="text-sm font-medium">Desglose Mercado Libre (montos fijos, opcional)</span>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editMlCommission">Comisión ML</Label>
+                    <Input
+                      id="editMlCommission"
+                      name="mlCommission"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editMlCommission}
+                      onChange={(e) => setEditMlCommission(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editMlShipping">Envío</Label>
+                    <Input
+                      id="editMlShipping"
+                      name="mlShipping"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editMlShipping}
+                      onChange={(e) => setEditMlShipping(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editMlTaxes">Impuestos</Label>
+                    <Input
+                      id="editMlTaxes"
+                      name="mlTaxes"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editMlTaxes}
+                      onChange={(e) => setEditMlTaxes(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {editPreviewAmount > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Precio neto real:{" "}
+                    <span className="font-medium text-foreground">{formatCurrency(editNetoRealML)}</span>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <span className="text-sm font-medium">Desglose Oficina (porcentajes, opcional)</span>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editProfitPct">Ganancia %</Label>
+                    <Input
+                      id="editProfitPct"
+                      name="profitPct"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editProfitPct}
+                      onChange={(e) => setEditProfitPct(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editIibbPct">IIBB %</Label>
+                    <Input
+                      id="editIibbPct"
+                      name="iibbPct"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editIibbPct}
+                      onChange={(e) => setEditIibbPct(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editIvaPct">IVA %</Label>
+                    <Input
+                      id="editIvaPct"
+                      name="ivaPct"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editIvaPct}
+                      onChange={(e) => setEditIvaPct(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="editOtherPct">Otros %</Label>
+                    <Input
+                      id="editOtherPct"
+                      name="otherPct"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editOtherPct}
+                      onChange={(e) => setEditOtherPct(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {editPreviewAmount > 0 && editPctTotal > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Costo neto:{" "}
+                    <span className="font-medium text-foreground">{formatCurrency(editCostoNetoOficina)}</span>
+                  </p>
+                )}
+              </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -20,6 +20,15 @@ const saleSchema = z.object({
   invoiceNumber: z.string().optional(),
   purchaseOrderNumber: z.string().optional(),
   notes: z.string().optional(),
+  // Canal + desglose. Todo opcional: es informativo, no bloquea el guardado.
+  channel: z.enum(["OFICINA", "MERCADO_LIBRE"]).default("OFICINA"),
+  mlCommission: z.coerce.number().min(0).optional(),
+  mlShipping: z.coerce.number().min(0).optional(),
+  mlTaxes: z.coerce.number().min(0).optional(),
+  profitPct: z.coerce.number().min(0).optional(),
+  iibbPct: z.coerce.number().min(0).optional(),
+  ivaPct: z.coerce.number().min(0).optional(),
+  otherPct: z.coerce.number().min(0).optional(),
 });
 
 function parseSaleForm(formData: FormData) {
@@ -36,6 +45,14 @@ function parseSaleForm(formData: FormData) {
     invoiceNumber: formData.get("invoiceNumber") || undefined,
     purchaseOrderNumber: formData.get("purchaseOrderNumber") || undefined,
     notes: formData.get("notes") || undefined,
+    channel: formData.get("channel") || "OFICINA",
+    mlCommission: formData.get("mlCommission") || undefined,
+    mlShipping: formData.get("mlShipping") || undefined,
+    mlTaxes: formData.get("mlTaxes") || undefined,
+    profitPct: formData.get("profitPct") || undefined,
+    iibbPct: formData.get("iibbPct") || undefined,
+    ivaPct: formData.get("ivaPct") || undefined,
+    otherPct: formData.get("otherPct") || undefined,
   });
 }
 
@@ -97,6 +114,19 @@ export async function createSale(formData: FormData) {
       invoiceNumber: parsed.data.invoiceNumber,
       purchaseOrderNumber: parsed.data.purchaseOrderNumber,
       notes: parsed.data.notes,
+      channel: parsed.data.channel,
+      ...(parsed.data.channel === "MERCADO_LIBRE"
+        ? {
+            mlCommission: parsed.data.mlCommission,
+            mlShipping: parsed.data.mlShipping,
+            mlTaxes: parsed.data.mlTaxes,
+          }
+        : {
+            profitPct: parsed.data.profitPct,
+            iibbPct: parsed.data.iibbPct,
+            ivaPct: parsed.data.ivaPct,
+            otherPct: parsed.data.otherPct,
+          }),
     });
   } catch (err) {
     console.error("createSale error:", err);
@@ -125,30 +155,57 @@ export async function updateSale(saleId: string, formData: FormData) {
     return { ok: false, error: resolved.error };
   }
 
+  // $set/$unset explícitos (igual que con USD/ARS) para poder limpiar los
+  // campos del canal que no corresponde cuando se cambia de uno a otro.
+  const setFields: Record<string, unknown> = {
+    client: parsed.data.clientId,
+    saleDate: new Date(parsed.data.saleDate),
+    paymentMethod: parsed.data.paymentMethod,
+    expectedCollectionDate: parsed.data.expectedCollectionDate
+      ? new Date(parsed.data.expectedCollectionDate)
+      : undefined,
+    amount: resolved.amount,
+    currency: resolved.currency,
+    remitoNumber: parsed.data.remitoNumber,
+    invoiceNumber: parsed.data.invoiceNumber,
+    purchaseOrderNumber: parsed.data.purchaseOrderNumber,
+    notes: parsed.data.notes,
+    channel: parsed.data.channel,
+  };
+
+  const unsetFields: Record<string, "" > = {};
+
+  if (resolved.currency === "USD") {
+    setFields.usdAmount = resolved.usdAmount;
+    setFields.exchangeRate = resolved.exchangeRate;
+  } else {
+    unsetFields.usdAmount = "";
+    unsetFields.exchangeRate = "";
+  }
+
+  if (parsed.data.channel === "MERCADO_LIBRE") {
+    setFields.mlCommission = parsed.data.mlCommission;
+    setFields.mlShipping = parsed.data.mlShipping;
+    setFields.mlTaxes = parsed.data.mlTaxes;
+    unsetFields.profitPct = "";
+    unsetFields.iibbPct = "";
+    unsetFields.ivaPct = "";
+    unsetFields.otherPct = "";
+  } else {
+    setFields.profitPct = parsed.data.profitPct;
+    setFields.iibbPct = parsed.data.iibbPct;
+    setFields.ivaPct = parsed.data.ivaPct;
+    setFields.otherPct = parsed.data.otherPct;
+    unsetFields.mlCommission = "";
+    unsetFields.mlShipping = "";
+    unsetFields.mlTaxes = "";
+  }
+
   try {
     await connectDB();
-    // $set explícito (a diferencia del create) porque, al pasar de USD a
-    // ARS, necesitamos poder BORRAR usdAmount/exchangeRate viejos — con
-    // $unset, no dejándolos pegados con el valor anterior.
     await Sale.findByIdAndUpdate(saleId, {
-      $set: {
-        client: parsed.data.clientId,
-        saleDate: new Date(parsed.data.saleDate),
-        paymentMethod: parsed.data.paymentMethod,
-        expectedCollectionDate: parsed.data.expectedCollectionDate
-          ? new Date(parsed.data.expectedCollectionDate)
-          : undefined,
-        amount: resolved.amount,
-        currency: resolved.currency,
-        remitoNumber: parsed.data.remitoNumber,
-        invoiceNumber: parsed.data.invoiceNumber,
-        purchaseOrderNumber: parsed.data.purchaseOrderNumber,
-        notes: parsed.data.notes,
-        ...(resolved.currency === "USD"
-          ? { usdAmount: resolved.usdAmount, exchangeRate: resolved.exchangeRate }
-          : {}),
-      },
-      ...(resolved.currency === "ARS" ? { $unset: { usdAmount: "", exchangeRate: "" } } : {}),
+      $set: setFields,
+      $unset: unsetFields,
     });
   } catch (err) {
     console.error("updateSale error:", err);
