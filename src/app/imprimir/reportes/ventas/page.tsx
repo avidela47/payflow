@@ -176,6 +176,30 @@ export default async function ImprimirReporteVentasPage({
                       {formatCurrency(report.channelBreakdown.oficina.grossAmount)}
                     </td>
                   </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Ganancia</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.totalProfit)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">IIBB</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.totalIibb)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">IVA</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.totalIva)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Otros</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.totalOther)}
+                    </td>
+                  </tr>
                   <tr className="border-b border-gray-200 font-semibold">
                     <td className="p-2">Costo neto</td>
                     <td className="p-2 text-right">

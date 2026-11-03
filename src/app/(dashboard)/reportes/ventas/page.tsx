@@ -216,6 +216,30 @@ export default async function ReporteVentasPage({
                       </TableCell>
                     </TableRow>
                     <TableRow>
+                      <TableCell>Ganancia</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.oficina.totalProfit)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>IIBB</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.oficina.totalIibb)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>IVA</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.oficina.totalIva)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Otros</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.oficina.totalOther)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
                       <TableCell className="font-medium">Costo neto</TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(report.channelBreakdown.oficina.netCostAmount)}

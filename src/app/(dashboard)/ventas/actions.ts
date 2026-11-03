@@ -25,10 +25,12 @@ const saleSchema = z.object({
   mlCommission: z.coerce.number().min(0).optional(),
   mlShipping: z.coerce.number().min(0).optional(),
   mlTaxes: z.coerce.number().min(0).optional(),
-  profitPct: z.coerce.number().min(0).optional(),
-  iibbPct: z.coerce.number().min(0).optional(),
-  ivaPct: z.coerce.number().min(0).optional(),
-  otherPct: z.coerce.number().min(0).optional(),
+  // Oficina — montos fijos en pesos (copiados de la factura), no
+  // porcentajes.
+  profitAmount: z.coerce.number().min(0).optional(),
+  iibbAmount: z.coerce.number().min(0).optional(),
+  ivaAmount: z.coerce.number().min(0).optional(),
+  otherAmount: z.coerce.number().min(0).optional(),
 });
 
 function parseSaleForm(formData: FormData) {
@@ -49,10 +51,10 @@ function parseSaleForm(formData: FormData) {
     mlCommission: formData.get("mlCommission") || undefined,
     mlShipping: formData.get("mlShipping") || undefined,
     mlTaxes: formData.get("mlTaxes") || undefined,
-    profitPct: formData.get("profitPct") || undefined,
-    iibbPct: formData.get("iibbPct") || undefined,
-    ivaPct: formData.get("ivaPct") || undefined,
-    otherPct: formData.get("otherPct") || undefined,
+    profitAmount: formData.get("profitAmount") || undefined,
+    iibbAmount: formData.get("iibbAmount") || undefined,
+    ivaAmount: formData.get("ivaAmount") || undefined,
+    otherAmount: formData.get("otherAmount") || undefined,
   });
 }
 
@@ -122,10 +124,10 @@ export async function createSale(formData: FormData) {
             mlTaxes: parsed.data.mlTaxes,
           }
         : {
-            profitPct: parsed.data.profitPct,
-            iibbPct: parsed.data.iibbPct,
-            ivaPct: parsed.data.ivaPct,
-            otherPct: parsed.data.otherPct,
+            profitAmount: parsed.data.profitAmount,
+            iibbAmount: parsed.data.iibbAmount,
+            ivaAmount: parsed.data.ivaAmount,
+            otherAmount: parsed.data.otherAmount,
           }),
     });
   } catch (err) {
@@ -187,15 +189,15 @@ export async function updateSale(saleId: string, formData: FormData) {
     setFields.mlCommission = parsed.data.mlCommission;
     setFields.mlShipping = parsed.data.mlShipping;
     setFields.mlTaxes = parsed.data.mlTaxes;
-    unsetFields.profitPct = "";
-    unsetFields.iibbPct = "";
-    unsetFields.ivaPct = "";
-    unsetFields.otherPct = "";
+    unsetFields.profitAmount = "";
+    unsetFields.iibbAmount = "";
+    unsetFields.ivaAmount = "";
+    unsetFields.otherAmount = "";
   } else {
-    setFields.profitPct = parsed.data.profitPct;
-    setFields.iibbPct = parsed.data.iibbPct;
-    setFields.ivaPct = parsed.data.ivaPct;
-    setFields.otherPct = parsed.data.otherPct;
+    setFields.profitAmount = parsed.data.profitAmount;
+    setFields.iibbAmount = parsed.data.iibbAmount;
+    setFields.ivaAmount = parsed.data.ivaAmount;
+    setFields.otherAmount = parsed.data.otherAmount;
     unsetFields.mlCommission = "";
     unsetFields.mlShipping = "";
     unsetFields.mlTaxes = "";

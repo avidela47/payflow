@@ -42,10 +42,10 @@ export default async function VentasPage() {
       mlCommission: sale.mlCommission,
       mlShipping: sale.mlShipping,
       mlTaxes: sale.mlTaxes,
-      profitPct: sale.profitPct,
-      iibbPct: sale.iibbPct,
-      ivaPct: sale.ivaPct,
-      otherPct: sale.otherPct,
+      profitAmount: sale.profitAmount,
+      iibbAmount: sale.iibbAmount,
+      ivaAmount: sale.ivaAmount,
+      otherAmount: sale.otherAmount,
     };
   });
 

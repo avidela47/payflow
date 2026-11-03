@@ -23,12 +23,13 @@ export interface ISale {
   mlCommission?: number;
   mlShipping?: number;
   mlTaxes?: number;
-  // Oficina — porcentajes aplicados sobre `amount` (suma directa, no en
-  // cascada) para llegar a un "costo neto" informativo.
-  profitPct?: number;
-  iibbPct?: number;
-  ivaPct?: number;
-  otherPct?: number;
+  // Oficina — montos fijos deducidos del precio de venta (copiados
+  // directo de la factura, en pesos — NO porcentajes) para llegar a un
+  // "costo neto" informativo. Mismo mecanismo que Mercado Libre.
+  profitAmount?: number;
+  iibbAmount?: number;
+  ivaAmount?: number;
+  otherAmount?: number;
   createdAt: Date;
 }
 
@@ -51,10 +52,10 @@ const SaleSchema = new Schema<ISale>({
   mlCommission: Number,
   mlShipping: Number,
   mlTaxes: Number,
-  profitPct: Number,
-  iibbPct: Number,
-  ivaPct: Number,
-  otherPct: Number,
+  profitAmount: Number,
+  iibbAmount: Number,
+  ivaAmount: Number,
+  otherAmount: Number,
   createdAt: { type: Date, default: Date.now },
 });
 

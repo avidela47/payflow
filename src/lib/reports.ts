@@ -287,9 +287,9 @@ export type SalesPaymentMethodRow = {
   amount: number;
 };
 
-// Desglose por canal. El costo neto de Oficina se suma venta por venta
-// (no se recalcula con un % promedio del mes) porque promediar falsea el
-// número apenas dos ventas tienen porcentajes distintos entre sí.
+// Desglose por canal. Oficina y Mercado Libre usan el mismo mecanismo:
+// montos fijos en pesos (copiados de la factura/liquidación real) que se
+// restan del bruto — no porcentajes.
 export type SalesChannelMLSummary = {
   count: number;
   grossAmount: number;
@@ -302,6 +302,10 @@ export type SalesChannelMLSummary = {
 export type SalesChannelOficinaSummary = {
   count: number;
   grossAmount: number;
+  totalProfit: number;
+  totalIibb: number;
+  totalIva: number;
+  totalOther: number;
   netCostAmount: number;
 };
 
@@ -362,7 +366,10 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
 
   let oficinaCount = 0;
   let oficinaGross = 0;
-  let oficinaNetCostTotal = 0;
+  let oficinaProfitTotal = 0;
+  let oficinaIibbTotal = 0;
+  let oficinaIvaTotal = 0;
+  let oficinaOtherTotal = 0;
 
   for (const sale of sales) {
     // Mismo caso que en ventas/page.tsx: si el cliente fue borrado,
@@ -401,9 +408,10 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
     } else {
       oficinaCount += 1;
       oficinaGross += sale.amount;
-      const pctTotal =
-        (sale.profitPct ?? 0) + (sale.iibbPct ?? 0) + (sale.ivaPct ?? 0) + (sale.otherPct ?? 0);
-      oficinaNetCostTotal += sale.amount - (sale.amount * pctTotal) / 100;
+      oficinaProfitTotal += sale.profitAmount ?? 0;
+      oficinaIibbTotal += sale.iibbAmount ?? 0;
+      oficinaIvaTotal += sale.ivaAmount ?? 0;
+      oficinaOtherTotal += sale.otherAmount ?? 0;
     }
 
     detail.push({
@@ -435,7 +443,12 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
     oficina: {
       count: oficinaCount,
       grossAmount: oficinaGross,
-      netCostAmount: oficinaNetCostTotal,
+      totalProfit: oficinaProfitTotal,
+      totalIibb: oficinaIibbTotal,
+      totalIva: oficinaIvaTotal,
+      totalOther: oficinaOtherTotal,
+      netCostAmount:
+        oficinaGross - oficinaProfitTotal - oficinaIibbTotal - oficinaIvaTotal - oficinaOtherTotal,
     },
   };
 

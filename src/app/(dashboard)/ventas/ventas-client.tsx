@@ -44,10 +44,10 @@ export type SaleItem = {
   mlCommission?: number;
   mlShipping?: number;
   mlTaxes?: number;
-  profitPct?: number;
-  iibbPct?: number;
-  ivaPct?: number;
-  otherPct?: number;
+  profitAmount?: number;
+  iibbAmount?: number;
+  ivaAmount?: number;
+  otherAmount?: number;
 };
 
 const PAYMENT_METHODS = ["Efectivo", "Transferencia", "Cheque", "Cuenta corriente", "Tarjeta", "Otro"];
@@ -98,10 +98,10 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
   const [mlCommission, setMlCommission] = useState("");
   const [mlShipping, setMlShipping] = useState("");
   const [mlTaxes, setMlTaxes] = useState("");
-  const [profitPct, setProfitPct] = useState("");
-  const [iibbPct, setIibbPct] = useState("");
-  const [ivaPct, setIvaPct] = useState("");
-  const [otherPct, setOtherPct] = useState("");
+  const [profitAmount, setProfitAmount] = useState("");
+  const [iibbAmount, setIibbAmount] = useState("");
+  const [ivaAmount, setIvaAmount] = useState("");
+  const [otherAmount, setOtherAmount] = useState("");
 
   // Edición / borrado
   const [editing, setEditing] = useState<SaleItem | null>(null);
@@ -113,10 +113,10 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
   const [editMlCommission, setEditMlCommission] = useState("");
   const [editMlShipping, setEditMlShipping] = useState("");
   const [editMlTaxes, setEditMlTaxes] = useState("");
-  const [editProfitPct, setEditProfitPct] = useState("");
-  const [editIibbPct, setEditIibbPct] = useState("");
-  const [editIvaPct, setEditIvaPct] = useState("");
-  const [editOtherPct, setEditOtherPct] = useState("");
+  const [editProfitAmount, setEditProfitAmount] = useState("");
+  const [editIibbAmount, setEditIibbAmount] = useState("");
+  const [editIvaAmount, setEditIvaAmount] = useState("");
+  const [editOtherAmount, setEditOtherAmount] = useState("");
   const [confirmTarget, setConfirmTarget] = useState<SaleItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -125,15 +125,19 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
   const today = todayISO();
 
   // Previews en vivo del desglose por canal (informativo — no se guarda
-  // como tal, se recalcula siempre a partir del monto + porcentajes/montos
-  // fijos cargados).
+  // como tal, se recalcula siempre a partir del monto + los montos fijos
+  // cargados). Oficina usa la misma resta directa que Mercado Libre — los
+  // 4 campos son montos en pesos copiados de la factura, no porcentajes.
   const createPreviewAmount =
     currency === "ARS" ? Number(amountArs) || 0 : (Number(usdAmount) || 0) * (Number(exchangeRate) || 0);
   const createNetoRealML =
     createPreviewAmount - (Number(mlCommission) || 0) - (Number(mlShipping) || 0) - (Number(mlTaxes) || 0);
-  const createPctTotal =
-    (Number(profitPct) || 0) + (Number(iibbPct) || 0) + (Number(ivaPct) || 0) + (Number(otherPct) || 0);
-  const createCostoNetoOficina = createPreviewAmount - (createPreviewAmount * createPctTotal) / 100;
+  const createCostoNetoOficina =
+    createPreviewAmount -
+    (Number(profitAmount) || 0) -
+    (Number(iibbAmount) || 0) -
+    (Number(ivaAmount) || 0) -
+    (Number(otherAmount) || 0);
 
   const editPreviewAmount =
     editCurrency === "ARS"
@@ -144,12 +148,12 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
     (Number(editMlCommission) || 0) -
     (Number(editMlShipping) || 0) -
     (Number(editMlTaxes) || 0);
-  const editPctTotal =
-    (Number(editProfitPct) || 0) +
-    (Number(editIibbPct) || 0) +
-    (Number(editIvaPct) || 0) +
-    (Number(editOtherPct) || 0);
-  const editCostoNetoOficina = editPreviewAmount - (editPreviewAmount * editPctTotal) / 100;
+  const editCostoNetoOficina =
+    editPreviewAmount -
+    (Number(editProfitAmount) || 0) -
+    (Number(editIibbAmount) || 0) -
+    (Number(editIvaAmount) || 0) -
+    (Number(editOtherAmount) || 0);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -190,10 +194,10 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
     setEditMlCommission(sale.mlCommission != null ? String(sale.mlCommission) : "");
     setEditMlShipping(sale.mlShipping != null ? String(sale.mlShipping) : "");
     setEditMlTaxes(sale.mlTaxes != null ? String(sale.mlTaxes) : "");
-    setEditProfitPct(sale.profitPct != null ? String(sale.profitPct) : "");
-    setEditIibbPct(sale.iibbPct != null ? String(sale.iibbPct) : "");
-    setEditIvaPct(sale.ivaPct != null ? String(sale.ivaPct) : "");
-    setEditOtherPct(sale.otherPct != null ? String(sale.otherPct) : "");
+    setEditProfitAmount(sale.profitAmount != null ? String(sale.profitAmount) : "");
+    setEditIibbAmount(sale.iibbAmount != null ? String(sale.iibbAmount) : "");
+    setEditIvaAmount(sale.ivaAmount != null ? String(sale.ivaAmount) : "");
+    setEditOtherAmount(sale.otherAmount != null ? String(sale.otherAmount) : "");
   }
 
   async function handleCreateSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -218,10 +222,10 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
     setMlCommission("");
     setMlShipping("");
     setMlTaxes("");
-    setProfitPct("");
-    setIibbPct("");
-    setIvaPct("");
-    setOtherPct("");
+    setProfitAmount("");
+    setIibbAmount("");
+    setIvaAmount("");
+    setOtherAmount("");
     router.refresh();
   }
 
@@ -465,58 +469,58 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
             </div>
           ) : (
             <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
-              <span className="text-sm font-medium">Desglose Oficina (porcentajes, opcional)</span>
+              <span className="text-sm font-medium">Desglose Oficina (montos, opcional — copiados de la factura)</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="profitPct">Ganancia %</Label>
+                  <Label htmlFor="profitAmount">Ganancia</Label>
                   <Input
-                    id="profitPct"
-                    name="profitPct"
+                    id="profitAmount"
+                    name="profitAmount"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={profitPct}
-                    onChange={(e) => setProfitPct(e.target.value)}
+                    value={profitAmount}
+                    onChange={(e) => setProfitAmount(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="iibbPct">IIBB %</Label>
+                  <Label htmlFor="iibbAmount">IIBB</Label>
                   <Input
-                    id="iibbPct"
-                    name="iibbPct"
+                    id="iibbAmount"
+                    name="iibbAmount"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={iibbPct}
-                    onChange={(e) => setIibbPct(e.target.value)}
+                    value={iibbAmount}
+                    onChange={(e) => setIibbAmount(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ivaPct">IVA %</Label>
+                  <Label htmlFor="ivaAmount">IVA</Label>
                   <Input
-                    id="ivaPct"
-                    name="ivaPct"
+                    id="ivaAmount"
+                    name="ivaAmount"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={ivaPct}
-                    onChange={(e) => setIvaPct(e.target.value)}
+                    value={ivaAmount}
+                    onChange={(e) => setIvaAmount(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="otherPct">Otros %</Label>
+                  <Label htmlFor="otherAmount">Otros</Label>
                   <Input
-                    id="otherPct"
-                    name="otherPct"
+                    id="otherAmount"
+                    name="otherAmount"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={otherPct}
-                    onChange={(e) => setOtherPct(e.target.value)}
+                    value={otherAmount}
+                    onChange={(e) => setOtherAmount(e.target.value)}
                   />
                 </div>
               </div>
-              {createPreviewAmount > 0 && createPctTotal > 0 && (
+              {createPreviewAmount > 0 && (
                 <p className="text-sm text-muted-foreground">
                   Costo neto:{" "}
                   <span className="font-medium text-foreground">{formatCurrency(createCostoNetoOficina)}</span>
@@ -838,58 +842,58 @@ export function VentasClient({ clients, sales }: { clients: ClientOption[]; sale
               </div>
             ) : (
               <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
-                <span className="text-sm font-medium">Desglose Oficina (porcentajes, opcional)</span>
+                <span className="text-sm font-medium">Desglose Oficina (montos, opcional — copiados de la factura)</span>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="editProfitPct">Ganancia %</Label>
+                    <Label htmlFor="editProfitAmount">Ganancia</Label>
                     <Input
-                      id="editProfitPct"
-                      name="profitPct"
+                      id="editProfitAmount"
+                      name="profitAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editProfitPct}
-                      onChange={(e) => setEditProfitPct(e.target.value)}
+                      value={editProfitAmount}
+                      onChange={(e) => setEditProfitAmount(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="editIibbPct">IIBB %</Label>
+                    <Label htmlFor="editIibbAmount">IIBB</Label>
                     <Input
-                      id="editIibbPct"
-                      name="iibbPct"
+                      id="editIibbAmount"
+                      name="iibbAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editIibbPct}
-                      onChange={(e) => setEditIibbPct(e.target.value)}
+                      value={editIibbAmount}
+                      onChange={(e) => setEditIibbAmount(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="editIvaPct">IVA %</Label>
+                    <Label htmlFor="editIvaAmount">IVA</Label>
                     <Input
-                      id="editIvaPct"
-                      name="ivaPct"
+                      id="editIvaAmount"
+                      name="ivaAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editIvaPct}
-                      onChange={(e) => setEditIvaPct(e.target.value)}
+                      value={editIvaAmount}
+                      onChange={(e) => setEditIvaAmount(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="editOtherPct">Otros %</Label>
+                    <Label htmlFor="editOtherAmount">Otros</Label>
                     <Input
-                      id="editOtherPct"
-                      name="otherPct"
+                      id="editOtherAmount"
+                      name="otherAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editOtherPct}
-                      onChange={(e) => setEditOtherPct(e.target.value)}
+                      value={editOtherAmount}
+                      onChange={(e) => setEditOtherAmount(e.target.value)}
                     />
                   </div>
                 </div>
-                {editPreviewAmount > 0 && editPctTotal > 0 && (
+                {editPreviewAmount > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Costo neto:{" "}
                     <span className="font-medium text-foreground">{formatCurrency(editCostoNetoOficina)}</span>
