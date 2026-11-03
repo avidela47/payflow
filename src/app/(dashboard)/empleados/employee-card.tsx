@@ -12,6 +12,7 @@ type EmployeeCardProps = {
   equipo?: string;
   activo?: boolean;
   logo?: string;
+  onVerPerfil?: () => void;
 };
 
 function formatIngreso(iso: string): string {
@@ -24,6 +25,41 @@ function formatIngreso(iso: string): string {
   return texto.replace(".", "");
 }
 
+function InstagramIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="15"
+      height="15"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+      <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.5-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z" />
+    </svg>
+  );
+}
+
+function TikTokIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+      <path d="M16.5 2c.3 2.4 1.8 4 4.4 4.2v3.1c-1.5.1-2.9-.4-4.4-1.3v6.6c0 3.6-2.6 6.4-6.3 6.4-1.6 0-3-.5-4.1-1.5A6.3 6.3 0 0 1 4 14.6c0-3.5 2.8-6.3 6.3-6.3.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3 1.3-3 3s1.3 3.1 3 3.1 3.1-1.3 3.1-3.1V2h3.1z" />
+    </svg>
+  );
+}
+
 export default function EmployeeCard({
   nombre,
   cargo,
@@ -34,13 +70,8 @@ export default function EmployeeCard({
   equipo = "ITELSA",
   activo = true,
   logo,
+  onVerPerfil,
 }: EmployeeCardProps) {
-  const redes = [
-    { nombre: "Instagram", texto: "IG" },
-    { nombre: "Facebook", texto: "f" },
-    { nombre: "TikTok", texto: "♪" },
-  ];
-
   return (
     <article className="employee-card">
       <style>{`
@@ -50,10 +81,10 @@ export default function EmployeeCard({
         }
 
         .employee-card {
-          width: min(360px, 100%);
+          width: min(320px, 100%);
           overflow: hidden;
           border: 1px solid rgba(255,255,255,.85);
-          border-radius: 26px;
+          border-radius: 22px;
           background: #fff;
           color: #102338;
           font-family: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -64,7 +95,7 @@ export default function EmployeeCard({
 
         .employee-card__hero {
           position: relative;
-          height: 255px;
+          height: 185px;
           overflow: hidden;
           background:
             radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
@@ -74,7 +105,7 @@ export default function EmployeeCard({
         .employee-card__top {
           position: absolute;
           z-index: 3;
-          inset: 20px 20px auto;
+          inset: 16px 16px auto;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -83,15 +114,15 @@ export default function EmployeeCard({
 
         .employee-card__brand {
           color: #fff;
-          font-size: 17px;
+          font-size: 15px;
           font-weight: 700;
           letter-spacing: 4px;
         }
 
         .employee-card__logo {
           display: block;
-          width: 105px;
-          height: 28px;
+          width: 90px;
+          height: 24px;
           object-fit: contain;
           object-position: left center;
         }
@@ -100,12 +131,12 @@ export default function EmployeeCard({
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 10px;
+          padding: 5px 9px;
           border: 1px solid rgba(255,255,255,.2);
           border-radius: 999px;
           background: var(--status-bg);
           color: var(--status-color);
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
         }
 
@@ -120,7 +151,7 @@ export default function EmployeeCard({
           position: absolute;
           inset: auto 0 0;
           width: 100%;
-          height: 170px;
+          height: 125px;
           opacity: .45;
         }
 
@@ -129,8 +160,8 @@ export default function EmployeeCard({
           z-index: 2;
           bottom: -5px;
           left: 50%;
-          width: 225px;
-          height: 225px;
+          width: 165px;
+          height: 165px;
           display: flex;
           align-items: flex-end;
           justify-content: center;
@@ -149,12 +180,12 @@ export default function EmployeeCard({
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 150px;
-          height: 150px;
-          margin-bottom: 10px;
+          width: 110px;
+          height: 110px;
+          margin-bottom: 8px;
           border-radius: 50%;
           border: 4px solid rgba(255,255,255,.85);
-          font-size: 48px;
+          font-size: 36px;
           font-weight: 800;
           color: #fff;
           box-shadow: 0 8px 18px rgba(0,0,0,.25);
@@ -163,9 +194,9 @@ export default function EmployeeCard({
         .employee-card__body {
           position: relative;
           z-index: 4;
-          margin-top: -18px;
-          padding: 24px;
-          border-radius: 24px 24px 0 0;
+          margin-top: -16px;
+          padding: 18px 20px 20px;
+          border-radius: 20px 20px 0 0;
           background: linear-gradient(145deg, #fff, #f5f8fa);
         }
 
@@ -173,44 +204,44 @@ export default function EmployeeCard({
           margin: 0;
           overflow-wrap: anywhere;
           color: #0c2035;
-          font-size: 25px;
+          font-size: 21px;
           font-weight: 800;
           line-height: 1.15;
-          letter-spacing: -.8px;
+          letter-spacing: -.6px;
         }
 
         .employee-card__role {
-          margin: 8px 0 0;
+          margin: 6px 0 0;
           color: #07828a;
-          font-size: 11px;
+          font-size: 10.5px;
           font-weight: 800;
-          line-height: 1.5;
-          letter-spacing: 2px;
+          line-height: 1.4;
+          letter-spacing: 1.8px;
           text-transform: uppercase;
         }
 
         .employee-card__details {
           display: grid;
-          gap: 14px;
-          margin: 21px 0 0;
-          padding-top: 18px;
+          gap: 10px;
+          margin: 14px 0 0;
+          padding-top: 13px;
           border-top: 1px solid #dfe7ed;
         }
 
         .employee-card__row {
           display: grid;
-          grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1.2fr);
+          grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.2fr);
           align-items: center;
-          gap: 9px;
-          font-size: 12px;
+          gap: 8px;
+          font-size: 11.5px;
         }
 
         .employee-card__icon {
           display: grid;
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           place-items: center;
-          border-radius: 11px;
+          border-radius: 10px;
           background: #e5f0f2;
           color: #16616e;
         }
@@ -231,29 +262,51 @@ export default function EmployeeCard({
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          gap: 14px;
-          margin-top: 23px;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 16px;
         }
 
         .employee-card__socials {
           display: flex;
-          gap: 7px;
+          gap: 6px;
         }
 
         .employee-card__social {
           display: grid;
-          width: 33px;
-          height: 33px;
+          width: 29px;
+          height: 29px;
           place-items: center;
           border-radius: 50%;
           background: #e5eff2;
           color: #173c52;
-          font-size: 13px;
-          font-weight: 800;
           text-decoration: none;
         }
 
-        .employee-card a:focus-visible {
+        .employee-card__button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 32px;
+          padding: 6px 13px;
+          border: 1px solid #087a83;
+          border-radius: 999px;
+          background: transparent;
+          color: #114354;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .employee-card__button:hover {
+          background: #087a83;
+          color: #fff;
+        }
+
+        .employee-card a:focus-visible,
+        .employee-card button:focus-visible {
           outline: 3px solid #21b9c5;
           outline-offset: 3px;
         }
@@ -283,7 +336,7 @@ export default function EmployeeCard({
 
         <svg
           className="employee-card__waves"
-          viewBox="0 0 360 170"
+          viewBox="0 0 360 125"
           fill="none"
           preserveAspectRatio="none"
           aria-hidden="true"
@@ -291,9 +344,9 @@ export default function EmployeeCard({
           {[0, 16, 32, 48, 64, 80].map((offset) => (
             <path
               key={offset}
-              d={`M-40 ${65 + offset}
+              d={`M-40 ${45 + offset}
                   C70 ${-20 + offset},
-                   155 ${210 + offset},
+                   155 ${165 + offset},
                    400 ${-35 + offset}`}
               stroke="#37d7df"
               strokeWidth=".8"
@@ -320,7 +373,7 @@ export default function EmployeeCard({
           {ingresoIso && (
             <div className="employee-card__row">
               <span className="employee-card__icon" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                   <rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.7" />
                   <path d="M8 3v4m8-4v4M4 11h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                 </svg>
@@ -332,7 +385,7 @@ export default function EmployeeCard({
 
           <div className="employee-card__row">
             <span className="employee-card__icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path
                   d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"
                   stroke="currentColor"
@@ -349,18 +402,23 @@ export default function EmployeeCard({
 
         <div className="employee-card__footer">
           <nav className="employee-card__socials" aria-label={`Redes de ${nombre}`}>
-            {redes.map((red) => (
-              <a
-                key={red.nombre}
-                className="employee-card__social"
-                href="#"
-                onClick={(e) => e.preventDefault()}
-                aria-label={red.nombre}
-              >
-                {red.texto}
-              </a>
-            ))}
+            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="Instagram">
+              <InstagramIcon />
+            </a>
+            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="Facebook">
+              <FacebookIcon />
+            </a>
+            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="TikTok">
+              <TikTokIcon />
+            </a>
           </nav>
+
+          {onVerPerfil && (
+            <button type="button" className="employee-card__button" onClick={onVerPerfil}>
+              Ver perfil
+              <span aria-hidden="true">→</span>
+            </button>
+          )}
         </div>
       </div>
     </article>

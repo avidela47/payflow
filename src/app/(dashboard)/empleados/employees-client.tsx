@@ -136,6 +136,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
                       ingresoIso={emp.fechaIngreso}
                       logo="/logo.png"
                       activo={emp.active}
+                      onVerPerfil={() => setEditing(emp)}
                     />
                   </HoverCardContent>
                 </HoverCard>
