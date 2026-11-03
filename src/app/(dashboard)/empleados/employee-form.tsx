@@ -74,10 +74,23 @@ export function EmployeeForm({
     setLoading(true);
     const formData = new FormData(e.currentTarget);
 
-    const result =
-      mode === "create"
-        ? await createEmployee(formData)
-        : await updateEmployee(employeeId as string, formData);
+    let result: { ok: boolean; error?: string } | undefined;
+    try {
+      result =
+        mode === "create"
+          ? await createEmployee(formData)
+          : await updateEmployee(employeeId as string, formData);
+    } catch (err) {
+      // Si el pedido nunca llegó a nuestra Server Action (ej. el proxy del
+      // VPS lo cortó antes por el tamaño del archivo), acá no hay un
+      // `result` prolijo — mostramos un error en vez de romper la página.
+      console.error("Employee form submit error:", err);
+      setLoading(false);
+      toast.error(
+        "No se pudo guardar. Si subiste una foto, puede ser demasiado pesada para el servidor — probá con una más chica."
+      );
+      return;
+    }
 
     setLoading(false);
 
