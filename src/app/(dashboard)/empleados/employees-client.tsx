@@ -88,14 +88,16 @@ function EmployeeAvatar({
   emp: EmployeeListItem;
   size: "sm" | "lg";
 }) {
-  const dimension = size === "sm" ? "h-7 w-7" : "h-16 w-16";
+  const dimension = size === "sm" ? "h-7 w-7" : "h-28 w-28";
+  const shape = size === "sm" ? "rounded-full" : "rounded-2xl";
+  const fit = size === "sm" ? "object-cover" : "object-contain";
   const textSize = size === "sm" ? "text-[10px]" : "text-lg";
 
   return (
-    <div className={`flex ${dimension} shrink-0 items-center justify-center overflow-hidden rounded-full`}>
+    <div className={`flex ${dimension} shrink-0 items-center justify-center overflow-hidden ${shape} bg-muted`}>
       {emp.foto ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={emp.foto} alt="" className="h-full w-full object-cover" />
+        <img src={emp.foto} alt="" className={`h-full w-full ${fit}`} />
       ) : (
         <div
           className={`flex h-full w-full items-center justify-center ${textSize} font-bold text-white ${avatarColorClass(emp.category)}`}
