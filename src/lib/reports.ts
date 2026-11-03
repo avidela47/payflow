@@ -287,6 +287,29 @@ export type SalesPaymentMethodRow = {
   amount: number;
 };
 
+// Desglose por canal. El costo neto de Oficina se suma venta por venta
+// (no se recalcula con un % promedio del mes) porque promediar falsea el
+// número apenas dos ventas tienen porcentajes distintos entre sí.
+export type SalesChannelMLSummary = {
+  count: number;
+  grossAmount: number;
+  totalCommission: number;
+  totalShipping: number;
+  totalTaxes: number;
+  netAmount: number;
+};
+
+export type SalesChannelOficinaSummary = {
+  count: number;
+  grossAmount: number;
+  netCostAmount: number;
+};
+
+export type SalesChannelBreakdown = {
+  mercadoLibre: SalesChannelMLSummary;
+  oficina: SalesChannelOficinaSummary;
+};
+
 export type SalesReportDetailRow = {
   id: string;
   clientName: string;
@@ -296,6 +319,7 @@ export type SalesReportDetailRow = {
   collected: boolean;
   collectedDateISO?: string;
   invoiceNumber?: string;
+  channel: "OFICINA" | "MERCADO_LIBRE";
 };
 
 export type SalesReportResult = {
@@ -308,6 +332,7 @@ export type SalesReportResult = {
   pendingCount: number;
   pendingAmount: number;
   byPaymentMethod: SalesPaymentMethodRow[];
+  channelBreakdown: SalesChannelBreakdown;
   detail: SalesReportDetailRow[];
 };
 
@@ -328,6 +353,16 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
   let pendingAmount = 0;
   const methodMap = new Map<string, SalesPaymentMethodRow>();
   const detail: SalesReportDetailRow[] = [];
+
+  let mlCount = 0;
+  let mlGross = 0;
+  let mlCommissionTotal = 0;
+  let mlShippingTotal = 0;
+  let mlTaxesTotal = 0;
+
+  let oficinaCount = 0;
+  let oficinaGross = 0;
+  let oficinaNetCostTotal = 0;
 
   for (const sale of sales) {
     // Mismo caso que en ventas/page.tsx: si el cliente fue borrado,
@@ -353,6 +388,24 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
     methodRow.amount += sale.amount;
     methodMap.set(methodKey, methodRow);
 
+    // Ventas cargadas antes de este cambio no tienen `channel` en la base
+    // — Mongoose aplica el default del schema ("OFICINA") al leerlas.
+    const channel = sale.channel ?? "OFICINA";
+
+    if (channel === "MERCADO_LIBRE") {
+      mlCount += 1;
+      mlGross += sale.amount;
+      mlCommissionTotal += sale.mlCommission ?? 0;
+      mlShippingTotal += sale.mlShipping ?? 0;
+      mlTaxesTotal += sale.mlTaxes ?? 0;
+    } else {
+      oficinaCount += 1;
+      oficinaGross += sale.amount;
+      const pctTotal =
+        (sale.profitPct ?? 0) + (sale.iibbPct ?? 0) + (sale.ivaPct ?? 0) + (sale.otherPct ?? 0);
+      oficinaNetCostTotal += sale.amount - (sale.amount * pctTotal) / 100;
+    }
+
     detail.push({
       id: sale._id.toString(),
       clientName,
@@ -364,10 +417,27 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
         ? sale.collectedDate.toISOString().slice(0, 10)
         : undefined,
       invoiceNumber: sale.invoiceNumber,
+      channel,
     });
   }
 
   const byPaymentMethod = Array.from(methodMap.values()).sort((a, b) => b.amount - a.amount);
+
+  const channelBreakdown: SalesChannelBreakdown = {
+    mercadoLibre: {
+      count: mlCount,
+      grossAmount: mlGross,
+      totalCommission: mlCommissionTotal,
+      totalShipping: mlShippingTotal,
+      totalTaxes: mlTaxesTotal,
+      netAmount: mlGross - mlCommissionTotal - mlShippingTotal - mlTaxesTotal,
+    },
+    oficina: {
+      count: oficinaCount,
+      grossAmount: oficinaGross,
+      netCostAmount: oficinaNetCostTotal,
+    },
+  };
 
   return {
     periodISO,
@@ -379,6 +449,7 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
     pendingCount,
     pendingAmount,
     byPaymentMethod,
+    channelBreakdown,
     detail,
   };
 }

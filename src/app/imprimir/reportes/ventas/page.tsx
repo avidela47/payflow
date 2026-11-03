@@ -5,6 +5,10 @@ import { formatCurrency } from "@/lib/utils";
 import { COMPANY } from "@/lib/company";
 import { PrintButton } from "@/components/print-button";
 
+function channelLabel(channel: "OFICINA" | "MERCADO_LIBRE"): string {
+  return channel === "MERCADO_LIBRE" ? "Mercado Libre" : "Oficina";
+}
+
 // Igual que /imprimir/reportes/sueldos y /gastos: fuera de (dashboard),
 // sin sidebar, pensada para Ctrl+P → Guardar como PDF.
 export default async function ImprimirReporteVentasPage({
@@ -24,6 +28,9 @@ export default async function ImprimirReporteVentasPage({
     dateStyle: "long",
     timeStyle: "short",
   }).format(new Date());
+
+  const hasChannelData =
+    report.channelBreakdown.mercadoLibre.count > 0 || report.channelBreakdown.oficina.count > 0;
 
   return (
     <div className="mx-auto max-w-4xl bg-white p-8 text-black print:p-0">
@@ -105,6 +112,83 @@ export default async function ImprimirReporteVentasPage({
         </table>
       </section>
 
+      {hasChannelData && (
+        <section className="mt-8">
+          <p className="mb-2 text-sm font-semibold">Desglose por canal</p>
+          <div className="grid grid-cols-2 gap-6">
+            {report.channelBreakdown.mercadoLibre.count > 0 && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-900 text-left text-white">
+                    <th className="p-2" colSpan={2}>
+                      Mercado Libre ({report.channelBreakdown.mercadoLibre.count})
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Bruto</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.mercadoLibre.grossAmount)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Comisión ML</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.mercadoLibre.totalCommission)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Envío</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.mercadoLibre.totalShipping)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Impuestos</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.mercadoLibre.totalTaxes)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200 font-semibold">
+                    <td className="p-2">Precio neto real</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.mercadoLibre.netAmount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+
+            {report.channelBreakdown.oficina.count > 0 && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-900 text-left text-white">
+                    <th className="p-2" colSpan={2}>
+                      Oficina ({report.channelBreakdown.oficina.count})
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2">Bruto</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.grossAmount)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200 font-semibold">
+                    <td className="p-2">Costo neto</td>
+                    <td className="p-2 text-right">
+                      {formatCurrency(report.channelBreakdown.oficina.netCostAmount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="mt-8">
         <p className="mb-2 text-sm font-semibold">Detalle cronológico</p>
         <table className="w-full text-sm">
@@ -113,6 +197,7 @@ export default async function ImprimirReporteVentasPage({
               <th className="p-2">Cliente</th>
               <th className="p-2">Fecha</th>
               <th className="p-2">Forma de pago</th>
+              <th className="p-2">Canal</th>
               <th className="p-2">Estado</th>
               <th className="p-2 text-right">Monto</th>
             </tr>
@@ -123,13 +208,14 @@ export default async function ImprimirReporteVentasPage({
                 <td className="p-2">{entry.clientName}</td>
                 <td className="p-2">{entry.saleDateISO}</td>
                 <td className="p-2">{entry.paymentMethod ?? "—"}</td>
+                <td className="p-2">{channelLabel(entry.channel)}</td>
                 <td className="p-2">{entry.collected ? "Cobrada" : "Pendiente"}</td>
                 <td className="p-2 text-right">{formatCurrency(entry.amount)}</td>
               </tr>
             ))}
             {report.detail.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
+                <td colSpan={6} className="p-4 text-center text-gray-500">
                   No hay ventas cargadas en este mes.
                 </td>
               </tr>

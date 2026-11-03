@@ -17,6 +17,10 @@ import { formatCurrency } from "@/lib/utils";
 import { getSalesReport, currentPeriodString } from "@/lib/reports";
 import { requireModuleAccess } from "@/lib/auth";
 
+function channelLabel(channel: "OFICINA" | "MERCADO_LIBRE"): string {
+  return channel === "MERCADO_LIBRE" ? "Mercado Libre" : "Oficina";
+}
+
 export default async function ReporteVentasPage({
   searchParams,
 }: {
@@ -26,6 +30,9 @@ export default async function ReporteVentasPage({
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getSalesReport(periodISO);
+
+  const hasChannelData =
+    report.channelBreakdown.mercadoLibre.count > 0 || report.channelBreakdown.oficina.count > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -137,6 +144,91 @@ export default async function ReporteVentasPage({
         </Table>
       </div>
 
+      {hasChannelData && (
+        <div>
+          <p className="mb-2 text-sm font-medium">Desglose por canal</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {report.channelBreakdown.mercadoLibre.count > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <p className="mb-2 text-sm font-medium">
+                  Mercado Libre ({report.channelBreakdown.mercadoLibre.count} venta(s))
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Concepto</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Bruto</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.mercadoLibre.grossAmount)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Comisión ML</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.mercadoLibre.totalCommission)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Envío</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.mercadoLibre.totalShipping)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Impuestos</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.mercadoLibre.totalTaxes)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Precio neto real</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(report.channelBreakdown.mercadoLibre.netAmount)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {report.channelBreakdown.oficina.count > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <p className="mb-2 text-sm font-medium">
+                  Oficina ({report.channelBreakdown.oficina.count} venta(s))
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Concepto</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Bruto</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.channelBreakdown.oficina.grossAmount)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Costo neto</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(report.channelBreakdown.oficina.netCostAmount)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div>
         <p className="mb-2 text-sm font-medium">Detalle cronológico</p>
         <Table>
@@ -145,6 +237,7 @@ export default async function ReporteVentasPage({
               <TableHead>Cliente</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Forma de pago</TableHead>
+              <TableHead>Canal</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Monto</TableHead>
             </TableRow>
@@ -152,7 +245,7 @@ export default async function ReporteVentasPage({
           <TableBody>
             {report.detail.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No hay ventas cargadas en este mes.
                 </TableCell>
               </TableRow>
@@ -162,6 +255,7 @@ export default async function ReporteVentasPage({
                 <TableCell className="font-medium">{entry.clientName}</TableCell>
                 <TableCell>{entry.saleDateISO}</TableCell>
                 <TableCell>{entry.paymentMethod ?? "—"}</TableCell>
+                <TableCell>{channelLabel(entry.channel)}</TableCell>
                 <TableCell>
                   <Badge variant={entry.collected ? "success" : "default"}>
                     {entry.collected ? "Cobrada" : "Pendiente"}
