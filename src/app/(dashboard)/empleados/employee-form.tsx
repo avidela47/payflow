@@ -11,6 +11,10 @@ import { createEmployee, updateEmployee } from "./actions";
 type Category = "MONOTRIBUTISTA" | "EMPLEADO";
 type PaymentType = "FIJO" | "POR_HORA";
 
+// Mismo tope que valida el servidor — avisamos acá antes de mandar el
+// archivo, para no hacer esperar el viaje al server por nada.
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+
 export type EmployeeFormValues = {
   nombre?: string;
   apellido?: string;
@@ -27,6 +31,8 @@ export type EmployeeFormValues = {
   hourlyRate?: number;
   banco?: string;
   cbuAlias?: string;
+  area?: string;
+  foto?: string;
 };
 
 export function EmployeeForm({
@@ -42,11 +48,26 @@ export function EmployeeForm({
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState<Category>(defaultValues?.category ?? "EMPLEADO");
   const [paymentType, setPaymentType] = useState<PaymentType>(
     defaultValues?.paymentType ?? "FIJO"
   );
+  const [photoPreview, setPhotoPreview] = useState<string | undefined>(defaultValues?.foto);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast.error("La imagen pesa más de 2MB. Comprimila antes de subirla.");
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      return;
+    }
+
+    setPhotoPreview(URL.createObjectURL(file));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,6 +91,7 @@ export function EmployeeForm({
       formRef.current?.reset();
       setCategory("EMPLEADO");
       setPaymentType("FIJO");
+      setPhotoPreview(undefined);
     } else {
       toast.success("Ficha actualizada.");
     }
@@ -79,6 +101,28 @@ export function EmployeeForm({
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <div className="flex items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
+          {photoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoPreview} alt="Foto" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs text-muted-foreground">Sin foto</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="foto">Foto (tipo avatar, máx. 2MB)</Label>
+          <Input
+            id="foto"
+            name="foto"
+            type="file"
+            accept="image/*"
+            ref={photoInputRef}
+            onChange={handlePhotoChange}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nombre">Nombre</Label>
@@ -111,6 +155,15 @@ export function EmployeeForm({
             name="fechaIngreso"
             type="date"
             defaultValue={defaultValues?.fechaIngreso}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="area">Área</Label>
+          <Input
+            id="area"
+            name="area"
+            placeholder="Ej: Ventas, Depósito, Administración"
+            defaultValue={defaultValues?.area}
           />
         </div>
         <div className="flex flex-col gap-1.5">

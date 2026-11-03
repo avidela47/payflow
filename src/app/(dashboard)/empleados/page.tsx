@@ -33,6 +33,8 @@ export default async function EmpleadosPage() {
     hourlyRate: emp.hourlyRate,
     banco: emp.banco,
     cbuAlias: emp.cbuAlias,
+    area: emp.area,
+    foto: emp.foto,
     active: emp.active,
   }));
 

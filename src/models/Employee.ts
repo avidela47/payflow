@@ -24,6 +24,8 @@ export interface IEmployee {
   hourlyRate?: number; // solo relevante si paymentType === "POR_HORA"
   banco?: string; // banco o billetera virtual (Mercado Pago, Ualá, etc.)
   cbuAlias?: string; // CBU/CVU o alias para transferir el pago
+  area?: string; // texto libre — dónde trabaja dentro de ITELSA
+  foto?: string; // ruta al archivo subido (public/uploads/empleados/...)
   active: boolean;
   createdAt: Date;
 }
@@ -48,6 +50,8 @@ const EmployeeSchema = new Schema<IEmployee>({
   hourlyRate: Number,
   banco: String,
   cbuAlias: String,
+  area: String,
+  foto: String,
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
