@@ -101,6 +101,9 @@ export default async function ImprimirReporteGastosPage({
                 {report.months.map((m) => (
                   <td key={m} className="p-2 text-right">
                     {row.amountsByPeriod[m] ? formatCurrency(row.amountsByPeriod[m]) : "—"}
+                    {row.debitoByPeriod[m] && (
+                      <div className="text-[10px] text-gray-500">✓ Débito automático</div>
+                    )}
                   </td>
                 ))}
                 <td className="p-2 text-right font-medium">{formatCurrency(row.total)}</td>

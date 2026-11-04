@@ -157,7 +157,13 @@ export async function getPayrollReport(periodISO: string): Promise<PayrollReport
 export type FixedCostSummaryRow = {
   categoryId: string;
   categoryName: string;
+  // Monto a MOSTRAR en cada período (incluye débito automático, para que
+  // el importe siempre salga en la tabla).
   amountsByPeriod: Record<string, number>;
+  // true cuando el monto de ese período es (o incluye) débito automático
+  // — se usa para mostrar el tilde al lado y no se suma en total/ni abajo.
+  debitoByPeriod: Record<string, boolean>;
+  // Total de la fila: NO incluye los montos marcados como débito automático.
   total: number;
 };
 
@@ -267,20 +273,27 @@ export async function getFixedCostReport(
     // La categoría tiene que aparecer en "Resumen por categoría" siempre
     // que tenga algún movimiento en el rango, sea débito automático o no
     // — por eso la fila se busca/crea ACÁ, antes del "if (isDebito)".
-    // Lo único que el débito automático se salta es la suma (más abajo).
     const row =
       summaryByCategory.get(categoryId) ??
       ({
         categoryId,
         categoryName,
         amountsByPeriod: {},
+        debitoByPeriod: {},
         total: 0,
       } as FixedCostSummaryRow);
     summaryByCategory.set(categoryId, row);
 
-    if (isDebito) continue;
-
+    // El importe SIEMPRE se muestra en la celda del período, sea débito
+    // automático o no. Lo que cambia con débito automático es que no entra
+    // en ningún total (row.total, summaryTotalsByPeriod, grandTotal,
+    // totalPesos/totalDolares) y queda marcado para mostrar el tilde.
     row.amountsByPeriod[periodISO] = (row.amountsByPeriod[periodISO] ?? 0) + entry.amount;
+    if (isDebito) {
+      row.debitoByPeriod[periodISO] = true;
+      continue;
+    }
+
     row.total += entry.amount;
 
     summaryTotalsByPeriod[periodISO] = (summaryTotalsByPeriod[periodISO] ?? 0) + entry.amount;
