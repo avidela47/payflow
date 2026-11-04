@@ -28,7 +28,9 @@ export type ViaticoEmpleadoItem = {
   employeeId: string;
   // Nombre resuelto server-side (ver page.tsx) — así el detalle muestra el
   // nombre correcto incluso si el empleado ya no está activo y por eso no
-  // aparece en la lista `employees` que recibe este componente.
+  // aparece en la lista `employees` que recibe este componente. Opcional
+  // porque una fila nueva del formulario (todavía sin empleado elegido)
+  // no lo tiene.
   employeeName?: string;
   honorarioType: ViaticoHonorarioType;
   monto: number;
