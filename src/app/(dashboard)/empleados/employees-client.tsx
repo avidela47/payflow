@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -63,20 +63,6 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
   const [confirmTarget, setConfirmTarget] = useState<EmployeeListItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hoveredEmp, setHoveredEmp] = useState<EmployeeListItem | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function openCard(emp: EmployeeListItem) {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    setHoveredEmp(emp);
-  }
-
-  function scheduleClose() {
-    closeTimer.current = setTimeout(() => setHoveredEmp(null), 180);
-  }
-
   async function performDelete(emp: EmployeeListItem) {
     setDeletingId(emp.id);
     const result = await deleteEmployee(emp.id);
@@ -127,16 +113,18 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
           {employees.map((emp) => (
             <TableRow key={emp.id}>
               <TableCell>
-                <div
-                  className="flex min-w-0 cursor-pointer items-center gap-2"
-                  onMouseEnter={() => openCard(emp)}
-                  onMouseLeave={scheduleClose}
+                <button
+                  type="button"
+                  className="flex min-w-0 items-center gap-2 rounded-md text-left transition-colors hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+                  aria-label={`Ver ficha de ${emp.nombre} ${emp.apellido}`}
+                  aria-haspopup="dialog"
+                  onClick={() => setHoveredEmp(emp)}
                 >
                   <EmployeeAvatar emp={emp} />
                   <div className="min-w-0 truncate font-medium">
                     {emp.nombre} {emp.apellido}
                   </div>
-                </div>
+                </button>
               </TableCell>
               <TableCell className="truncate text-muted-foreground">
                 {emp.dni ?? emp.cuit ?? "—"}
@@ -188,12 +176,15 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
         </TableBody>
       </Table>
 
-      {hoveredEmp && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onMouseEnter={() => openCard(hoveredEmp)}
-          onMouseLeave={scheduleClose}
-        >
+      <Dialog
+        open={hoveredEmp !== null}
+        onOpenChange={(open) => {
+          if (!open) setHoveredEmp(null);
+        }}
+        title="Ficha del empleado"
+        className="w-[calc(100vw-2rem)] max-w-[400px] max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      >
+        {hoveredEmp && (
           <EmployeeCard
             nombre={`${hoveredEmp.nombre} ${hoveredEmp.apellido}`.trim()}
             cargo={
@@ -210,8 +201,8 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
               setEditing(hoveredEmp);
             }}
           />
-        </div>
-      )}
+        )}
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen} title="Nuevo empleado">
         <EmployeeForm mode="create" onSuccess={() => setCreateOpen(false)} />
