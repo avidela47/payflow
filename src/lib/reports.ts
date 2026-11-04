@@ -264,8 +264,10 @@ export async function getFixedCostReport(
       debitoAutomatico: isDebito,
     });
 
-    if (isDebito) continue;
-
+    // La categoría tiene que aparecer en "Resumen por categoría" siempre
+    // que tenga algún movimiento en el rango, sea débito automático o no
+    // — por eso la fila se busca/crea ACÁ, antes del "if (isDebito)".
+    // Lo único que el débito automático se salta es la suma (más abajo).
     const row =
       summaryByCategory.get(categoryId) ??
       ({
@@ -274,9 +276,12 @@ export async function getFixedCostReport(
         amountsByPeriod: {},
         total: 0,
       } as FixedCostSummaryRow);
+    summaryByCategory.set(categoryId, row);
+
+    if (isDebito) continue;
+
     row.amountsByPeriod[periodISO] = (row.amountsByPeriod[periodISO] ?? 0) + entry.amount;
     row.total += entry.amount;
-    summaryByCategory.set(categoryId, row);
 
     summaryTotalsByPeriod[periodISO] = (summaryTotalsByPeriod[periodISO] ?? 0) + entry.amount;
     grandTotal += entry.amount;

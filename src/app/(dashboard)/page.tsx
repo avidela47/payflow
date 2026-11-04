@@ -144,10 +144,7 @@ export default async function DashboardPage() {
     Purchase.countDocuments({ receiptStatus: { $in: ["EN_CURSO", "RECIBIDA_PARCIAL"] } }),
     PayrollEntry.find({ period: payrollPeriod }).lean(),
     PayrollEntry.find({ period: prevPayrollPeriod }).lean(),
-    // debitoAutomatico: se descuenta solo de la cuenta — no corresponde
-    // mostrarlo como "pendiente" acá (mismo criterio que en
-    // getFixedCostReport, ver reports.ts).
-    FixedCostEntry.find({ period: periodStart, paid: false, debitoAutomatico: { $ne: true } })
+    FixedCostEntry.find({ period: periodStart, paid: false })
       .populate("category")
       .lean(),
     Check.find({ status: "ACTIVO" }).lean(),
