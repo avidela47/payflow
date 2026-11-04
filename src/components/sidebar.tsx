@@ -23,6 +23,7 @@ import {
   Truck,
   ShoppingCart,
   Banknote,
+  Plane,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +77,13 @@ const navItems = [
     icon: Banknote,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "caja-chica",
+  },
+  {
+    href: "/viaticos",
+    label: "Viáticos",
+    icon: Plane,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "viaticos",
   },
   { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
