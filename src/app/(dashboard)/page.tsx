@@ -144,7 +144,12 @@ export default async function DashboardPage() {
     Purchase.countDocuments({ receiptStatus: { $in: ["EN_CURSO", "RECIBIDA_PARCIAL"] } }),
     PayrollEntry.find({ period: payrollPeriod }).lean(),
     PayrollEntry.find({ period: prevPayrollPeriod }).lean(),
-    FixedCostEntry.find({ period: periodStart, paid: false }).populate("category").lean(),
+    // debitoAutomatico: se descuenta solo de la cuenta — no corresponde
+    // mostrarlo como "pendiente" acá (mismo criterio que en
+    // getFixedCostReport, ver reports.ts).
+    FixedCostEntry.find({ period: periodStart, paid: false, debitoAutomatico: { $ne: true } })
+      .populate("category")
+      .lean(),
     Check.find({ status: "ACTIVO" }).lean(),
     // Agenda y Calendario son privados por usuario (ver
     // migrar-agenda-calendario-florencia.ts) — sin el filtro por user, este

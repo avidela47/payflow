@@ -42,6 +42,7 @@ export default async function CostosFijosPage() {
       exchangeRate: entry.exchangeRate,
       noConversion: entry.noConversion ?? false,
       paymentMode: entry.paymentMode,
+      debitoAutomatico: entry.debitoAutomatico ?? false,
       dueDateISO: entry.dueDate ? entry.dueDate.toISOString().slice(0, 10) : undefined,
       dueDateLabel: entry.dueDate ? formatDueDate(entry.dueDate) : undefined,
       notes: entry.notes,

@@ -17,6 +17,12 @@ import { formatCurrency, formatPeriod } from "@/lib/utils";
 import { getFixedCostReport, currentPeriodString, periodStringToDate } from "@/lib/reports";
 import { requireModuleAccess } from "@/lib/auth";
 
+function formatUsd(value: number): string {
+  return new Intl.NumberFormat("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(
+    value
+  );
+}
+
 export default async function ReporteGastosPage({
   searchParams,
 }: {
@@ -64,18 +70,35 @@ export default async function ReporteGastosPage({
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">
-            Total del rango —{" "}
-            <span className="capitalize">
-              {formatPeriod(periodStringToDate(report.fromISO))} a{" "}
-              {formatPeriod(periodStringToDate(report.toISO))}
-            </span>
-          </p>
-          <p className="text-2xl font-semibold">{formatCurrency(report.grandTotal)}</p>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">
+              Total del rango —{" "}
+              <span className="capitalize">
+                {formatPeriod(periodStringToDate(report.fromISO))} a{" "}
+                {formatPeriod(periodStringToDate(report.toISO))}
+              </span>
+            </p>
+            <p className="text-2xl font-semibold">{formatCurrency(report.grandTotal)}</p>
+            <p className="text-xs text-muted-foreground">
+              En pesos equivalentes (incluye USD convertidos a pesos)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Cargado en pesos</p>
+            <p className="text-2xl font-semibold">{formatCurrency(report.totalPesos)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Cargado en dólares</p>
+            <p className="text-2xl font-semibold">U$D {formatUsd(report.totalDolares)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div>
         <p className="mb-2 text-sm font-medium">Resumen por categoría</p>
@@ -137,6 +160,7 @@ export default async function ReporteGastosPage({
               <TableHead>Categoría</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Forma de pago</TableHead>
+              <TableHead>Notas</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Monto</TableHead>
             </TableRow>
@@ -144,7 +168,7 @@ export default async function ReporteGastosPage({
           <TableBody>
             {report.detail.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No hay gastos cargados en este rango.
                 </TableCell>
               </TableRow>
@@ -154,12 +178,36 @@ export default async function ReporteGastosPage({
                 <TableCell className="font-medium">{entry.categoryName}</TableCell>
                 <TableCell className="capitalize">{entry.periodLabel}</TableCell>
                 <TableCell>{entry.paymentMode ?? "—"}</TableCell>
-                <TableCell>
-                  <Badge variant={entry.paid ? "success" : "default"}>
-                    {entry.paid ? "Pagado" : "Pendiente"}
-                  </Badge>
+                <TableCell className="max-w-[220px] text-muted-foreground">
+                  {entry.notes ?? "—"}
                 </TableCell>
-                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col items-start gap-1">
+                    <Badge variant={entry.paid ? "success" : "default"}>
+                      {entry.paid ? "Pagado" : "Pendiente"}
+                    </Badge>
+                    {entry.debitoAutomatico && (
+                      <Badge variant="success" title="No suma en los totales de este reporte">
+                        ✓ Débito automático
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  {entry.currency === "USD" ? (
+                    <>
+                      U$D {formatUsd(entry.usdAmount ?? 0)}
+                      <div className="text-xs text-muted-foreground">
+                        ({formatCurrency(entry.amount)})
+                      </div>
+                    </>
+                  ) : (
+                    formatCurrency(entry.amount)
+                  )}
+                  {entry.debitoAutomatico && (
+                    <div className="text-xs text-muted-foreground">No incluido en el total</div>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

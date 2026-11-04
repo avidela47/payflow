@@ -5,6 +5,12 @@ import { formatCurrency, formatPeriod } from "@/lib/utils";
 import { COMPANY } from "@/lib/company";
 import { PrintButton } from "@/components/print-button";
 
+function formatUsd(value: number): string {
+  return new Intl.NumberFormat("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(
+    value
+  );
+}
+
 // Igual que /imprimir/reportes/sueldos: fuera de (dashboard), sin sidebar,
 // pensada para Ctrl+P → Guardar como PDF.
 export default async function ImprimirReporteGastosPage({
@@ -56,6 +62,25 @@ export default async function ImprimirReporteGastosPage({
       </header>
 
       <section className="mt-6">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-900 text-left text-white">
+              <th className="p-2">Total del rango (pesos equiv.)</th>
+              <th className="p-2 text-right">Cargado en pesos</th>
+              <th className="p-2 text-right">Cargado en dólares</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <td className="p-2">{formatCurrency(report.grandTotal)}</td>
+              <td className="p-2 text-right">{formatCurrency(report.totalPesos)}</td>
+              <td className="p-2 text-right">U$D {formatUsd(report.totalDolares)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-8">
         <p className="mb-2 text-sm font-semibold">Resumen por categoría</p>
         <table className="w-full text-sm">
           <thead>
@@ -113,6 +138,7 @@ export default async function ImprimirReporteGastosPage({
               <th className="p-2">Categoría</th>
               <th className="p-2">Período</th>
               <th className="p-2">Forma de pago</th>
+              <th className="p-2">Notas</th>
               <th className="p-2">Estado</th>
               <th className="p-2 text-right">Monto</th>
             </tr>
@@ -123,13 +149,21 @@ export default async function ImprimirReporteGastosPage({
                 <td className="p-2">{entry.categoryName}</td>
                 <td className="p-2 capitalize">{entry.periodLabel}</td>
                 <td className="p-2">{entry.paymentMode ?? "—"}</td>
-                <td className="p-2">{entry.paid ? "Pagado" : "Pendiente"}</td>
-                <td className="p-2 text-right">{formatCurrency(entry.amount)}</td>
+                <td className="p-2">{entry.notes ?? "—"}</td>
+                <td className="p-2">
+                  {entry.paid ? "Pagado" : "Pendiente"}
+                  {entry.debitoAutomatico ? " ✓ Débito automático (no suma)" : ""}
+                </td>
+                <td className="p-2 text-right">
+                  {entry.currency === "USD"
+                    ? `U$D ${formatUsd(entry.usdAmount ?? 0)} (${formatCurrency(entry.amount)})`
+                    : formatCurrency(entry.amount)}
+                </td>
               </tr>
             ))}
             {report.detail.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
+                <td colSpan={6} className="p-4 text-center text-gray-500">
                   No hay gastos cargados en este rango.
                 </td>
               </tr>

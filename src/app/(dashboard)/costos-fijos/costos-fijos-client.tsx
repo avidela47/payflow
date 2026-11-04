@@ -43,6 +43,7 @@ export type FixedCostEntryItem = {
   exchangeRate?: number;
   noConversion?: boolean;
   paymentMode?: string;
+  debitoAutomatico?: boolean;
   dueDateISO?: string; // "YYYY-MM-DD"
   dueDateLabel?: string;
   notes?: string;
@@ -97,6 +98,7 @@ export function CostosFijosClient({
   const [usdAmount, setUsdAmount] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
   const [noConversion, setNoConversion] = useState(false);
+  const [debitoAutomatico, setDebitoAutomatico] = useState(false);
 
   // Modal de nueva categoría
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -108,6 +110,7 @@ export function CostosFijosClient({
   const [editUsdAmount, setEditUsdAmount] = useState("");
   const [editExchangeRate, setEditExchangeRate] = useState("");
   const [editNoConversion, setEditNoConversion] = useState(false);
+  const [editDebitoAutomatico, setEditDebitoAutomatico] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<FixedCostEntryItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export function CostosFijosClient({
     setEditUsdAmount(entry.usdAmount != null ? String(entry.usdAmount) : "");
     setEditExchangeRate(entry.exchangeRate != null ? String(entry.exchangeRate) : "");
     setEditNoConversion(entry.noConversion ?? false);
+    setEditDebitoAutomatico(entry.debitoAutomatico ?? false);
   }
 
   async function handleCreateSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -140,6 +144,7 @@ export function CostosFijosClient({
     setUsdAmount("");
     setExchangeRate("");
     setNoConversion(false);
+    setDebitoAutomatico(false);
     router.refresh();
   }
 
@@ -334,6 +339,20 @@ export function CostosFijosClient({
               <Input id="dueDate" name="dueDate" type="date" />
             </div>
 
+            <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
+              <input
+                id="debitoAutomatico"
+                name="debitoAutomatico"
+                type="checkbox"
+                checked={debitoAutomatico}
+                onChange={(e) => setDebitoAutomatico(e.target.checked)}
+                className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+              <Label htmlFor="debitoAutomatico" className="cursor-pointer font-normal">
+                Débito automático (no suma en el reporte)
+              </Label>
+            </div>
+
             <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-2">
               <Label htmlFor="notes">Notas</Label>
               <Input id="notes" name="notes" />
@@ -406,15 +425,22 @@ export function CostosFijosClient({
               <TableCell>{entry.paymentMode ?? "—"}</TableCell>
               <TableCell>{entry.dueDateLabel ?? "—"}</TableCell>
               <TableCell>
-                <button
-                  onClick={() => handleTogglePaid(entry)}
-                  disabled={togglingId === entry.id}
-                  title="Click para cambiar el estado"
-                >
-                  <Badge variant={entry.paid ? "success" : "default"}>
-                    {togglingId === entry.id ? "..." : entry.paid ? "Pagado" : "Pendiente"}
-                  </Badge>
-                </button>
+                <div className="flex flex-col items-start gap-1">
+                  <button
+                    onClick={() => handleTogglePaid(entry)}
+                    disabled={togglingId === entry.id}
+                    title="Click para cambiar el estado"
+                  >
+                    <Badge variant={entry.paid ? "success" : "default"}>
+                      {togglingId === entry.id ? "..." : entry.paid ? "Pagado" : "Pendiente"}
+                    </Badge>
+                  </button>
+                  {entry.debitoAutomatico && (
+                    <Badge variant="success" title="No suma en el reporte">
+                      ✓ Débito automático
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-2">
@@ -607,6 +633,19 @@ export function CostosFijosClient({
                 type="date"
                 defaultValue={editing.dueDateISO ?? ""}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="editDebitoAutomatico"
+                name="debitoAutomatico"
+                type="checkbox"
+                checked={editDebitoAutomatico}
+                onChange={(e) => setEditDebitoAutomatico(e.target.checked)}
+                className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+              <Label htmlFor="editDebitoAutomatico" className="cursor-pointer font-normal">
+                Débito automático (no suma en el reporte)
+              </Label>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="editNotes">Notas</Label>

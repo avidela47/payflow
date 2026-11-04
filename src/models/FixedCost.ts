@@ -34,6 +34,15 @@ export interface IFixedCostEntry {
   // Reportes/Dashboard (ver getFixedCostReport en reports.ts).
   noConversion?: boolean;
   paymentMode?: string; // "VEP" | "Tarjeta" | "Débito automático" | ...
+  // Distinto de paymentMode="Débito automático" (que es solo texto
+  // descriptivo): este campo cambia el comportamiento del reporte — el
+  // gasto SIGUE apareciendo en el detalle cronológico de Reportes >
+  // Gastos, pero queda afuera de las sumas (resumen por categoría y total
+  // del rango), porque se descuenta solo de la cuenta y no corresponde
+  // contarlo como un pago manual pendiente/hecho. Se muestra con un
+  // tilde, igual que un gasto pagado (ver getFixedCostReport en
+  // reports.ts).
+  debitoAutomatico?: boolean;
   dueDate?: Date;
   paid: boolean;
   notes?: string;
@@ -49,6 +58,7 @@ const FixedCostEntrySchema = new Schema<IFixedCostEntry>({
   exchangeRate: Number,
   noConversion: { type: Boolean, default: false },
   paymentMode: String,
+  debitoAutomatico: { type: Boolean, default: false },
   dueDate: Date,
   paid: { type: Boolean, default: false },
   notes: String,

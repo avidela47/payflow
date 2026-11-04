@@ -142,6 +142,9 @@ const entrySchema = z.object({
   usdAmount: z.coerce.number().positive().optional(),
   exchangeRate: z.coerce.number().positive().optional(),
   paymentMode: z.string().optional(),
+  // Checkbox aparte de paymentMode: saca el gasto de las sumas del
+  // reporte (ver comentario en el modelo).
+  debitoAutomatico: z.boolean().optional().default(false),
   dueDate: z.string().optional(), // "YYYY-MM-DD"
   notes: z.string().optional(),
 });
@@ -156,6 +159,7 @@ function parseEntryForm(formData: FormData) {
     usdAmount: formData.get("usdAmount") || undefined,
     exchangeRate: formData.get("exchangeRate") || undefined,
     paymentMode: formData.get("paymentMode") || undefined,
+    debitoAutomatico: formData.get("debitoAutomatico") === "on",
     dueDate: formData.get("dueDate") || undefined,
     notes: formData.get("notes") || undefined,
   });
@@ -252,6 +256,7 @@ export async function createFixedCostEntry(formData: FormData) {
           currency: resolved.currency,
           noConversion: resolved.noConversion,
           paymentMode: parsed.data.paymentMode,
+          debitoAutomatico: parsed.data.debitoAutomatico,
           dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
           notes: parsed.data.notes,
           ...(resolved.currency === "USD" ? { usdAmount: resolved.usdAmount } : {}),
@@ -317,6 +322,7 @@ export async function updateFixedCostEntry(entryId: string, formData: FormData) 
         currency: resolved.currency,
         noConversion: resolved.noConversion,
         paymentMode: parsed.data.paymentMode,
+        debitoAutomatico: parsed.data.debitoAutomatico,
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         notes: parsed.data.notes,
         ...(resolved.currency === "USD" ? { usdAmount: resolved.usdAmount } : {}),

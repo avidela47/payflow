@@ -167,9 +167,17 @@ export type FixedCostDetailRow = {
   periodISO: string;
   periodLabel: string;
   amount: number;
+  currency: "ARS" | "USD";
+  usdAmount?: number;
   paymentMode?: string;
   dueDate?: Date;
+  notes?: string;
   paid: boolean;
+  // Si es true, esta fila SIGUE apareciendo en el detalle cronológico
+  // pero quedó afuera del resumen por categoría, de summaryTotalsByPeriod,
+  // de grandTotal y de totalPesos/totalDolares — se descuenta solo de la
+  // cuenta, no corresponde sumarlo como un pago pendiente/hecho.
+  debitoAutomatico: boolean;
 };
 
 export type FixedCostReportResult = {
@@ -179,6 +187,14 @@ export type FixedCostReportResult = {
   summary: FixedCostSummaryRow[];
   summaryTotalsByPeriod: Record<string, number>;
   grandTotal: number;
+  // División pedida aparte del total en pesos "mezclado" (grandTotal, que
+  // incluye el equivalente en pesos de los costos en USD convertidos):
+  // totalPesos es solo lo cargado directamente en pesos, totalDolares es
+  // solo lo cargado en dólares (monto en USD crudo, sin convertir). Los
+  // costos "sin conversión" (noConversion) siguen totalmente afuera de
+  // este reporte, como ya era antes.
+  totalPesos: number;
+  totalDolares: number;
   detail: FixedCostDetailRow[];
 };
 
@@ -200,6 +216,8 @@ export async function getFixedCostReport(
   const summaryTotalsByPeriod: Record<string, number> = {};
   for (const m of months) summaryTotalsByPeriod[m] = 0;
   let grandTotal = 0;
+  let totalPesos = 0;
+  let totalDolares = 0;
   const detail: FixedCostDetailRow[] = [];
 
   for (const entry of entries) {
@@ -226,6 +244,27 @@ export async function getFixedCostReport(
       2,
       "0"
     )}`;
+    const currency = entry.currency ?? "ARS";
+    const isDebito = entry.debitoAutomatico ?? false;
+
+    // La fila de detalle se agrega siempre, sea débito automático o no —
+    // lo único que cambia es si suma a los totales de abajo.
+    detail.push({
+      id: entry._id.toString(),
+      categoryName,
+      periodISO,
+      periodLabel: formatPeriod(periodDate),
+      amount: entry.amount,
+      currency,
+      usdAmount: entry.usdAmount,
+      paymentMode: entry.paymentMode,
+      dueDate: entry.dueDate,
+      notes: entry.notes,
+      paid: entry.paid,
+      debitoAutomatico: isDebito,
+    });
+
+    if (isDebito) continue;
 
     const row =
       summaryByCategory.get(categoryId) ??
@@ -242,16 +281,11 @@ export async function getFixedCostReport(
     summaryTotalsByPeriod[periodISO] = (summaryTotalsByPeriod[periodISO] ?? 0) + entry.amount;
     grandTotal += entry.amount;
 
-    detail.push({
-      id: entry._id.toString(),
-      categoryName,
-      periodISO,
-      periodLabel: formatPeriod(periodDate),
-      amount: entry.amount,
-      paymentMode: entry.paymentMode,
-      dueDate: entry.dueDate,
-      paid: entry.paid,
-    });
+    if (currency === "USD") {
+      totalDolares += entry.usdAmount ?? 0;
+    } else {
+      totalPesos += entry.amount;
+    }
   }
 
   const summary = Array.from(summaryByCategory.values()).sort((a, b) =>
@@ -265,6 +299,8 @@ export async function getFixedCostReport(
     summary,
     summaryTotalsByPeriod,
     grandTotal,
+    totalPesos,
+    totalDolares,
     detail,
   };
 }
