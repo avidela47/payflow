@@ -128,6 +128,11 @@ export default async function ReporteGastosPage({
                 {report.months.map((m) => (
                   <TableCell key={m} className="text-right">
                     {row.amountsByPeriod[m] ? formatCurrency(row.amountsByPeriod[m]) : "—"}
+                    {row.debitoByPeriod[m] && (
+                      <div className="text-xs text-muted-foreground">
+                        ✓ Débito automático
+                      </div>
+                    )}
                   </TableCell>
                 ))}
                 <TableCell className="text-right font-medium">
