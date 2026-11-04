@@ -4,6 +4,7 @@ import { FixedCostEntry } from "@/models/FixedCost";
 import { Sale } from "@/models/Sale";
 import { Purchase, type PurchaseReceiptStatus } from "@/models/Purchase";
 import { Check, type CheckStatus, type CheckType, type CheckDirection } from "@/models/Check";
+import { Viatico } from "@/models/Viatico";
 import { formatPeriod } from "@/lib/utils";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
@@ -712,6 +713,125 @@ export async function getCheckReport(periodISO: string): Promise<ChecksReportRes
     byStatus,
     byType,
     byDirection,
+    detail,
+  };
+}
+// ---------- Reporte de Viáticos ----------
+
+export type ViaticosCategoryRow = {
+  categoria: string;
+  amount: number;
+};
+
+export type ViaticosReportDetailRow = {
+  id: string;
+  nombre: string;
+  fechaISO: string;
+  paidBy?: string;
+  totalAmount: number;
+  excedente: number;
+};
+
+export type ViaticosReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  totalCount: number;
+  totalAmount: number;
+  totalExcedente: number;
+  byCategory: ViaticosCategoryRow[];
+  detail: ViaticosReportDetailRow[];
+};
+
+// Mismo cálculo de total que usa viaticos-client.tsx (calcularTotal): suma
+// de honorarios de empleados (TRABAJO: monto fijo; DIA: monto x días) +
+// hospedaje + combustible + extras + materiales + seguro. Se duplica acá
+// (server-side, para el reporte) en vez de importarlo del client
+// component porque ese archivo es "use client".
+function calcularTotalViatico(v: {
+  empleados: { honorarioType: "TRABAJO" | "DIA"; monto: number; dias?: number }[];
+  hospedaje?: { costoPorDia?: number; cantidadDias?: number };
+  combustible?: { monto?: number };
+  extras: { monto: number }[];
+  materiales: { monto: number }[];
+  seguro?: { costo?: number };
+}) {
+  const empleadosTotal = v.empleados.reduce(
+    (sum, e) => sum + (e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto),
+    0
+  );
+  const hospedajeTotal = (v.hospedaje?.costoPorDia ?? 0) * (v.hospedaje?.cantidadDias ?? 0);
+  const combustibleTotal = v.combustible?.monto ?? 0;
+  const extrasTotal = v.extras.reduce((sum, x) => sum + x.monto, 0);
+  const materialesTotal = v.materiales.reduce((sum, x) => sum + x.monto, 0);
+  const seguroTotal = v.seguro?.costo ?? 0;
+  return {
+    total:
+      empleadosTotal + hospedajeTotal + combustibleTotal + extrasTotal + materialesTotal + seguroTotal,
+    empleadosTotal,
+    hospedajeTotal,
+    combustibleTotal,
+    extrasTotal,
+    materialesTotal,
+    seguroTotal,
+  };
+}
+
+export async function getViaticosReport(periodISO: string): Promise<ViaticosReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const viaticos = await Viatico.find({ fecha: { $gte: from, $lt: to } })
+    .sort({ fecha: 1 })
+    .lean();
+
+  let totalAmount = 0;
+  let totalExcedente = 0;
+  let honorarios = 0;
+  let hospedaje = 0;
+  let combustible = 0;
+  let extras = 0;
+  let materiales = 0;
+  let seguro = 0;
+  const detail: ViaticosReportDetailRow[] = [];
+
+  for (const v of viaticos) {
+    const calc = calcularTotalViatico(v);
+    totalAmount += calc.total;
+    totalExcedente += v.excedente ?? 0;
+    honorarios += calc.empleadosTotal;
+    hospedaje += calc.hospedajeTotal;
+    combustible += calc.combustibleTotal;
+    extras += calc.extrasTotal;
+    materiales += calc.materialesTotal;
+    seguro += calc.seguroTotal;
+
+    detail.push({
+      id: v._id.toString(),
+      nombre: v.nombre,
+      fechaISO: v.fecha.toISOString().slice(0, 10),
+      paidBy: v.paidBy,
+      totalAmount: calc.total,
+      excedente: v.excedente ?? 0,
+    });
+  }
+
+  const byCategory: ViaticosCategoryRow[] = [
+    { categoria: "Honorarios de empleados", amount: honorarios },
+    { categoria: "Hospedaje", amount: hospedaje },
+    { categoria: "Combustible (EdenRed)", amount: combustible },
+    { categoria: "Extras", amount: extras },
+    { categoria: "Materiales", amount: materiales },
+    { categoria: "Seguro", amount: seguro },
+  ].filter((row) => row.amount > 0);
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    totalCount: viaticos.length,
+    totalAmount,
+    totalExcedente,
+    byCategory,
     detail,
   };
 }

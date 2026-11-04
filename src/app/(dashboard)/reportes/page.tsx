@@ -7,6 +7,7 @@ import {
   Landmark,
   ArrowRight,
   FileBarChart,
+  Plane,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireModuleAccess } from "@/lib/auth";
@@ -98,6 +99,23 @@ export default async function ReportesPage() {
                 <p className="font-semibold">Costos Fijos / Gastos</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Por rango de meses: resumen por categoría y detalle cronológico.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reportes/viaticos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Plane className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Viáticos</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: total por categoría (honorarios, hospedaje, combustible, extras, materiales, seguro) y excedente.
                 </p>
               </div>
               <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
