@@ -384,26 +384,25 @@ export default function EmployeeCard({
           </span>
         </div>
 
-               <svg
+                 <svg
           className="employee-card__waves"
-          viewBox="0 0 400 145"
+          viewBox="0 0 400 230"
           fill="none"
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          {[0, 1, 2, 3, 4, 5].map((i) => {
-            const b = 35 + i * 18;
-            return (
-              <path
-                key={i}
-                d={`M-40,${b} Q 0,${b - 16} 40,${b} T 120,${b} T 200,${b} T 280,${b} T 360,${b} T 440,${b}`}
-                stroke="#37d7df"
-                strokeWidth=".8"
-              />
-            );
-          })}
+          {[40, 65, 90, 115, 140, 165].map((r) => (
+            <ellipse
+              key={r}
+              cx="70"
+              cy="60"
+              rx={r}
+              ry={r * 0.85}
+              stroke="#37d7df"
+              strokeWidth=".7"
+            />
+          ))}
         </svg>
-
         {imagen && failedImage !== imagen ? (
           <div className="employee-card__avatar-frame">
             <img src={imagen} alt={`Retrato de ${nombre}`} onError={() => setFailedImage(imagen)} />
