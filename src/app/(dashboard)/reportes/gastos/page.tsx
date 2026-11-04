@@ -202,12 +202,19 @@ export default async function ReporteGastosPage({
                   {entry.currency === "USD" ? (
                     <>
                       U$D {formatUsd(entry.usdAmount ?? 0)}
-                      <div className="text-xs text-muted-foreground">
-                        ({formatCurrency(entry.amount)})
-                      </div>
+                      {!entry.noConversion && (
+                        <div className="text-xs text-muted-foreground">
+                          ({formatCurrency(entry.amount)})
+                        </div>
+                      )}
                     </>
                   ) : (
                     formatCurrency(entry.amount)
+                  )}
+                  {entry.noConversion && (
+                    <div className="text-xs text-muted-foreground">
+                      Sin conversión — no suma al total en pesos
+                    </div>
                   )}
                   {entry.debitoAutomatico && (
                     <div className="text-xs text-muted-foreground">No incluido en el total</div>

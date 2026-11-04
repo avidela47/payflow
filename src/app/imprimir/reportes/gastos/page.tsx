@@ -159,8 +159,15 @@ export default async function ImprimirReporteGastosPage({
                 </td>
                 <td className="p-2 text-right">
                   {entry.currency === "USD"
-                    ? `U$D ${formatUsd(entry.usdAmount ?? 0)} (${formatCurrency(entry.amount)})`
+                    ? entry.noConversion
+                      ? `U$D ${formatUsd(entry.usdAmount ?? 0)}`
+                      : `U$D ${formatUsd(entry.usdAmount ?? 0)} (${formatCurrency(entry.amount)})`
                     : formatCurrency(entry.amount)}
+                  {entry.noConversion && (
+                    <div className="text-[10px] text-gray-500">
+                      Sin conversión — no suma al total en pesos
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

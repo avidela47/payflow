@@ -184,6 +184,10 @@ export type FixedCostDetailRow = {
   // de grandTotal y de totalPesos/totalDolares — se descuenta solo de la
   // cuenta, no corresponde sumarlo como un pago pendiente/hecho.
   debitoAutomatico: boolean;
+  // USD "sin conversión": no tiene equivalente en pesos (amount=0 a
+  // propósito), por eso tampoco entra al Resumen por categoría — pero sí
+  // suma a "Cargado en dólares" y aparece acá en el detalle.
+  noConversion: boolean;
 };
 
 export type FixedCostReportResult = {
@@ -196,9 +200,10 @@ export type FixedCostReportResult = {
   // División pedida aparte del total en pesos "mezclado" (grandTotal, que
   // incluye el equivalente en pesos de los costos en USD convertidos):
   // totalPesos es solo lo cargado directamente en pesos, totalDolares es
-  // solo lo cargado en dólares (monto en USD crudo, sin convertir). Los
-  // costos "sin conversión" (noConversion) siguen totalmente afuera de
-  // este reporte, como ya era antes.
+  // solo lo cargado en dólares (monto en USD crudo, sin convertir),
+  // INCLUYENDO los costos "sin conversión" (noConversion) — esos no entran
+  // al Resumen por categoría (no tienen equivalente en pesos) pero sí
+  // aparecen en el detalle y suman acá en dólares.
   totalPesos: number;
   totalDolares: number;
   detail: FixedCostDetailRow[];
@@ -227,12 +232,6 @@ export async function getFixedCostReport(
   const detail: FixedCostDetailRow[] = [];
 
   for (const entry of entries) {
-    // Un costo en USD "sin conversión" es un gasto aparte, en dólares
-    // puros, que a propósito no tiene equivalente en pesos (amount=0) —
-    // se deja afuera de este reporte (que es en pesos) en vez de meter
-    // una fila en $0 que se vería como un error.
-    if (entry.noConversion) continue;
-
     const categoryDoc =
       entry.category && typeof entry.category === "object" && "name" in entry.category
         ? (entry.category as unknown as { _id: { toString(): string }; name: string })
@@ -252,9 +251,10 @@ export async function getFixedCostReport(
     )}`;
     const currency = entry.currency ?? "ARS";
     const isDebito = entry.debitoAutomatico ?? false;
+    const isNoConversion = entry.noConversion ?? false;
 
-    // La fila de detalle se agrega siempre, sea débito automático o no —
-    // lo único que cambia es si suma a los totales de abajo.
+    // La fila de detalle se agrega siempre — débito automático, sin
+    // conversión, lo que sea — así no desaparece ningún gasto cargado.
     detail.push({
       id: entry._id.toString(),
       categoryName,
@@ -268,7 +268,22 @@ export async function getFixedCostReport(
       notes: entry.notes,
       paid: entry.paid,
       debitoAutomatico: isDebito,
+      noConversion: isNoConversion,
     });
+
+    // Un costo en USD "sin conversión" es un gasto en dólares puros, a
+    // propósito sin equivalente en pesos (amount=0) — por eso NO entra al
+    // Resumen por categoría (ahí se vería como una fila en $0, que parece
+    // un error) ni suma a los totales en pesos. Pero SÍ es plata en
+    // dólares real y tiene que sumar a "Cargado en dólares" — antes se
+    // salteaba el entry entero acá arriba y el USD quedaba fantasma, sin
+    // aparecer en ningún lado del reporte.
+    if (isNoConversion) {
+      if (currency === "USD") {
+        totalDolares += entry.usdAmount ?? 0;
+      }
+      continue;
+    }
 
     // La categoría tiene que aparecer en "Resumen por categoría" siempre
     // que tenga algún movimiento en el rango, sea débito automático o no
