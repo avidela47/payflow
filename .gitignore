@@ -7,4 +7,5 @@ build
 *.log
 .DS_Store
 *.tsbuildinfo
-.vercel
+.vercelpublic/uploads/
+public/uploads/
