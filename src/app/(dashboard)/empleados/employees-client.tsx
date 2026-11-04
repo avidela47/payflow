@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { EmployeeForm, type EmployeeFormValues } from "./employee-form";
 import { deleteEmployee } from "./actions";
 import EmployeeCard from "./employee-card";
@@ -39,7 +38,7 @@ function avatarColorClass(category?: string): string {
   return category === "MONOTRIBUTISTA" ? "bg-destructive" : "bg-success";
 }
 
-// Avatar chico de la tabla (el disparador del hover card).
+// Avatar chico de la tabla (el disparador del hover).
 function EmployeeAvatar({ emp }: { emp: EmployeeListItem }) {
   return (
     <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full">
@@ -63,6 +62,20 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
   const [editing, setEditing] = useState<EmployeeListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<EmployeeListItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [hoveredEmp, setHoveredEmp] = useState<EmployeeListItem | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function openCard(emp: EmployeeListItem) {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setHoveredEmp(emp);
+  }
+
+  function scheduleClose() {
+    closeTimer.current = setTimeout(() => setHoveredEmp(null), 180);
+  }
 
   async function performDelete(emp: EmployeeListItem) {
     setDeletingId(emp.id);
@@ -114,32 +127,16 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
           {employees.map((emp) => (
             <TableRow key={emp.id}>
               <TableCell>
-                <HoverCard openDelay={150}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex min-w-0 cursor-pointer items-center gap-2">
-                      <EmployeeAvatar emp={emp} />
-                      <div className="min-w-0 truncate font-medium">
-                        {emp.nombre} {emp.apellido}
-                      </div>
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-auto rounded-none border-0 bg-transparent p-0 shadow-none">
-                    <EmployeeCard
-                      nombre={`${emp.nombre} ${emp.apellido}`.trim()}
-                      cargo={
-                        emp.area ||
-                        (emp.category === "MONOTRIBUTISTA" ? "Monotributista" : "Empleado")
-                      }
-                      imagen={emp.foto}
-                      fallbackInitials={getInitials(emp.nombre, emp.apellido)}
-                      fallbackColorClass={avatarColorClass(emp.category)}
-                      ingresoIso={emp.fechaIngreso}
-                      logo="/logo2.png"
-                      activo={emp.active}
-                      onVerPerfil={() => setEditing(emp)}
-                    />
-                  </HoverCardContent>
-                </HoverCard>
+                <div
+                  className="flex min-w-0 cursor-pointer items-center gap-2"
+                  onMouseEnter={() => openCard(emp)}
+                  onMouseLeave={scheduleClose}
+                >
+                  <EmployeeAvatar emp={emp} />
+                  <div className="min-w-0 truncate font-medium">
+                    {emp.nombre} {emp.apellido}
+                  </div>
+                </div>
               </TableCell>
               <TableCell className="truncate text-muted-foreground">
                 {emp.dni ?? emp.cuit ?? "—"}
@@ -190,6 +187,31 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
           ))}
         </TableBody>
       </Table>
+
+      {hoveredEmp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onMouseEnter={() => openCard(hoveredEmp)}
+          onMouseLeave={scheduleClose}
+        >
+          <EmployeeCard
+            nombre={`${hoveredEmp.nombre} ${hoveredEmp.apellido}`.trim()}
+            cargo={
+              hoveredEmp.area ||
+              (hoveredEmp.category === "MONOTRIBUTISTA" ? "Monotributista" : "Empleado")
+            }
+            imagen={hoveredEmp.foto}
+            fallbackInitials={getInitials(hoveredEmp.nombre, hoveredEmp.apellido)}
+            fallbackColorClass={avatarColorClass(hoveredEmp.category)}
+            ingresoIso={hoveredEmp.fechaIngreso}
+            activo={hoveredEmp.active}
+            onVerPerfil={() => {
+              setHoveredEmp(null);
+              setEditing(hoveredEmp);
+            }}
+          />
+        </div>
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen} title="Nuevo empleado">
         <EmployeeForm mode="create" onSuccess={() => setCreateOpen(false)} />

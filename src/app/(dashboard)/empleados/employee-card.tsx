@@ -156,19 +156,24 @@ export default function EmployeeCard({
           z-index: 1;
         }
 
-        .employee-card__avatar-photo {
+        .employee-card__avatar-frame {
           position: absolute;
           z-index: 2;
-          inset: 0;
+          bottom: 0;
+          left: 50%;
+          width: 175px;
+          height: 175px;
+          overflow: hidden;
+          border-radius: 18px 18px 0 0;
+          background: #0d2638;
+          transform: translateX(-50%);
         }
 
-        .employee-card__avatar-photo img {
+        .employee-card__avatar-frame img {
+          display: block;
           width: 100%;
           height: 100%;
-          object-fit: cover;
-          object-position: center 22%;
-          mask-image: radial-gradient(ellipse 75% 95% at 50% 55%, black 55%, transparent 100%);
-          -webkit-mask-image: radial-gradient(ellipse 75% 95% at 50% 55%, black 55%, transparent 100%);
+          object-fit: contain;
         }
 
         .employee-card__avatar-fallback-wrap {
@@ -363,7 +368,7 @@ export default function EmployeeCard({
         </svg>
 
         {imagen ? (
-          <div className="employee-card__avatar-photo">
+          <div className="employee-card__avatar-frame">
             <img src={imagen} alt={`Retrato de ${nombre}`} />
           </div>
         ) : (
