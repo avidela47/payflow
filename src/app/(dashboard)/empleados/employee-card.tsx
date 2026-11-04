@@ -232,13 +232,21 @@ export default function EmployeeCard({
         }
 
         .employee-card__body {
-          position: relative;
-          z-index: 4;
-          margin-top: -16px;
-          padding: 18px 20px 20px;
-          border-radius: 20px 20px 0 0;
-          background: linear-gradient(145deg, #fff, #f5f8fa);
-        }
+  position: relative;
+  z-index: 4;
+  padding: 34px 20px 20px;
+  background: linear-gradient(145deg, #fff, #f5f8fa);
+}
+
+.employee-card__divider {
+  position: absolute;
+  z-index: 5;
+  top: -28px;
+  left: 0;
+  width: 100%;
+  height: 36px;
+  display: block;
+}
 
         .employee-card__name {
           margin: 0;
@@ -409,7 +417,18 @@ export default function EmployeeCard({
         )}
       </div>
 
-      <div className="employee-card__body">
+            <div className="employee-card__body">
+        <svg
+          className="employee-card__divider"
+          viewBox="0 0 400 36"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M0,18 C60,36 100,0 160,14 C220,28 260,4 320,16 C360,24 380,10 400,16 L400,36 L0,36 Z"
+            fill="#ffffff"
+          />
+        </svg>
         <h2 className="employee-card__name">{nombre}</h2>
         <p className="employee-card__role">{cargo}</p>
 
