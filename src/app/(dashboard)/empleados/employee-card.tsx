@@ -113,13 +113,13 @@ export default function EmployeeCard({
         }
 
         .employee-card__hero {
-          position: relative;
-          height: clamp(155px, 32dvh, 230px);
-          overflow: hidden;
-          background:
-            radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
-            linear-gradient(135deg, #112947, #071727 75%);
-        }
+  position: relative;
+  height: 230px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
+    linear-gradient(135deg, #112947, #071727 75%);
+}
 
         .employee-card__top {
           position: absolute;
@@ -144,12 +144,13 @@ export default function EmployeeCard({
 }
 
         .employee-card__logo {
-          display: block;
-          width: 105px;
-          height: 28px;
-          object-fit: contain;
-          object-position: left center;
-        }
+  display: block;
+  width: 125px;
+  height: 32px;
+  object-fit: contain;
+  object-position: left center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)) drop-shadow(0 0 6px rgba(0,0,0,.35));
+}
 
         .employee-card__status {
           display: inline-flex;
@@ -375,24 +376,24 @@ export default function EmployeeCard({
           </span>
         </div>
 
-        <svg
+               <svg
           className="employee-card__waves"
-          viewBox="0 0 360 145"
+          viewBox="0 0 400 145"
           fill="none"
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          {[0, 16, 32, 48, 64, 80].map((offset) => (
-            <path
-              key={offset}
-              d={`M-40 ${50 + offset}
-                  C70 ${-20 + offset},
-                   155 ${195 + offset},
-                   400 ${-35 + offset}`}
-              stroke="#37d7df"
-              strokeWidth=".8"
-            />
-          ))}
+          {[0, 1, 2, 3, 4, 5].map((i) => {
+            const b = 35 + i * 18;
+            return (
+              <path
+                key={i}
+                d={`M-40,${b} Q 0,${b - 16} 40,${b} T 120,${b} T 200,${b} T 280,${b} T 360,${b} T 440,${b}`}
+                stroke="#37d7df"
+                strokeWidth=".8"
+              />
+            );
+          })}
         </svg>
 
         {imagen && failedImage !== imagen ? (
