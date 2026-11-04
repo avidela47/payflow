@@ -134,7 +134,7 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
                       fallbackInitials={getInitials(emp.nombre, emp.apellido)}
                       fallbackColorClass={avatarColorClass(emp.category)}
                       ingresoIso={emp.fechaIngreso}
-                      logo="/logo.png"
+                      logo="/logo2.png"
                       activo={emp.active}
                       onVerPerfil={() => setEditing(emp)}
                     />
