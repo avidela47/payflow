@@ -143,10 +143,10 @@ export default function EmployeeCard({
   align-items: center;
 }
 
-        .employee-card__logo {
+       .employee-card__logo {
   display: block;
-  width: 125px;
-  height: 32px;
+  width: 180px;
+  height: 56px;
   object-fit: contain;
   object-position: left center;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)) drop-shadow(0 0 6px rgba(0,0,0,.35));
