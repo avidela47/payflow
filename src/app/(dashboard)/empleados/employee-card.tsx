@@ -81,7 +81,7 @@ export default function EmployeeCard({
         }
 
         .employee-card {
-          width: min(320px, 100%);
+          width: min(340px, 100%);
           overflow: hidden;
           border: 1px solid rgba(255,255,255,.85);
           border-radius: 22px;
@@ -95,7 +95,7 @@ export default function EmployeeCard({
 
         .employee-card__hero {
           position: relative;
-          height: 185px;
+          height: 215px;
           overflow: hidden;
           background:
             radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
@@ -116,7 +116,7 @@ export default function EmployeeCard({
           color: #fff;
           font-size: 15px;
           font-weight: 700;
-          letter-spacing: 4px;
+          letter-spacing: 3.5px;
         }
 
         .employee-card__logo {
@@ -151,41 +151,49 @@ export default function EmployeeCard({
           position: absolute;
           inset: auto 0 0;
           width: 100%;
-          height: 125px;
-          opacity: .45;
+          height: 145px;
+          opacity: .4;
+          z-index: 1;
         }
 
-        .employee-card__avatar {
+        .employee-card__avatar-photo {
           position: absolute;
           z-index: 2;
-          bottom: -5px;
+          inset: 0;
+        }
+
+        .employee-card__avatar-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center 22%;
+          mask-image: radial-gradient(ellipse 75% 95% at 50% 55%, black 55%, transparent 100%);
+          -webkit-mask-image: radial-gradient(ellipse 75% 95% at 50% 55%, black 55%, transparent 100%);
+        }
+
+        .employee-card__avatar-fallback-wrap {
+          position: absolute;
+          z-index: 2;
+          bottom: 0;
           left: 50%;
-          width: 165px;
-          height: 165px;
           display: flex;
           align-items: flex-end;
           justify-content: center;
+          width: 160px;
+          height: 160px;
           transform: translateX(-50%);
-        }
-
-        .employee-card__avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          object-position: center bottom;
-          filter: drop-shadow(0 8px 18px rgba(0,0,0,.18));
         }
 
         .employee-card__avatar-fallback {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 110px;
-          height: 110px;
+          width: 120px;
+          height: 120px;
           margin-bottom: 8px;
           border-radius: 50%;
           border: 4px solid rgba(255,255,255,.85);
-          font-size: 36px;
+          font-size: 38px;
           font-weight: 800;
           color: #fff;
           box-shadow: 0 8px 18px rgba(0,0,0,.25);
@@ -204,7 +212,7 @@ export default function EmployeeCard({
           margin: 0;
           overflow-wrap: anywhere;
           color: #0c2035;
-          font-size: 21px;
+          font-size: 22px;
           font-weight: 800;
           line-height: 1.15;
           letter-spacing: -.6px;
@@ -223,8 +231,8 @@ export default function EmployeeCard({
         .employee-card__details {
           display: grid;
           gap: 10px;
-          margin: 14px 0 0;
-          padding-top: 13px;
+          margin: 15px 0 0;
+          padding-top: 14px;
           border-top: 1px solid #dfe7ed;
         }
 
@@ -336,7 +344,7 @@ export default function EmployeeCard({
 
         <svg
           className="employee-card__waves"
-          viewBox="0 0 360 125"
+          viewBox="0 0 360 145"
           fill="none"
           preserveAspectRatio="none"
           aria-hidden="true"
@@ -344,9 +352,9 @@ export default function EmployeeCard({
           {[0, 16, 32, 48, 64, 80].map((offset) => (
             <path
               key={offset}
-              d={`M-40 ${45 + offset}
+              d={`M-40 ${50 + offset}
                   C70 ${-20 + offset},
-                   155 ${165 + offset},
+                   155 ${195 + offset},
                    400 ${-35 + offset}`}
               stroke="#37d7df"
               strokeWidth=".8"
@@ -354,15 +362,17 @@ export default function EmployeeCard({
           ))}
         </svg>
 
-        <div className="employee-card__avatar">
-          {imagen ? (
+        {imagen ? (
+          <div className="employee-card__avatar-photo">
             <img src={imagen} alt={`Retrato de ${nombre}`} />
-          ) : (
+          </div>
+        ) : (
+          <div className="employee-card__avatar-fallback-wrap">
             <div className={`employee-card__avatar-fallback ${fallbackColorClass}`}>
               {fallbackInitials}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="employee-card__body">
@@ -370,18 +380,16 @@ export default function EmployeeCard({
         <p className="employee-card__role">{cargo}</p>
 
         <dl className="employee-card__details">
-          {ingresoIso && (
-            <div className="employee-card__row">
-              <span className="employee-card__icon" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.7" />
-                  <path d="M8 3v4m8-4v4M4 11h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                </svg>
-              </span>
-              <dt className="employee-card__label">Ingreso</dt>
-              <dd className="employee-card__value">{formatIngreso(ingresoIso)}</dd>
-            </div>
-          )}
+          <div className="employee-card__row">
+            <span className="employee-card__icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.7" />
+                <path d="M8 3v4m8-4v4M4 11h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+            </span>
+            <dt className="employee-card__label">Ingreso</dt>
+            <dd className="employee-card__value">{ingresoIso ? formatIngreso(ingresoIso) : "—"}</dd>
+          </div>
 
           <div className="employee-card__row">
             <span className="employee-card__icon" aria-hidden="true">
