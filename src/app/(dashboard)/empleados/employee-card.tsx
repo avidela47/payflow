@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 type EmployeeCardProps = {
   nombre: string;
@@ -12,17 +12,25 @@ type EmployeeCardProps = {
   equipo?: string;
   activo?: boolean;
   logo?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
   onVerPerfil?: () => void;
 };
 
 function formatIngreso(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const texto = new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(y, m - 1, d));
-  return texto.replace(".", "");
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(iso);
+  if (!match) return "—";
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) return "—";
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit", month: "short", year: "numeric",
+  }).format(date).replace(/\./g, "");
 }
 
 function InstagramIcon() {
@@ -69,9 +77,19 @@ export default function EmployeeCard({
   ingresoIso,
   equipo = "ITELSA",
   activo = true,
-  logo,
+  logo = "/logo2.png",
+  instagram,
+  facebook,
+  tiktok,
   onVerPerfil,
 }: EmployeeCardProps) {
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const redes = [
+    { label: "Instagram", url: instagram, icon: <InstagramIcon /> },
+    { label: "Facebook", url: facebook, icon: <FacebookIcon /> },
+    { label: "TikTok", url: tiktok, icon: <TikTokIcon /> },
+  ];
+
   return (
     <article className="employee-card">
       <style>{`
@@ -81,7 +99,8 @@ export default function EmployeeCard({
         }
 
         .employee-card {
-          width: min(340px, 100%);
+          width: min(360px, 100%);
+          margin-inline: auto;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,.85);
           border-radius: 22px;
@@ -95,7 +114,7 @@ export default function EmployeeCard({
 
         .employee-card__hero {
           position: relative;
-          height: 215px;
+          height: clamp(155px, 32dvh, 230px);
           overflow: hidden;
           background:
             radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
@@ -119,10 +138,16 @@ export default function EmployeeCard({
           letter-spacing: 3.5px;
         }
 
+        .employee-card__logo-wrap {
+          padding: 7px 10px;
+          border-radius: 10px;
+          background: #fff;
+        }
+
         .employee-card__logo {
           display: block;
-          width: 90px;
-          height: 24px;
+          width: 105px;
+          height: 28px;
           object-fit: contain;
           object-position: left center;
         }
@@ -161,11 +186,12 @@ export default function EmployeeCard({
           z-index: 2;
           bottom: 0;
           left: 50%;
-          width: 175px;
-          height: 175px;
+          width: 245px;
+          max-width: 85%;
+          height: calc(100% - 36px);
           overflow: hidden;
-          border-radius: 18px 18px 0 0;
-          background: #0d2638;
+          background: transparent;
+          filter: drop-shadow(0 8px 18px rgba(0,0,0,.18));
           transform: translateX(-50%);
         }
 
@@ -174,6 +200,7 @@ export default function EmployeeCard({
           width: 100%;
           height: 100%;
           object-fit: contain;
+          object-position: center bottom;
         }
 
         .employee-card__avatar-fallback-wrap {
@@ -286,6 +313,9 @@ export default function EmployeeCard({
         }
 
         .employee-card__social {
+          border: 0;
+          padding: 0;
+          cursor: pointer;
           display: grid;
           width: 29px;
           height: 29px;
@@ -301,7 +331,8 @@ export default function EmployeeCard({
           align-items: center;
           justify-content: center;
           gap: 8px;
-          min-height: 32px;
+          margin-left: auto;
+          min-height: 36px;
           padding: 6px 13px;
           border: 1px solid #087a83;
           border-radius: 999px;
@@ -327,11 +358,9 @@ export default function EmployeeCard({
 
       <div className="employee-card__hero">
         <div className="employee-card__top">
-          {logo ? (
+          <div className="employee-card__logo-wrap">
             <img className="employee-card__logo" src={logo} alt={equipo} />
-          ) : (
-            <span className="employee-card__brand">{equipo}</span>
-          )}
+          </div>
 
           <span
             className="employee-card__status"
@@ -367,9 +396,9 @@ export default function EmployeeCard({
           ))}
         </svg>
 
-        {imagen ? (
+        {imagen && failedImage !== imagen ? (
           <div className="employee-card__avatar-frame">
-            <img src={imagen} alt={`Retrato de ${nombre}`} />
+            <img src={imagen} alt={`Retrato de ${nombre}`} onError={() => setFailedImage(imagen)} />
           </div>
         ) : (
           <div className="employee-card__avatar-fallback-wrap">
@@ -414,17 +443,25 @@ export default function EmployeeCard({
         </dl>
 
         <div className="employee-card__footer">
-          <nav className="employee-card__socials" aria-label={`Redes de ${nombre}`}>
-            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="Instagram">
-              <InstagramIcon />
-            </a>
-            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="Facebook">
-              <FacebookIcon />
-            </a>
-            <a className="employee-card__social" href="#" onClick={(e) => e.preventDefault()} aria-label="TikTok">
-              <TikTokIcon />
-            </a>
-          </nav>
+          {redes.length > 0 && (
+            <nav className="employee-card__socials" aria-label={`Redes de ${nombre}`}>
+              {redes.map((red) => {
+                const hasLink = Boolean(red.url && /^https?:\/\//i.test(red.url));
+                return hasLink ? (
+                  <a key={red.label} className="employee-card__social"
+                    href={red.url} target="_blank" rel="noopener noreferrer"
+                    aria-label={red.label}>
+                    {red.icon}
+                  </a>
+                ) : (
+                  <button key={red.label} type="button"
+                    className="employee-card__social" aria-label={red.label}>
+                    {red.icon}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
 
           {onVerPerfil && (
             <button type="button" className="employee-card__button" onClick={onVerPerfil}>

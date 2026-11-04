@@ -181,11 +181,11 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
         onOpenChange={(open) => {
           if (!open) setHoveredEmp(null);
         }}
-        title="Ficha del empleado"
-        className="w-[calc(100vw-2rem)] max-w-[400px] max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        className="w-[calc(100vw-2rem)] max-w-[360px] !max-h-none !overflow-visible !border-0 !bg-transparent !p-0 !shadow-none"
       >
         {hoveredEmp && (
           <EmployeeCard
+            logo="/logo2.png"
             nombre={`${hoveredEmp.nombre} ${hoveredEmp.apellido}`.trim()}
             cargo={
               hoveredEmp.area ||
