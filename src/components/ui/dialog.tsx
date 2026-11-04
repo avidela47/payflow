@@ -9,6 +9,7 @@ export function Dialog({
   title,
   description,
   className,
+  contentClassName,
   children,
 }: {
   open: boolean;
@@ -16,6 +17,7 @@ export function Dialog({
   title?: string;
   description?: string;
   className?: string;
+  contentClassName?: string;
   children: React.ReactNode;
 }) {
   const ref = React.useRef<HTMLDialogElement>(null);
@@ -62,7 +64,14 @@ export function Dialog({
           </button>
         </div>
       )}
-      <div className="max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{children}</div>
+      <div
+        className={cn(
+          "max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-6",
+          contentClassName
+        )}
+      >
+        {children}
+      </div>
     </dialog>
   );
 }

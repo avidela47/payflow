@@ -139,10 +139,9 @@ export default function EmployeeCard({
         }
 
         .employee-card__logo-wrap {
-          padding: 7px 10px;
-          border-radius: 10px;
-          background: #fff;
-        }
+  display: flex;
+  align-items: center;
+}
 
         .employee-card__logo {
           display: block;
