@@ -180,8 +180,8 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
         onOpenChange={(open) => {
           if (!open) setHoveredEmp(null);
         }}
-        className="w-[calc(100vw-2rem)] max-w-[360px] !max-h-none !overflow-visible !border-0 !bg-transparent !p-0 !shadow-none"
-        contentClassName="!max-h-none !overflow-visible !p-0"
+        className="employee-profile-dialog"
+        contentClassName="employee-profile-dialog__content"
       >
         {hoveredEmp && (
           <EmployeeCard

@@ -93,276 +93,39 @@ export default function EmployeeCard({
   return (
     <article className="employee-card">
       <style>{`
-        .employee-card,
-        .employee-card * {
-          box-sizing: border-box;
-        }
-
-        .employee-card {
-          width: min(360px, 100%);
-          margin-inline: auto;
-          overflow: hidden;
-          border: 1px solid rgba(255,255,255,.85);
-          border-radius: 22px;
-          background: #fff;
-          color: #102338;
-          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-          box-shadow:
-            0 22px 55px -18px rgba(8,31,54,.35),
-            0 4px 12px rgba(8,31,54,.06);
-        }
-
-        .employee-card__hero {
-  position: relative;
-  height: 230px;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 95% 90%, #098995 0%, transparent 55%),
-    linear-gradient(135deg, #112947, #071727 75%);
-}
-
-        .employee-card__top {
-          position: absolute;
-          z-index: 3;
-          inset: 16px 16px auto;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-        }
-
-        .employee-card__brand {
-          color: #fff;
-          font-size: 15px;
-          font-weight: 700;
-          letter-spacing: 3.5px;
-        }
-
-        .employee-card__logo-wrap {
-  display: flex;
-  align-items: center;
-}
-
-       .employee-card__logo {
-  display: block;
-  width: 180px;
-  height: 56px;
-  object-fit: contain;
-  object-position: left center;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)) drop-shadow(0 0 6px rgba(0,0,0,.35));
-}
-
-        .employee-card__status {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 5px 9px;
-          border: 1px solid rgba(255,255,255,.2);
-          border-radius: 999px;
-          background: var(--status-bg);
-          color: var(--status-color);
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .employee-card__dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: currentColor;
-        }
-
-        .employee-card__waves {
-          position: absolute;
-          inset: auto 0 0;
-          width: 100%;
-          height: 145px;
-          opacity: .4;
-          z-index: 1;
-        }
-
-        .employee-card__avatar-frame {
-          position: absolute;
-          z-index: 2;
-          bottom: 0;
-          left: 50%;
-          width: 245px;
-          max-width: 85%;
-          height: calc(100% - 36px);
-          overflow: hidden;
-          background: transparent;
-          filter: drop-shadow(0 8px 18px rgba(0,0,0,.18));
-          transform: translateX(-50%);
-        }
-
-        .employee-card__avatar-frame img {
-          display: block;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          object-position: center bottom;
-        }
-
-        .employee-card__avatar-fallback-wrap {
-          position: absolute;
-          z-index: 2;
-          bottom: 0;
-          left: 50%;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          width: 160px;
-          height: 160px;
-          transform: translateX(-50%);
-        }
-
-        .employee-card__avatar-fallback {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 120px;
-          height: 120px;
-          margin-bottom: 8px;
-          border-radius: 50%;
-          border: 4px solid rgba(255,255,255,.85);
-          font-size: 38px;
-          font-weight: 800;
-          color: #fff;
-          box-shadow: 0 8px 18px rgba(0,0,0,.25);
-        }
-
-        .employee-card__body {
-  position: relative;
-  z-index: 4;
-  padding: 34px 20px 20px;
-  background: linear-gradient(145deg, #fff, #f5f8fa);
-}
-
-.employee-card__divider {
-  position: absolute;
-  z-index: 5;
-  top: -28px;
-  left: 0;
-  width: 100%;
-  height: 36px;
-  display: block;
-}
-
-        .employee-card__name {
-          margin: 0;
-          overflow-wrap: anywhere;
-          color: #0c2035;
-          font-size: 22px;
-          font-weight: 800;
-          line-height: 1.15;
-          letter-spacing: -.6px;
-        }
-
-        .employee-card__role {
-          margin: 6px 0 0;
-          color: #07828a;
-          font-size: 10.5px;
-          font-weight: 800;
-          line-height: 1.4;
-          letter-spacing: 1.8px;
-          text-transform: uppercase;
-        }
-
-        .employee-card__details {
-          display: grid;
-          gap: 10px;
-          margin: 15px 0 0;
-          padding-top: 14px;
-          border-top: 1px solid #dfe7ed;
-        }
-
-        .employee-card__row {
-          display: grid;
-          grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.2fr);
-          align-items: center;
-          gap: 8px;
-          font-size: 11.5px;
-        }
-
-        .employee-card__icon {
-          display: grid;
-          width: 28px;
-          height: 28px;
-          place-items: center;
-          border-radius: 10px;
-          background: #e5f0f2;
-          color: #16616e;
-        }
-
-        .employee-card__label {
-          margin: 0;
-          color: #778493;
-        }
-
-        .employee-card__value {
-          margin: 0;
-          overflow-wrap: anywhere;
-          color: #173047;
-          font-weight: 700;
-        }
-
-        .employee-card__footer {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          margin-top: 16px;
-        }
-
-        .employee-card__socials {
-          display: flex;
-          gap: 6px;
-        }
-
-        .employee-card__social {
-          border: 0;
-          padding: 0;
-          cursor: pointer;
-          display: grid;
-          width: 29px;
-          height: 29px;
-          place-items: center;
-          border-radius: 50%;
-          background: #e5eff2;
-          color: #173c52;
-          text-decoration: none;
-        }
-
-        .employee-card__button {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          margin-left: auto;
-          min-height: 36px;
-          padding: 6px 13px;
-          border: 1px solid #087a83;
-          border-radius: 999px;
-          background: transparent;
-          color: #114354;
-          font: inherit;
-          font-size: 11px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .employee-card__button:hover {
-          background: #087a83;
-          color: #fff;
-        }
-
-        .employee-card a:focus-visible,
-        .employee-card button:focus-visible {
-          outline: 3px solid #21b9c5;
-          outline-offset: 3px;
-        }
-      `}</style>
+.employee-card,.employee-card *{box-sizing:border-box}
+.employee-card{width:100%;margin:0;overflow:hidden;border-radius:28px;background:#f8fafc;color:#0b1c30;font-family:Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 24px 65px -18px #061b3866}
+.employee-card__hero{position:relative;height:270px;overflow:hidden;background:radial-gradient(ellipse at 100% 92%,#0797a3 0,transparent 56%),linear-gradient(130deg,#102747,#061726 80%)}
+.employee-card__top{position:absolute;inset:20px 20px auto;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none}
+.employee-card__logo-wrap{width:116px;height:36px;display:flex;align-items:center}
+.employee-card__logo{display:block;width:100%;height:100%;object-fit:contain;object-position:left center}
+.employee-card__status{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;background:var(--status-bg);color:var(--status-color);font-size:10px;font-weight:750;white-space:nowrap}
+.employee-card__dot{width:5px;height:5px;background:currentColor;border-radius:50%}
+.employee-card__waves{position:absolute;bottom:0;left:0;width:100%;height:210px;opacity:.55;z-index:1}
+.employee-card__avatar-frame{position:absolute;z-index:2;top:12px;left:50%;width:78%;height:360px;transform:translateX(-50%);background:transparent;filter:drop-shadow(0 8px 15px #0003)}
+.employee-card__avatar-frame img{display:block;width:100%;height:100%;object-fit:contain;object-position:center top}
+.employee-card__avatar-fallback-wrap{position:absolute;inset:65px 0 0;display:grid;place-items:center;z-index:2}
+.employee-card__avatar-fallback{display:grid;place-items:center;width:125px;height:125px;border:4px solid #ffffffb3;border-radius:50%;font-size:40px;font-weight:800;color:#fff;background-color:#13767c}
+.employee-card__body{position:relative;z-index:4;padding:12px 24px 22px;background:linear-gradient(#fff,#f4f7fa)}
+.employee-card__divider{position:absolute;top:-28px;left:0;width:100%;height:29px;display:block}
+.employee-card__name{margin:0;color:#081b30;font-size:28px;font-weight:800;line-height:1.12;letter-spacing:-.8px;overflow-wrap:anywhere;text-transform:none}
+.employee-card__role{margin:7px 0 0;color:#057f88;font-size:11px;font-weight:750;line-height:1.4;letter-spacing:1.8px;text-transform:uppercase}
+.employee-card__details{display:grid;gap:12px;margin:18px 0 0;padding-top:16px;border-top:1px solid #d7e1e9}
+.employee-card__row{display:grid;grid-template-columns:30px 1fr 1.25fr;align-items:center;gap:9px;font-size:12px}
+.employee-card__icon{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e2eef1;color:#124b61}
+.employee-card__label{margin:0;color:#7b8390}
+.employee-card__value{margin:0;color:#10243b;font-weight:700;overflow-wrap:anywhere}
+.employee-card__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}
+.employee-card__socials{display:flex;gap:7px}
+.employee-card__social{display:grid;place-items:center;width:31px;height:31px;padding:0;border:0;border-radius:50%;background:#e1edf1;color:#123b51;text-decoration:none;cursor:pointer}
+.employee-card__button{display:inline-flex;align-items:center;justify-content:center;gap:14px;margin-left:auto;min-height:36px;padding:7px 16px;border:1px solid #167984;border-radius:999px;background:transparent;color:#11364d;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.employee-card__button:hover{background:#087d86;color:white}
+.employee-card__social:hover{background:#cbe4e8}
+.employee-card :is(button,a):focus-visible{outline:3px solid #1bbac8;outline-offset:3px}
+.employee-profile-dialog{width:min(360px,calc(100vw - 32px))!important;max-width:none!important;max-height:none!important;overflow:visible!important;border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+.employee-profile-dialog__content{max-height:none!important;overflow:visible!important;padding:0!important}
+@media(max-height:620px){.employee-card__hero{height:215px}.employee-card__avatar-frame{height:300px}.employee-card__body{padding:9px 20px 16px}.employee-card__name{font-size:24px}.employee-card__details{margin-top:12px;padding-top:12px;gap:8px}.employee-card__footer{margin-top:14px}}
+`}</style>
 
       <div className="employee-card__hero">
         <div className="employee-card__top">
@@ -384,23 +147,11 @@ export default function EmployeeCard({
           </span>
         </div>
 
-                 <svg
-          className="employee-card__waves"
-          viewBox="0 0 400 230"
-          fill="none"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          {[40, 65, 90, 115, 140, 165].map((r) => (
-            <ellipse
-              key={r}
-              cx="70"
-              cy="60"
-              rx={r}
-              ry={r * 0.85}
-              stroke="#37d7df"
-              strokeWidth=".7"
-            />
+        <svg className="employee-card__waves" viewBox="0 0 360 210" fill="none" preserveAspectRatio="none" aria-hidden="true">
+          {[0, 14, 28, 42, 56, 70].map((offset) => (
+            <path key={offset}
+              d={`M-30 ${100+offset} C75 ${50+offset}, 130 ${230+offset}, 390 ${10+offset}`}
+              stroke="#39d8e0" strokeWidth=".8" />
           ))}
         </svg>
         {imagen && failedImage !== imagen ? (
@@ -424,7 +175,7 @@ export default function EmployeeCard({
           aria-hidden="true"
         >
           <path
-            d="M0,18 C60,36 100,0 160,14 C220,28 260,4 320,16 C360,24 380,10 400,16 L400,36 L0,36 Z"
+            d="M0,36 C12,0 42,6 86,9 C195,16 265,44 350,27 C380,21 393,12 400,0 L400,36 Z"
             fill="#ffffff"
           />
         </svg>
