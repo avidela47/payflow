@@ -31,6 +31,11 @@ const materialSchema = z.object({
   monto: z.coerce.number().nonnegative(),
 });
 
+const topeDiarioSchema = z.object({
+  employeeId: z.string().min(1),
+  monto: z.coerce.number().nonnegative(),
+});
+
 const viaticoSchema = z.object({
   nombre: z.string().min(1, "Falta el nombre del viaje."),
   paidBy: z.string().optional(),
@@ -50,26 +55,31 @@ const viaticoSchema = z.object({
   seguroCobertura: z.string().optional(),
   seguroCantidadDias: z.coerce.number().nonnegative().optional(),
   seguroCosto: z.coerce.number().nonnegative().optional(),
-  montoTopeDiario: z.coerce.number().nonnegative().optional(),
+  topesDiarios: z.array(topeDiarioSchema).default([]),
   notes: z.string().optional(),
 });
 
 export type ViaticoFormInput = z.infer<typeof viaticoSchema>;
 
-// Supuesto (a confirmar con Ariel): `montoTopeDiario` es un tope sobre el
-// monto por día de los empleados con honorarioType "DIA". Si el monto por
-// día de un empleado supera el tope, la diferencia x cantidad de días se
-// guarda en `excedente` como línea informativa ("Excedente de viáticos").
-// El excedente NO se suma aparte al total — ya está incluido dentro del
-// monto de ese empleado, es solo para identificarlo como excedente.
+// Tope diario de viático, por empleado (`topesDiarios`): cada empleado
+// puede tener su propio tope sobre el monto por día (solo aplica a
+// honorarioType "DIA"). Si el monto por día de un empleado supera SU
+// tope, la diferencia x cantidad de días se guarda en `excedente` como
+// línea informativa ("Excedente de viáticos"). El excedente NO se suma
+// aparte al total — ya está incluido dentro del monto de ese empleado, es
+// solo para identificarlo como excedente. Un empleado sin tope asignado
+// no genera excedente.
 function calcularExcedente(
   empleados: z.infer<typeof empleadoSchema>[],
-  montoTopeDiario?: number
+  topesDiarios: z.infer<typeof topeDiarioSchema>[]
 ): number {
-  if (!montoTopeDiario) return 0;
+  if (topesDiarios.length === 0) return 0;
+  const topeByEmployee = new Map(topesDiarios.map((t) => [t.employeeId, t.monto]));
   return empleados.reduce((sum, emp) => {
     if (emp.honorarioType !== "DIA") return sum;
-    const diff = emp.monto - montoTopeDiario;
+    const tope = topeByEmployee.get(emp.employeeId);
+    if (tope == null) return sum;
+    const diff = emp.monto - tope;
     if (diff <= 0) return sum;
     return sum + diff * (emp.dias ?? 1);
   }, 0);
@@ -106,8 +116,8 @@ function buildDoc(data: ViaticoFormInput) {
       cantidadDias: data.seguroCantidadDias,
       costo: data.seguroCosto,
     },
-    montoTopeDiario: data.montoTopeDiario,
-    excedente: calcularExcedente(data.empleados, data.montoTopeDiario),
+    topesDiarios: data.topesDiarios.map((t) => ({ employee: t.employeeId, monto: t.monto })),
+    excedente: calcularExcedente(data.empleados, data.topesDiarios),
     notes: data.notes || undefined,
   };
 }

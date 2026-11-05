@@ -39,6 +39,7 @@ export type ViaticoEmpleadoItem = {
 
 export type ViaticoExtraItem = { descripcion: string; monto: number };
 export type ViaticoMaterialItem = { descripcion: string; cantidad?: number; monto: number };
+export type ViaticoTopeDiarioItem = { employeeId: string; employeeName?: string; monto: number };
 
 export type ViaticoItem = {
   id: string;
@@ -60,7 +61,7 @@ export type ViaticoItem = {
   seguroCobertura?: string;
   seguroCantidadDias?: number;
   seguroCosto?: number;
-  montoTopeDiario?: number;
+  topesDiarios: ViaticoTopeDiarioItem[];
   excedente: number;
   notes?: string;
 };
@@ -68,6 +69,7 @@ export type ViaticoItem = {
 type EmpleadoRow = ViaticoEmpleadoItem & { _key: number };
 type ExtraRow = ViaticoExtraItem & { _key: number };
 type MaterialRow = ViaticoMaterialItem & { _key: number };
+type TopeRow = ViaticoTopeDiarioItem & { _key: number };
 
 let keySeq = 0;
 function nextKey() {
@@ -83,6 +85,9 @@ function emptyExtraRow(): ExtraRow {
 }
 function emptyMaterialRow(): MaterialRow {
   return { _key: nextKey(), descripcion: "", cantidad: undefined, monto: 0 };
+}
+function emptyTopeRow(): TopeRow {
+  return { _key: nextKey(), employeeId: "", monto: 0 };
 }
 
 function todayISO() {
@@ -151,7 +156,6 @@ export function ViaticosClient({
   const [nombre, setNombre] = useState("");
   const [paidBy, setPaidBy] = useState("");
   const [fecha, setFecha] = useState(todayISO());
-  const [montoTopeDiario, setMontoTopeDiario] = useState("");
   const [notes, setNotes] = useState("");
 
   // Hospedaje
@@ -176,12 +180,12 @@ export function ViaticosClient({
   const [empleadosRows, setEmpleadosRows] = useState<EmpleadoRow[]>([emptyEmpleadoRow()]);
   const [extrasRows, setExtrasRows] = useState<ExtraRow[]>([]);
   const [materialesRows, setMaterialesRows] = useState<MaterialRow[]>([]);
+  const [topesRows, setTopesRows] = useState<TopeRow[]>([]);
 
   function resetForm() {
     setNombre("");
     setPaidBy("");
     setFecha(todayISO());
-    setMontoTopeDiario("");
     setNotes("");
     setHospedajeLugar("");
     setHospedajeCheckIn("");
@@ -198,6 +202,7 @@ export function ViaticosClient({
     setEmpleadosRows([emptyEmpleadoRow()]);
     setExtrasRows([]);
     setMaterialesRows([]);
+    setTopesRows([]);
   }
 
   function openCreate() {
@@ -210,7 +215,6 @@ export function ViaticosClient({
     setNombre(v.nombre);
     setPaidBy(v.paidBy ?? "");
     setFecha(v.fechaISO);
-    setMontoTopeDiario(v.montoTopeDiario != null ? String(v.montoTopeDiario) : "");
     setNotes(v.notes ?? "");
     setHospedajeLugar(v.hospedajeLugar ?? "");
     setHospedajeCheckIn(v.hospedajeCheckIn ?? "");
@@ -231,6 +235,7 @@ export function ViaticosClient({
     );
     setExtrasRows(v.extras.map((e) => ({ ...e, _key: nextKey() })));
     setMaterialesRows(v.materiales.map((m) => ({ ...m, _key: nextKey() })));
+    setTopesRows(v.topesDiarios.map((t) => ({ ...t, _key: nextKey() })));
     setEditingId(v.id);
     setFormOpen(true);
   }
@@ -250,15 +255,18 @@ export function ViaticosClient({
   );
 
   const previewExcedente = useMemo(() => {
-    const tope = Number(montoTopeDiario);
-    if (!tope) return 0;
+    const topesValidos = topesRows.filter((t) => t.employeeId);
+    if (topesValidos.length === 0) return 0;
+    const topeByEmployee = new Map(topesValidos.map((t) => [t.employeeId, t.monto]));
     return empleadosRows.reduce((sum, e) => {
       if (e.honorarioType !== "DIA") return sum;
+      const tope = topeByEmployee.get(e.employeeId);
+      if (tope == null) return sum;
       const diff = e.monto - tope;
       if (diff <= 0) return sum;
       return sum + diff * (e.dias ?? 1);
     }, 0);
-  }, [empleadosRows, montoTopeDiario]);
+  }, [empleadosRows, topesRows]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -291,7 +299,9 @@ export function ViaticosClient({
       seguroCobertura: seguroCobertura || undefined,
       seguroCantidadDias: seguroCantidadDias ? Number(seguroCantidadDias) : undefined,
       seguroCosto: seguroCosto ? Number(seguroCosto) : undefined,
-      montoTopeDiario: montoTopeDiario ? Number(montoTopeDiario) : undefined,
+      topesDiarios: topesRows
+        .filter((r) => r.employeeId)
+        .map((r) => ({ employeeId: r.employeeId, monto: r.monto })),
       notes: notes || undefined,
     };
 
@@ -438,18 +448,6 @@ export function ViaticosClient({
                 placeholder="ITELSA / Rubén..."
               />
             </div>
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="montoTopeDiario">Tope diario de viático (por empleado/día)</Label>
-              <Input
-                id="montoTopeDiario"
-                type="number"
-                step="0.01"
-                min="0"
-                value={montoTopeDiario}
-                onChange={(e) => setMontoTopeDiario(e.target.value)}
-                placeholder="Si se supera, se calcula el excedente"
-              />
-            </div>
           </div>
 
           {/* Empleados */}
@@ -467,7 +465,7 @@ export function ViaticosClient({
               </Button>
             </div>
             {empleadosRows.map((row, idx) => (
-              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr_auto] sm:items-end">
+              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] sm:items-end">
                 <div className="flex flex-col gap-1.5">
                   {idx === 0 && <Label>Empleado</Label>}
                   <Select
@@ -534,12 +532,92 @@ export function ViaticosClient({
                     }
                   />
                 </div>
+                <div className="flex flex-col gap-1.5">
+                  {idx === 0 && <Label>Monto total</Label>}
+                  <Input
+                    readOnly
+                    disabled
+                    className="bg-muted/50"
+                    value={formatCurrency(
+                      row.honorarioType === "DIA" ? row.monto * (row.dias ?? 1) : row.monto
+                    )}
+                  />
+                </div>
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
                   className="text-destructive hover:bg-destructive/10"
                   onClick={() => setEmpleadosRows((rows) => rows.filter((r) => r._key !== row._key))}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Tope diario de viático, por empleado */}
+          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Tope diario de viático (por empleado/día)</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setTopesRows((rows) => [...rows, emptyTopeRow()])}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Agregar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Si el monto por día de un empleado supera el tope que le asignes acá, la diferencia se
+              suma a &quot;Excedente de viáticos&quot;. Un empleado sin tope acá no genera excedente.
+            </p>
+            {topesRows.length === 0 && (
+              <p className="text-sm text-muted-foreground">Sin topes configurados.</p>
+            )}
+            {topesRows.map((row, idx) => (
+              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_auto] sm:items-end">
+                <div className="flex flex-col gap-1.5">
+                  {idx === 0 && <Label>Empleado</Label>}
+                  <Select
+                    value={row.employeeId}
+                    onChange={(e) =>
+                      setTopesRows((rows) =>
+                        rows.map((r) => (r._key === row._key ? { ...r, employeeId: e.target.value } : r))
+                      )
+                    }
+                  >
+                    <option value="">Elegir...</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.nombre} {emp.apellido}
+                        {emp.area ? ` (${emp.area})` : ""}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {idx === 0 && <Label>Tope por día</Label>}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={row.monto || ""}
+                    onChange={(e) =>
+                      setTopesRows((rows) =>
+                        rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                      )
+                    }
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => setTopesRows((rows) => rows.filter((r) => r._key !== row._key))}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

@@ -12,7 +12,11 @@ export default async function ViaticosPage() {
 
   const [employees, viaticos] = await Promise.all([
     Employee.find({ active: true }).sort({ nombre: 1 }).lean(),
-    Viatico.find({}).populate("empleados.employee").sort({ fecha: -1 }).limit(500).lean(),
+    Viatico.find({})
+      .populate(["empleados.employee", "topesDiarios.employee"])
+      .sort({ fecha: -1 })
+      .limit(500)
+      .lean(),
   ]);
 
   const employeeOptions: EmployeeOption[] = employees.map((e) => ({
@@ -60,7 +64,17 @@ export default async function ViaticosPage() {
     seguroCobertura: v.seguro?.cobertura,
     seguroCantidadDias: v.seguro?.cantidadDias,
     seguroCosto: v.seguro?.costo,
-    montoTopeDiario: v.montoTopeDiario,
+    topesDiarios: (v.topesDiarios ?? []).map((t) => {
+      const employeeDoc =
+        t.employee && typeof t.employee === "object" && "_id" in t.employee
+          ? (t.employee as unknown as { _id: { toString(): string }; nombre: string; apellido: string })
+          : null;
+      return {
+        employeeId: employeeDoc ? employeeDoc._id.toString() : String(t.employee),
+        employeeName: employeeDoc ? `${employeeDoc.nombre} ${employeeDoc.apellido}` : "Empleado eliminado",
+        monto: t.monto,
+      };
+    }),
     excedente: v.excedente ?? 0,
     notes: v.notes,
   }));

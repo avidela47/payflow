@@ -49,6 +49,15 @@ export interface IViaticoSeguro {
   costo?: number;
 }
 
+// Tope diario de viático, ahora POR EMPLEADO (antes era un único monto
+// global para todo el viaje). Si el monto por día de un empleado con
+// honorarioType "DIA" supera el tope que se le asignó acá, la diferencia
+// x días se guarda en `excedente`.
+export interface IViaticoTopeDiario {
+  employee: mongoose.Types.ObjectId;
+  monto: number;
+}
+
 export interface IViatico {
   _id: mongoose.Types.ObjectId;
   // Nombre del viaje/obra — ej: "Morón".
@@ -64,10 +73,7 @@ export interface IViatico {
   extras: IViaticoExtra[];
   materiales: IViaticoMaterial[];
   seguro?: IViaticoSeguro;
-  // Tope diario de honorario por viático (por empleado, tipo "DIA"). Si el
-  // monto por día de algún empleado supera este tope, la diferencia x días
-  // se guarda en `excedente` como "Excedente de viáticos".
-  montoTopeDiario?: number;
+  topesDiarios: IViaticoTopeDiario[];
   excedente: number;
   notes?: string;
   createdAt: Date;
@@ -130,6 +136,14 @@ const ViaticoSeguroSchema = new Schema<IViaticoSeguro>(
   { _id: false }
 );
 
+const ViaticoTopeDiarioSchema = new Schema<IViaticoTopeDiario>(
+  {
+    employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
+    monto: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const ViaticoSchema = new Schema<IViatico>({
   nombre: { type: String, required: true },
   paidBy: String,
@@ -140,7 +154,7 @@ const ViaticoSchema = new Schema<IViatico>({
   extras: { type: [ViaticoExtraSchema], default: [] },
   materiales: { type: [ViaticoMaterialSchema], default: [] },
   seguro: ViaticoSeguroSchema,
-  montoTopeDiario: Number,
+  topesDiarios: { type: [ViaticoTopeDiarioSchema], default: [] },
   excedente: { type: Number, default: 0 },
   notes: String,
   createdAt: { type: Date, default: Date.now },
