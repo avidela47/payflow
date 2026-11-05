@@ -45,6 +45,7 @@ export default async function ViaticosPage() {
         monto: e.monto,
         dias: e.dias,
         paymentMode: e.paymentMode,
+        pagos: (e.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: toISODate(p.fecha)! })),
       };
     }),
     hospedajeLugar: v.hospedaje?.lugar,
@@ -55,7 +56,11 @@ export default async function ViaticosPage() {
     hospedajePaidBy: v.hospedaje?.paidBy,
     combustibleMonto: v.combustible?.monto,
     combustiblePaidBy: v.combustible?.paidBy,
-    extras: (v.extras ?? []).map((x) => ({ descripcion: x.descripcion, monto: x.monto })),
+    extras: (v.extras ?? []).map((x) => ({
+      descripcion: x.descripcion,
+      monto: x.monto,
+      paymentMode: x.paymentMode,
+    })),
     materiales: (v.materiales ?? []).map((m) => ({
       descripcion: m.descripcion,
       cantidad: m.cantidad,
@@ -75,6 +80,8 @@ export default async function ViaticosPage() {
         employeeId: employeeDoc ? employeeDoc._id.toString() : String(t.employee),
         employeeName: employeeDoc ? `${employeeDoc.nombre} ${employeeDoc.apellido}` : "Empleado eliminado",
         monto: t.monto,
+        descripcion: t.descripcion,
+        paymentMode: t.paymentMode,
       };
     }),
     excedente: v.excedente ?? 0,

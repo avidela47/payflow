@@ -3,7 +3,12 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
-import { Viatico, VIATICO_HONORARIO_TYPES, VIATICO_PAYMENT_MODES } from "@/models/Viatico";
+import {
+  Viatico,
+  VIATICO_HONORARIO_TYPES,
+  VIATICO_PAYMENT_MODES,
+  VIATICO_EMPLOYEE_PAYMENT_MODES,
+} from "@/models/Viatico";
 import { getSession } from "@/lib/auth";
 
 // A diferencia de Compras/Sueldos (formularios planos, FormData), Viáticos
@@ -13,17 +18,24 @@ import { getSession } from "@/lib/auth";
 // (sesión, zod, try/catch, revalidatePath) se mantiene igual al resto del
 // proyecto.
 
+const pagoSchema = z.object({
+  monto: z.coerce.number().positive(),
+  fecha: z.string().min(1),
+});
+
 const empleadoSchema = z.object({
   employeeId: z.string().min(1),
   honorarioType: z.enum(VIATICO_HONORARIO_TYPES),
   monto: z.coerce.number().nonnegative(),
   dias: z.coerce.number().positive().optional(),
-  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
+  paymentMode: z.enum(VIATICO_EMPLOYEE_PAYMENT_MODES).optional(),
+  pagos: z.array(pagoSchema).default([]),
 });
 
 const extraSchema = z.object({
   descripcion: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
+  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const materialSchema = z.object({
@@ -36,6 +48,8 @@ const materialSchema = z.object({
 const topeDiarioSchema = z.object({
   employeeId: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
+  descripcion: z.string().optional(),
+  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const viaticoSchema = z.object({
@@ -98,6 +112,7 @@ function buildDoc(data: ViaticoFormInput) {
       monto: e.monto,
       dias: e.dias,
       paymentMode: e.paymentMode,
+      pagos: e.pagos.map((p) => ({ monto: p.monto, fecha: new Date(p.fecha) })),
     })),
     hospedaje: {
       lugar: data.hospedajeLugar || undefined,
@@ -119,7 +134,12 @@ function buildDoc(data: ViaticoFormInput) {
       cantidadDias: data.seguroCantidadDias,
       costo: data.seguroCosto,
     },
-    topesDiarios: data.topesDiarios.map((t) => ({ employee: t.employeeId, monto: t.monto })),
+    topesDiarios: data.topesDiarios.map((t) => ({
+      employee: t.employeeId,
+      monto: t.monto,
+      descripcion: t.descripcion || undefined,
+      paymentMode: t.paymentMode,
+    })),
     excedente: calcularExcedente(data.empleados, data.topesDiarios),
     notes: data.notes || undefined,
   };

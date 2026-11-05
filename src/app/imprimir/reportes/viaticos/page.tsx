@@ -105,7 +105,7 @@ export default async function ImprimirReporteViaticosPage({
       </section>
 
       <section className="mt-8">
-        <p className="mb-2 text-sm font-semibold">Por forma de pago (honorarios y materiales)</p>
+        <p className="mb-2 text-sm font-semibold">Por forma de pago (honorarios, materiales y extras)</p>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900 text-left text-white">
@@ -123,7 +123,7 @@ export default async function ImprimirReporteViaticosPage({
             {report.byPaymentMode.length === 0 && (
               <tr>
                 <td colSpan={2} className="p-4 text-center text-gray-500">
-                  No hay gastos de empleados o materiales cargados en este mes.
+                  No hay gastos de empleados, materiales o extras cargados en este mes.
                 </td>
               </tr>
             )}

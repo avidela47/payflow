@@ -792,9 +792,10 @@ export type ViaticosCategoryRow = {
   amount: number;
 };
 
-// Discriminado por forma de pago (Tarjeta/Efectivo/Débito) de los gastos
-// individuales de cada viaje: honorarios de empleados + materiales. Los
-// gastos sin forma de pago cargada caen en "Sin especificar".
+// Discriminado por forma de pago de los gastos individuales de cada
+// viaje: honorarios de empleados (Transferencia/Efectivo) + materiales y
+// extras (Tarjeta/Efectivo/Débito). Los gastos sin forma de pago cargada
+// caen en "Sin especificar".
 export type ViaticosPaymentModeRow = {
   paymentMode: string;
   amount: number;
@@ -808,6 +809,8 @@ function paymentModeLabel(mode?: string): string {
       return "Efectivo";
     case "DEBITO":
       return "Débito";
+    case "TRANSFERENCIA":
+      return "Transferencia";
     default:
       return "Sin especificar";
   }
@@ -899,7 +902,7 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     seguro += calc.seguroTotal;
 
     // Discriminado por forma de pago: honorarios de empleados + materiales
-    // (los únicos gastos individuales con forma de pago cargada por ahora).
+    // + extras.
     for (const e of v.empleados ?? []) {
       const amount = e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto;
       const label = paymentModeLabel(e.paymentMode);
@@ -908,6 +911,10 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     for (const m of v.materiales ?? []) {
       const label = paymentModeLabel(m.paymentMode);
       paymentModeTotals.set(label, (paymentModeTotals.get(label) ?? 0) + m.monto);
+    }
+    for (const x of v.extras ?? []) {
+      const label = paymentModeLabel(x.paymentMode);
+      paymentModeTotals.set(label, (paymentModeTotals.get(label) ?? 0) + x.monto);
     }
 
     detail.push({

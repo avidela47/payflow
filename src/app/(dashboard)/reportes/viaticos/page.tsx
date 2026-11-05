@@ -118,7 +118,7 @@ export default async function ReporteViaticosPage({
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-medium">Por forma de pago (honorarios y materiales)</p>
+        <p className="mb-2 text-sm font-medium">Por forma de pago (honorarios, materiales y extras)</p>
         <Table>
           <TableHeader>
             <TableRow>
@@ -130,7 +130,7 @@ export default async function ReporteViaticosPage({
             {report.byPaymentMode.length === 0 && (
               <TableRow>
                 <TableCell colSpan={2} className="text-center text-muted-foreground">
-                  No hay gastos de empleados o materiales cargados en este mes.
+                  No hay gastos de empleados, materiales o extras cargados en este mes.
                 </TableCell>
               </TableRow>
             )}
