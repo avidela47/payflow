@@ -225,23 +225,28 @@ export default async function ImprimirReporteViaticosPage({
                 {v.topesDiarios.length > 0 && (
                   <div className="rounded bg-amber-50 p-2">
                     <p className="mb-1 font-semibold text-gray-700">Tope diario de viático</p>
-                    <ul className="list-disc pl-4">
+                    <div className="flex flex-col gap-1.5">
                       {v.topesDiarios.map((t, i) => (
-                        <li key={i}>
-                          {t.employeeName} — importe {formatCurrency(t.monto)}/día —{" "}
-                          {t.saldo < 0 ? `Excedido en ${formatCurrency(Math.abs(t.saldo))}` : `Saldo: ${formatCurrency(t.saldo)}`}
-                          {t.gastos.length > 0 &&
-                            ` (gastos: ${t.gastos
-                              .map(
-                                (g) =>
-                                  `${g.descripcion} ${formatCurrency(g.monto)}${
-                                    g.paymentMode ? ` (${g.paymentMode})` : ""
-                                  }`
-                              )
-                              .join(", ")})`}
-                        </li>
+                        <div key={i}>
+                          <p>
+                            {t.employeeName} — importe {formatCurrency(t.monto)}/día —{" "}
+                            {t.saldo < 0
+                              ? `Excedido en ${formatCurrency(Math.abs(t.saldo))}`
+                              : `Saldo: ${formatCurrency(t.saldo)}`}
+                          </p>
+                          {t.gastos.length > 0 && (
+                            <ul className="list-disc pl-4">
+                              {t.gastos.map((g, gi) => (
+                                <li key={gi}>
+                                  {g.descripcion} — {formatCurrency(g.monto)}
+                                  {g.paymentMode ? ` (${g.paymentMode})` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 

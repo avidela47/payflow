@@ -254,33 +254,30 @@ export default async function ReporteViaticosPage({
                     <p className="mb-1.5 text-xs font-semibold text-muted-foreground">
                       Tope diario de viático
                     </p>
-                    <ul className="flex flex-col gap-1 text-sm">
+                    <div className="flex flex-col gap-2 text-sm">
                       {v.topesDiarios.map((t, i) => (
-                        <li key={i}>
-                          {t.employeeName} — importe {formatCurrency(t.monto)}/día —{" "}
-                          {t.saldo < 0 ? (
-                            <Badge variant="warning">Excedido en {formatCurrency(Math.abs(t.saldo))}</Badge>
-                          ) : (
-                            <>Saldo: {formatCurrency(t.saldo)}</>
-                          )}
+                        <div key={i}>
+                          <p>
+                            {t.employeeName} — importe {formatCurrency(t.monto)}/día —{" "}
+                            {t.saldo < 0 ? (
+                              <Badge variant="warning">Excedido en {formatCurrency(Math.abs(t.saldo))}</Badge>
+                            ) : (
+                              <>Saldo: {formatCurrency(t.saldo)}</>
+                            )}
+                          </p>
                           {t.gastos.length > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              {" "}
-                              (gastos:{" "}
-                              {t.gastos
-                                .map(
-                                  (g) =>
-                                    `${g.descripcion} ${formatCurrency(g.monto)}${
-                                      g.paymentMode ? ` (${g.paymentMode})` : ""
-                                    }`
-                                )
-                                .join(", ")}
-                              )
-                            </span>
+                            <ul className="ml-4 list-disc">
+                              {t.gastos.map((g, gi) => (
+                                <li key={gi}>
+                                  {g.descripcion} — {formatCurrency(g.monto)}
+                                  {g.paymentMode ? ` (${g.paymentMode})` : ""}
+                                </li>
+                              ))}
+                            </ul>
                           )}
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
