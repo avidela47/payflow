@@ -72,16 +72,26 @@ export interface IViaticoSeguro {
   costo?: number;
 }
 
+// Un gasto individual descontado del importe de tope asignado a un
+// empleado — mismo patrón que materiales/extras (descripción + forma de
+// pago).
+export interface IViaticoTopeGasto {
+  descripcion: string;
+  monto: number;
+  paymentMode?: ViaticoPaymentMode;
+}
+
 // Tope diario de viático, ahora POR EMPLEADO (antes era un único monto
-// global para todo el viaje). Si el monto por día de un empleado con
-// honorarioType "DIA" supera el tope que se le asignó acá, la diferencia
-// x días se guarda en `excedente`.
+// global para todo el viaje). `monto` es el importe/tope por día asignado
+// al empleado — si el monto por día de un empleado con honorarioType
+// "DIA" lo supera, la diferencia x días se guarda en `excedente`.
+// `gastos` discrimina qué se gastó de ese importe y cómo se pagó cada
+// cosa (en vez de tener que repetir una fila por empleado por cada
+// gasto).
 export interface IViaticoTopeDiario {
   employee: mongoose.Types.ObjectId;
   monto: number;
-  // Qué gasto es y cómo se pagó — mismo patrón que materiales/extras.
-  descripcion?: string;
-  paymentMode?: ViaticoPaymentMode;
+  gastos: IViaticoTopeGasto[];
 }
 
 export interface IViatico {
@@ -174,12 +184,20 @@ const ViaticoSeguroSchema = new Schema<IViaticoSeguro>(
   { _id: false }
 );
 
+const ViaticoTopeGastoSchema = new Schema<IViaticoTopeGasto>(
+  {
+    descripcion: { type: String, required: true },
+    monto: { type: Number, required: true },
+    paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
+  },
+  { _id: false }
+);
+
 const ViaticoTopeDiarioSchema = new Schema<IViaticoTopeDiario>(
   {
     employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
     monto: { type: Number, required: true },
-    descripcion: String,
-    paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
+    gastos: { type: [ViaticoTopeGastoSchema], default: [] },
   },
   { _id: false }
 );

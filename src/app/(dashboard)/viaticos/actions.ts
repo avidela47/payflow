@@ -45,11 +45,16 @@ const materialSchema = z.object({
   paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
+const topeGastoSchema = z.object({
+  descripcion: z.string().min(1),
+  monto: z.coerce.number().nonnegative(),
+  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
+});
+
 const topeDiarioSchema = z.object({
   employeeId: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
-  descripcion: z.string().optional(),
-  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
+  gastos: z.array(topeGastoSchema).default([]),
 });
 
 const viaticoSchema = z.object({
@@ -137,8 +142,11 @@ function buildDoc(data: ViaticoFormInput) {
     topesDiarios: data.topesDiarios.map((t) => ({
       employee: t.employeeId,
       monto: t.monto,
-      descripcion: t.descripcion || undefined,
-      paymentMode: t.paymentMode,
+      gastos: t.gastos.map((g) => ({
+        descripcion: g.descripcion,
+        monto: g.monto,
+        paymentMode: g.paymentMode,
+      })),
     })),
     excedente: calcularExcedente(data.empleados, data.topesDiarios),
     notes: data.notes || undefined,

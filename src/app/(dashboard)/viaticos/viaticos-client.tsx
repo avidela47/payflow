@@ -67,12 +67,15 @@ export type ViaticoMaterialItem = {
   monto: number;
   paymentMode?: ViaticoPaymentMode;
 };
+export type ViaticoTopeGastoItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
 export type ViaticoTopeDiarioItem = {
   employeeId: string;
   employeeName?: string;
+  // Importe/tope por día asignado al empleado.
   monto: number;
-  descripcion?: string;
-  paymentMode?: ViaticoPaymentMode;
+  // Gastos descontados de ese importe — discrimina qué se gastó y cómo
+  // se pagó, sin tener que repetir la fila del empleado por cada gasto.
+  gastos: ViaticoTopeGastoItem[];
 };
 
 export type ViaticoItem = {
@@ -104,7 +107,8 @@ type PagoRow = ViaticoPagoItem & { _key: number };
 type EmpleadoRow = Omit<ViaticoEmpleadoItem, "pagos"> & { _key: number; pagos: PagoRow[] };
 type ExtraRow = ViaticoExtraItem & { _key: number };
 type MaterialRow = ViaticoMaterialItem & { _key: number };
-type TopeRow = ViaticoTopeDiarioItem & { _key: number };
+type TopeGastoRow = ViaticoTopeGastoItem & { _key: number };
+type TopeRow = Omit<ViaticoTopeDiarioItem, "gastos"> & { _key: number; gastos: TopeGastoRow[] };
 
 let keySeq = 0;
 function nextKey() {
@@ -125,7 +129,10 @@ function emptyMaterialRow(): MaterialRow {
   return { _key: nextKey(), descripcion: "", cantidad: undefined, monto: 0 };
 }
 function emptyTopeRow(): TopeRow {
-  return { _key: nextKey(), employeeId: "", monto: 0 };
+  return { _key: nextKey(), employeeId: "", monto: 0, gastos: [] };
+}
+function emptyTopeGastoRow(): TopeGastoRow {
+  return { _key: nextKey(), descripcion: "", monto: 0 };
 }
 
 // Cubre ambos sets (materiales/extras/tope y el de empleados) para que el
@@ -153,6 +160,13 @@ function saldoEmpleado(e: {
 }): number {
   const pagado = e.pagos.reduce((sum, p) => sum + p.monto, 0);
   return montoTotalEmpleado(e) - pagado;
+}
+
+// Saldo disponible del importe de tope asignado a un empleado: el
+// importe menos la suma de los gastos cargados contra él.
+function saldoTope(t: { monto: number; gastos: ViaticoTopeGastoItem[] }): number {
+  const gastado = t.gastos.reduce((sum, g) => sum + g.monto, 0);
+  return t.monto - gastado;
 }
 
 function todayISO() {
@@ -304,7 +318,13 @@ export function ViaticosClient({
     );
     setExtrasRows(v.extras.map((e) => ({ ...e, _key: nextKey() })));
     setMaterialesRows(v.materiales.map((m) => ({ ...m, _key: nextKey() })));
-    setTopesRows(v.topesDiarios.map((t) => ({ ...t, _key: nextKey() })));
+    setTopesRows(
+      v.topesDiarios.map((t) => ({
+        ...t,
+        _key: nextKey(),
+        gastos: t.gastos.map((g) => ({ ...g, _key: nextKey() })),
+      }))
+    );
     setEditingId(v.id);
     setFormOpen(true);
   }
@@ -382,8 +402,9 @@ export function ViaticosClient({
         .map((r) => ({
           employeeId: r.employeeId,
           monto: r.monto,
-          descripcion: r.descripcion,
-          paymentMode: r.paymentMode,
+          gastos: r.gastos
+            .filter((g) => g.descripcion)
+            .map((g) => ({ descripcion: g.descripcion, monto: g.monto, paymentMode: g.paymentMode })),
         })),
       notes: notes || undefined,
     };
@@ -785,86 +806,177 @@ export function ViaticosClient({
               <p className="text-sm text-muted-foreground">Sin topes configurados.</p>
             )}
             {topesRows.map((row, idx) => (
-              <div
-                key={row._key}
-                className="grid grid-cols-1 gap-2 sm:grid-cols-[1.3fr_1.3fr_1fr_1fr_auto] sm:items-end"
-              >
-                <div className="flex flex-col gap-1.5">
-                  {idx === 0 && <Label>Empleado</Label>}
-                  <Select
-                    value={row.employeeId}
-                    onChange={(e) =>
-                      setTopesRows((rows) =>
-                        rows.map((r) => (r._key === row._key ? { ...r, employeeId: e.target.value } : r))
-                      )
-                    }
-                  >
-                    <option value="">Elegir...</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.nombre} {emp.apellido}
-                        {emp.area ? ` (${emp.area})` : ""}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {idx === 0 && <Label>Qué gasto</Label>}
-                  <Input
-                    placeholder="Descripción"
-                    value={row.descripcion ?? ""}
-                    onChange={(e) =>
-                      setTopesRows((rows) =>
-                        rows.map((r) => (r._key === row._key ? { ...r, descripcion: e.target.value } : r))
-                      )
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {idx === 0 && <Label>Tope por día</Label>}
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={row.monto || ""}
-                    onChange={(e) =>
-                      setTopesRows((rows) =>
-                        rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
-                      )
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {idx === 0 && <Label>Forma de pago</Label>}
-                  <Select
-                    value={row.paymentMode ?? ""}
-                    onChange={(e) =>
-                      setTopesRows((rows) =>
-                        rows.map((r) =>
-                          r._key === row._key
-                            ? { ...r, paymentMode: (e.target.value || undefined) as ViaticoPaymentMode | undefined }
-                            : r
+              <div key={row._key} className="flex flex-col gap-2 rounded-md border border-border/60 p-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                  <div className="flex flex-col gap-1.5">
+                    {idx === 0 && <Label>Empleado</Label>}
+                    <Select
+                      value={row.employeeId}
+                      onChange={(e) =>
+                        setTopesRows((rows) =>
+                          rows.map((r) => (r._key === row._key ? { ...r, employeeId: e.target.value } : r))
                         )
-                      )
-                    }
+                      }
+                    >
+                      <option value="">Elegir...</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.nombre} {emp.apellido}
+                          {emp.area ? ` (${emp.area})` : ""}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {idx === 0 && <Label>Importe (tope por día)</Label>}
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={row.monto || ""}
+                      onChange={(e) =>
+                        setTopesRows((rows) =>
+                          rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                        )
+                      }
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => setTopesRows((rows) => rows.filter((r) => r._key !== row._key))}
                   >
-                    <option value="">Elegir...</option>
-                    {PAYMENT_MODE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </Select>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
-                  onClick={() => setTopesRows((rows) => rows.filter((r) => r._key !== row._key))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+
+                {/* Gastos descontados del importe de este empleado */}
+                <div className="flex flex-col gap-2 rounded-md bg-muted/30 p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Gastos de este importe</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setTopesRows((rows) =>
+                          rows.map((r) =>
+                            r._key === row._key ? { ...r, gastos: [...r.gastos, emptyTopeGastoRow()] } : r
+                          )
+                        )
+                      }
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      Agregar gasto
+                    </Button>
+                  </div>
+                  {row.gastos.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Sin gastos cargados.</p>
+                  )}
+                  {row.gastos.map((gasto) => (
+                    <div key={gasto._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+                      <Input
+                        placeholder="Qué gasto"
+                        value={gasto.descripcion}
+                        onChange={(e) =>
+                          setTopesRows((rows) =>
+                            rows.map((r) =>
+                              r._key === row._key
+                                ? {
+                                    ...r,
+                                    gastos: r.gastos.map((g) =>
+                                      g._key === gasto._key ? { ...g, descripcion: e.target.value } : g
+                                    ),
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Monto"
+                        value={gasto.monto || ""}
+                        onChange={(e) =>
+                          setTopesRows((rows) =>
+                            rows.map((r) =>
+                              r._key === row._key
+                                ? {
+                                    ...r,
+                                    gastos: r.gastos.map((g) =>
+                                      g._key === gasto._key ? { ...g, monto: Number(e.target.value) } : g
+                                    ),
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      <Select
+                        value={gasto.paymentMode ?? ""}
+                        onChange={(e) =>
+                          setTopesRows((rows) =>
+                            rows.map((r) =>
+                              r._key === row._key
+                                ? {
+                                    ...r,
+                                    gastos: r.gastos.map((g) =>
+                                      g._key === gasto._key
+                                        ? {
+                                            ...g,
+                                            paymentMode: (e.target.value || undefined) as
+                                              | ViaticoPaymentMode
+                                              | undefined,
+                                          }
+                                        : g
+                                    ),
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      >
+                        <option value="">Forma de pago...</option>
+                        {PAYMENT_MODE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() =>
+                          setTopesRows((rows) =>
+                            rows.map((r) =>
+                              r._key === row._key
+                                ? { ...r, gastos: r.gastos.filter((g) => g._key !== gasto._key) }
+                                : r
+                            )
+                          )
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <p className="text-xs">
+                    {saldoTope(row) < 0 ? (
+                      <Badge variant="warning">Excedido en {formatCurrency(Math.abs(saldoTope(row)))}</Badge>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">Saldo disponible: </span>
+                        <span className="font-medium">{formatCurrency(saldoTope(row))}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -1249,9 +1361,22 @@ export function ViaticosClient({
                 <ul className="ml-4 list-disc">
                   {detailTarget.topesDiarios.map((t, i) => (
                     <li key={i}>
-                      {t.employeeName}
-                      {t.descripcion ? ` — ${t.descripcion}` : ""} — {formatCurrency(t.monto)}/día
-                      {paymentModeLabel(t.paymentMode) ? ` (${paymentModeLabel(t.paymentMode)})` : ""}
+                      {t.employeeName} — {formatCurrency(t.monto)}/día —{" "}
+                      {saldoTope(t) < 0 ? (
+                        <Badge variant="warning">Excedido en {formatCurrency(Math.abs(saldoTope(t)))}</Badge>
+                      ) : (
+                        <>Saldo: {formatCurrency(saldoTope(t))}</>
+                      )}
+                      {t.gastos.length > 0 && (
+                        <ul className="ml-4 list-[circle] text-xs text-muted-foreground">
+                          {t.gastos.map((g, gi) => (
+                            <li key={gi}>
+                              {g.descripcion} — {formatCurrency(g.monto)}
+                              {paymentModeLabel(g.paymentMode) ? ` (${paymentModeLabel(g.paymentMode)})` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

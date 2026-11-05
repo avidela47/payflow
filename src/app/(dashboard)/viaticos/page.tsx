@@ -80,8 +80,11 @@ export default async function ViaticosPage() {
         employeeId: employeeDoc ? employeeDoc._id.toString() : String(t.employee),
         employeeName: employeeDoc ? `${employeeDoc.nombre} ${employeeDoc.apellido}` : "Empleado eliminado",
         monto: t.monto,
-        descripcion: t.descripcion,
-        paymentMode: t.paymentMode,
+        gastos: (t.gastos ?? []).map((g) => ({
+          descripcion: g.descripcion,
+          monto: g.monto,
+          paymentMode: g.paymentMode,
+        })),
       };
     }),
     excedente: v.excedente ?? 0,
