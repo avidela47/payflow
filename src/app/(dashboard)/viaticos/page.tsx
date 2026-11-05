@@ -44,6 +44,7 @@ export default async function ViaticosPage() {
         honorarioType: e.honorarioType,
         monto: e.monto,
         dias: e.dias,
+        paymentMode: e.paymentMode,
       };
     }),
     hospedajeLugar: v.hospedaje?.lugar,
@@ -59,6 +60,7 @@ export default async function ViaticosPage() {
       descripcion: m.descripcion,
       cantidad: m.cantidad,
       monto: m.monto,
+      paymentMode: m.paymentMode,
     })),
     seguroCompania: v.seguro?.compania,
     seguroCobertura: v.seguro?.cobertura,
@@ -82,7 +84,7 @@ export default async function ViaticosPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Viáticos</h1>
+        <h1 className="text-2xl font-semibold">Viajes</h1>
         <p className="text-sm text-muted-foreground">
           Gastos de viaje por obra: honorarios, hospedaje, combustible, extras, materiales y seguro.
         </p>

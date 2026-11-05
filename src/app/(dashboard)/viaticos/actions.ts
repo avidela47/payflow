@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
-import { Viatico, VIATICO_HONORARIO_TYPES } from "@/models/Viatico";
+import { Viatico, VIATICO_HONORARIO_TYPES, VIATICO_PAYMENT_MODES } from "@/models/Viatico";
 import { getSession } from "@/lib/auth";
 
 // A diferencia de Compras/Sueldos (formularios planos, FormData), Viáticos
@@ -18,6 +18,7 @@ const empleadoSchema = z.object({
   honorarioType: z.enum(VIATICO_HONORARIO_TYPES),
   monto: z.coerce.number().nonnegative(),
   dias: z.coerce.number().positive().optional(),
+  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const extraSchema = z.object({
@@ -29,6 +30,7 @@ const materialSchema = z.object({
   descripcion: z.string().min(1),
   cantidad: z.coerce.number().nonnegative().optional(),
   monto: z.coerce.number().nonnegative(),
+  paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const topeDiarioSchema = z.object({
@@ -95,6 +97,7 @@ function buildDoc(data: ViaticoFormInput) {
       honorarioType: e.honorarioType,
       monto: e.monto,
       dias: e.dias,
+      paymentMode: e.paymentMode,
     })),
     hospedaje: {
       lugar: data.hospedajeLugar || undefined,
@@ -139,7 +142,7 @@ export async function createViatico(input: ViaticoFormInput) {
   } catch (err) {
     console.error("createViatico error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `No se pudo crear el viático: ${message}` };
+    return { ok: false, error: `No se pudo crear el viaje: ${message}` };
   }
 
   revalidatePath("/viaticos");
@@ -164,7 +167,7 @@ export async function updateViatico(viaticoId: string, input: ViaticoFormInput) 
   } catch (err) {
     console.error("updateViatico error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `No se pudo editar el viático: ${message}` };
+    return { ok: false, error: `No se pudo editar el viaje: ${message}` };
   }
 
   revalidatePath("/viaticos");
@@ -184,7 +187,7 @@ export async function deleteViatico(viaticoId: string) {
   } catch (err) {
     console.error("deleteViatico error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `No se pudo borrar el viático: ${message}` };
+    return { ok: false, error: `No se pudo borrar el viaje: ${message}` };
   }
 
   revalidatePath("/viaticos");

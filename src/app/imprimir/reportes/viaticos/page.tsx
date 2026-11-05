@@ -51,7 +51,7 @@ export default async function ImprimirReporteViaticosPage({
           </div>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold">REPORTE DE VIÁTICOS</p>
+          <p className="text-lg font-bold">REPORTE DE VIAJES</p>
           <p className="text-sm capitalize text-gray-700">{report.periodLabel}</p>
           <p className="text-xs text-gray-500">Emitido: {emittedAt}</p>
         </div>
@@ -62,7 +62,7 @@ export default async function ImprimirReporteViaticosPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900 text-left text-white">
-              <th className="p-2">Total de viáticos</th>
+              <th className="p-2">Total de viajes</th>
               <th className="p-2 text-right">Excedente de viáticos</th>
             </tr>
           </thead>
@@ -96,7 +96,34 @@ export default async function ImprimirReporteViaticosPage({
             {report.byCategory.length === 0 && (
               <tr>
                 <td colSpan={2} className="p-4 text-center text-gray-500">
-                  No hay viáticos cargados en este mes.
+                  No hay viajes cargados en este mes.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-8">
+        <p className="mb-2 text-sm font-semibold">Por forma de pago (honorarios y materiales)</p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-900 text-left text-white">
+              <th className="p-2">Forma de pago</th>
+              <th className="p-2 text-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.byPaymentMode.map((row) => (
+              <tr key={row.paymentMode} className="border-b border-gray-200">
+                <td className="p-2">{row.paymentMode}</td>
+                <td className="p-2 text-right">{formatCurrency(row.amount)}</td>
+              </tr>
+            ))}
+            {report.byPaymentMode.length === 0 && (
+              <tr>
+                <td colSpan={2} className="p-4 text-center text-gray-500">
+                  No hay gastos de empleados o materiales cargados en este mes.
                 </td>
               </tr>
             )}
@@ -131,7 +158,7 @@ export default async function ImprimirReporteViaticosPage({
             {report.detail.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-4 text-center text-gray-500">
-                  No hay viáticos cargados en este mes.
+                  No hay viajes cargados en este mes.
                 </td>
               </tr>
             )}

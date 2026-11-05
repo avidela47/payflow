@@ -20,9 +20,19 @@ import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { createViatico, updateViatico, deleteViatico, type ViaticoFormInput } from "./actions";
-import type { ViaticoHonorarioType } from "@/models/Viatico";
+import type { ViaticoHonorarioType, ViaticoPaymentMode } from "@/models/Viatico";
 
 export type EmployeeOption = { id: string; nombre: string; apellido: string; area?: string };
+
+// Mismos valores que VIATICO_PAYMENT_MODES en el modelo — se redeclaran
+// acá (en vez de importar esa constante) porque este archivo es "use
+// client" y el modelo importa mongoose, que no debe terminar en el bundle
+// del navegador. El tipo sí se importa (import type se borra al compilar).
+const PAYMENT_MODE_OPTIONS: { value: ViaticoPaymentMode; label: string }[] = [
+  { value: "TARJETA", label: "Tarjeta" },
+  { value: "EFECTIVO", label: "Efectivo" },
+  { value: "DEBITO", label: "Débito" },
+];
 
 export type ViaticoEmpleadoItem = {
   employeeId: string;
@@ -35,10 +45,16 @@ export type ViaticoEmpleadoItem = {
   honorarioType: ViaticoHonorarioType;
   monto: number;
   dias?: number;
+  paymentMode?: ViaticoPaymentMode;
 };
 
 export type ViaticoExtraItem = { descripcion: string; monto: number };
-export type ViaticoMaterialItem = { descripcion: string; cantidad?: number; monto: number };
+export type ViaticoMaterialItem = {
+  descripcion: string;
+  cantidad?: number;
+  monto: number;
+  paymentMode?: ViaticoPaymentMode;
+};
 export type ViaticoTopeDiarioItem = { employeeId: string; employeeName?: string; monto: number };
 
 export type ViaticoItem = {
@@ -88,6 +104,11 @@ function emptyMaterialRow(): MaterialRow {
 }
 function emptyTopeRow(): TopeRow {
   return { _key: nextKey(), employeeId: "", monto: 0 };
+}
+
+function paymentModeLabel(mode?: ViaticoPaymentMode): string | null {
+  const found = PAYMENT_MODE_OPTIONS.find((o) => o.value === mode);
+  return found ? found.label : null;
 }
 
 function todayISO() {
@@ -282,6 +303,7 @@ export function ViaticosClient({
           honorarioType: r.honorarioType,
           monto: r.monto,
           dias: r.honorarioType === "DIA" ? r.dias || 1 : undefined,
+          paymentMode: r.paymentMode,
         })),
       hospedajeLugar: hospedajeLugar || undefined,
       hospedajeCheckIn: hospedajeCheckIn || undefined,
@@ -294,7 +316,12 @@ export function ViaticosClient({
       extras: extrasRows.filter((r) => r.descripcion).map((r) => ({ descripcion: r.descripcion, monto: r.monto })),
       materiales: materialesRows
         .filter((r) => r.descripcion)
-        .map((r) => ({ descripcion: r.descripcion, cantidad: r.cantidad, monto: r.monto })),
+        .map((r) => ({
+          descripcion: r.descripcion,
+          cantidad: r.cantidad,
+          monto: r.monto,
+          paymentMode: r.paymentMode,
+        })),
       seguroCompania: seguroCompania || undefined,
       seguroCobertura: seguroCobertura || undefined,
       seguroCantidadDias: seguroCantidadDias ? Number(seguroCantidadDias) : undefined,
@@ -314,7 +341,7 @@ export function ViaticosClient({
       return;
     }
 
-    toast.success(editingId ? "Viático actualizado." : "Viático guardado.");
+    toast.success(editingId ? "Viaje actualizado." : "Viaje guardado.");
     setFormOpen(false);
     resetForm();
     setEditingId(null);
@@ -330,7 +357,7 @@ export function ViaticosClient({
       toast.error(result.error ?? "Ocurrió un error.");
       return;
     }
-    toast.success("Viático borrado.");
+    toast.success("Viaje borrado.");
     setConfirmTarget(null);
     router.refresh();
   }
@@ -339,11 +366,11 @@ export function ViaticosClient({
     <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {viaticos.length === 0 ? "Todavía no hay viáticos cargados." : `${viaticos.length} viático(s) cargado(s).`}
+          {viaticos.length === 0 ? "Todavía no hay viajes cargados." : `${viaticos.length} viaje(s) cargado(s).`}
         </p>
         <Button type="button" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" />
-          Nuevo viático
+          Nuevo viaje
         </Button>
       </div>
 
@@ -363,7 +390,7 @@ export function ViaticosClient({
           {viaticos.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Todavía no hay viáticos cargados.
+                Todavía no hay viajes cargados.
               </TableCell>
             </TableRow>
           )}
@@ -420,7 +447,7 @@ export function ViaticosClient({
           setFormOpen(open);
           if (!open) setEditingId(null);
         }}
-        title={editingId ? "Editar viático" : "Nuevo viático"}
+        title={editingId ? "Editar viaje" : "Nuevo viaje"}
         className="max-w-3xl"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -465,7 +492,8 @@ export function ViaticosClient({
               </Button>
             </div>
             {empleadosRows.map((row, idx) => (
-              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] sm:items-end">
+              <div key={row._key} className="flex flex-col gap-2 rounded-md border border-border/60 p-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] sm:items-end">
                 <div className="flex flex-col gap-1.5">
                   {idx === 0 && <Label>Empleado</Label>}
                   <Select
@@ -552,6 +580,29 @@ export function ViaticosClient({
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
+              </div>
+              <div className="flex flex-col gap-1.5 sm:max-w-[220px]">
+                {idx === 0 && <Label>Forma de pago</Label>}
+                <Select
+                  value={row.paymentMode ?? ""}
+                  onChange={(e) =>
+                    setEmpleadosRows((rows) =>
+                      rows.map((r) =>
+                        r._key === row._key
+                          ? { ...r, paymentMode: (e.target.value || undefined) as ViaticoPaymentMode | undefined }
+                          : r
+                      )
+                    )
+                  }
+                >
+                  <option value="">Elegir...</option>
+                  {PAYMENT_MODE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
               </div>
             ))}
           </div>
@@ -762,7 +813,7 @@ export function ViaticosClient({
               </Button>
             </div>
             {materialesRows.map((row) => (
-              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                 <Input
                   placeholder="Descripción"
                   value={row.descripcion}
@@ -796,6 +847,25 @@ export function ViaticosClient({
                     )
                   }
                 />
+                <Select
+                  value={row.paymentMode ?? ""}
+                  onChange={(e) =>
+                    setMaterialesRows((rows) =>
+                      rows.map((r) =>
+                        r._key === row._key
+                          ? { ...r, paymentMode: (e.target.value || undefined) as ViaticoPaymentMode | undefined }
+                          : r
+                      )
+                    )
+                  }
+                >
+                  <option value="">Forma de pago...</option>
+                  {PAYMENT_MODE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
                 <Button
                   type="button"
                   size="sm"
@@ -860,7 +930,7 @@ export function ViaticosClient({
               )}
             </div>
             <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar viático"}
+              {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar viaje"}
             </Button>
           </div>
         </form>
@@ -894,6 +964,7 @@ export function ViaticosClient({
                     {e.honorarioType === "DIA"
                       ? `${formatCurrency(e.monto)}/día x ${e.dias ?? 1} día(s)`
                       : formatCurrency(e.monto)}
+                    {paymentModeLabel(e.paymentMode) ? ` (${paymentModeLabel(e.paymentMode)})` : ""}
                   </li>
                 ))}
               </ul>
@@ -931,6 +1002,7 @@ export function ViaticosClient({
                   {detailTarget.materiales.map((m, i) => (
                     <li key={i}>
                       {m.descripcion} {m.cantidad ? `x${m.cantidad}` : ""} — {formatCurrency(m.monto)}
+                      {paymentModeLabel(m.paymentMode) ? ` (${paymentModeLabel(m.paymentMode)})` : ""}
                     </li>
                   ))}
                 </ul>
@@ -968,13 +1040,13 @@ export function ViaticosClient({
         onOpenChange={(open) => {
           if (!open) setConfirmTarget(null);
         }}
-        title="Borrar viático"
+        title="Borrar viaje"
         className="max-w-md"
       >
         {confirmTarget && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              ¿Seguro que querés borrar el viático{" "}
+              ¿Seguro que querés borrar el viaje{" "}
               <span className="font-medium text-foreground">{confirmTarget.nombre}</span> del{" "}
               {formatDate(confirmTarget.fechaISO)}? No se puede deshacer.
             </p>

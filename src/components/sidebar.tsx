@@ -80,7 +80,7 @@ const navItems = [
   },
   {
     href: "/viaticos",
-    label: "Viáticos",
+    label: "Viajes",
     icon: Plane,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "viaticos",

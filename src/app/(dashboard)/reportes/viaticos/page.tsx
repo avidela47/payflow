@@ -37,7 +37,7 @@ export default async function ReporteViaticosPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Reporte de Viáticos</h1>
+        <h1 className="text-2xl font-semibold">Reporte de Viajes</h1>
         <p className="text-sm text-muted-foreground">
           Total del mes por categoría (honorarios, hospedaje, combustible, extras, materiales, seguro) y excedente.
         </p>
@@ -67,7 +67,7 @@ export default async function ReporteViaticosPage({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total de viáticos</p>
+            <p className="text-sm text-muted-foreground">Total de viajes</p>
             <p className="text-2xl font-semibold">{formatCurrency(report.totalAmount)}</p>
             <p className="text-xs text-muted-foreground">{report.totalCount} viaje(s)</p>
           </CardContent>
@@ -103,13 +103,40 @@ export default async function ReporteViaticosPage({
             {report.byCategory.length === 0 && (
               <TableRow>
                 <TableCell colSpan={2} className="text-center text-muted-foreground">
-                  No hay viáticos cargados en este mes.
+                  No hay viajes cargados en este mes.
                 </TableCell>
               </TableRow>
             )}
             {report.byCategory.map((row) => (
               <TableRow key={row.categoria}>
                 <TableCell className="font-medium">{row.categoria}</TableCell>
+                <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium">Por forma de pago (honorarios y materiales)</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Forma de pago</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byPaymentMode.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  No hay gastos de empleados o materiales cargados en este mes.
+                </TableCell>
+              </TableRow>
+            )}
+            {report.byPaymentMode.map((row) => (
+              <TableRow key={row.paymentMode}>
+                <TableCell className="font-medium">{row.paymentMode}</TableCell>
                 <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
               </TableRow>
             ))}
@@ -133,7 +160,7 @@ export default async function ReporteViaticosPage({
             {report.detail.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No hay viáticos cargados en este mes.
+                  No hay viajes cargados en este mes.
                 </TableCell>
               </TableRow>
             )}

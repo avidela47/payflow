@@ -6,6 +6,11 @@ import mongoose, { Schema, models, model, Model } from "mongoose";
 export const VIATICO_HONORARIO_TYPES = ["TRABAJO", "DIA"] as const;
 export type ViaticoHonorarioType = (typeof VIATICO_HONORARIO_TYPES)[number];
 
+// Forma de pago de un gasto individual (empleado o material) — distinto
+// de `paidBy` (quién paga, texto libre) de hospedaje/combustible.
+export const VIATICO_PAYMENT_MODES = ["TARJETA", "EFECTIVO", "DEBITO"] as const;
+export type ViaticoPaymentMode = (typeof VIATICO_PAYMENT_MODES)[number];
+
 export interface IViaticoEmpleado {
   employee: mongoose.Types.ObjectId;
   honorarioType: ViaticoHonorarioType;
@@ -13,6 +18,7 @@ export interface IViaticoEmpleado {
   // Si honorarioType === "DIA": monto por día — se multiplica por `dias`.
   monto: number;
   dias?: number; // solo aplica con honorarioType === "DIA"
+  paymentMode?: ViaticoPaymentMode;
 }
 
 export interface IViaticoHospedaje {
@@ -40,6 +46,7 @@ export interface IViaticoMaterial {
   descripcion: string;
   cantidad?: number;
   monto: number;
+  paymentMode?: ViaticoPaymentMode;
 }
 
 export interface IViaticoSeguro {
@@ -85,6 +92,7 @@ const ViaticoEmpleadoSchema = new Schema<IViaticoEmpleado>(
     honorarioType: { type: String, enum: VIATICO_HONORARIO_TYPES, required: true },
     monto: { type: Number, required: true },
     dias: Number,
+    paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
   },
   { _id: false }
 );
@@ -122,6 +130,7 @@ const ViaticoMaterialSchema = new Schema<IViaticoMaterial>(
     descripcion: { type: String, required: true },
     cantidad: Number,
     monto: { type: Number, required: true },
+    paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
   },
   { _id: false }
 );

@@ -792,6 +792,27 @@ export type ViaticosCategoryRow = {
   amount: number;
 };
 
+// Discriminado por forma de pago (Tarjeta/Efectivo/Débito) de los gastos
+// individuales de cada viaje: honorarios de empleados + materiales. Los
+// gastos sin forma de pago cargada caen en "Sin especificar".
+export type ViaticosPaymentModeRow = {
+  paymentMode: string;
+  amount: number;
+};
+
+function paymentModeLabel(mode?: string): string {
+  switch (mode) {
+    case "TARJETA":
+      return "Tarjeta";
+    case "EFECTIVO":
+      return "Efectivo";
+    case "DEBITO":
+      return "Débito";
+    default:
+      return "Sin especificar";
+  }
+}
+
 export type ViaticosReportDetailRow = {
   id: string;
   nombre: string;
@@ -808,6 +829,7 @@ export type ViaticosReportResult = {
   totalAmount: number;
   totalExcedente: number;
   byCategory: ViaticosCategoryRow[];
+  byPaymentMode: ViaticosPaymentModeRow[];
   detail: ViaticosReportDetailRow[];
 };
 
@@ -863,6 +885,7 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
   let materiales = 0;
   let seguro = 0;
   const detail: ViaticosReportDetailRow[] = [];
+  const paymentModeTotals = new Map<string, number>();
 
   for (const v of viaticos) {
     const calc = calcularTotalViatico(v);
@@ -874,6 +897,18 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     extras += calc.extrasTotal;
     materiales += calc.materialesTotal;
     seguro += calc.seguroTotal;
+
+    // Discriminado por forma de pago: honorarios de empleados + materiales
+    // (los únicos gastos individuales con forma de pago cargada por ahora).
+    for (const e of v.empleados ?? []) {
+      const amount = e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto;
+      const label = paymentModeLabel(e.paymentMode);
+      paymentModeTotals.set(label, (paymentModeTotals.get(label) ?? 0) + amount);
+    }
+    for (const m of v.materiales ?? []) {
+      const label = paymentModeLabel(m.paymentMode);
+      paymentModeTotals.set(label, (paymentModeTotals.get(label) ?? 0) + m.monto);
+    }
 
     detail.push({
       id: v._id.toString(),
@@ -894,6 +929,10 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     { categoria: "Seguro", amount: seguro },
   ].filter((row) => row.amount > 0);
 
+  const byPaymentMode: ViaticosPaymentModeRow[] = Array.from(paymentModeTotals.entries())
+    .map(([paymentMode, amount]) => ({ paymentMode, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
   return {
     periodISO,
     periodLabel: formatPeriod(from),
@@ -901,6 +940,7 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     totalAmount,
     totalExcedente,
     byCategory,
+    byPaymentMode,
     detail,
   };
 }
