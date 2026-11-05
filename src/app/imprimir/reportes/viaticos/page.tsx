@@ -137,7 +137,7 @@ export default async function ImprimirReporteViaticosPage({
           <thead>
             <tr className="bg-gray-900 text-left text-white">
               <th className="p-2">Viaje</th>
-              <th className="p-2">Fecha</th>
+              <th className="p-2">Fechas</th>
               <th className="p-2">Paga</th>
               <th className="p-2 text-right">Monto</th>
               <th className="p-2 text-right">Excedente</th>
@@ -147,7 +147,11 @@ export default async function ImprimirReporteViaticosPage({
             {report.detail.map((entry) => (
               <tr key={entry.id} className="border-b border-gray-200">
                 <td className="p-2">{entry.nombre}</td>
-                <td className="p-2">{formatDate(entry.fechaISO)}</td>
+                <td className="p-2">
+                  {entry.fechaInicioISO === entry.fechaFinISO
+                    ? formatDate(entry.fechaInicioISO)
+                    : `${formatDate(entry.fechaInicioISO)} – ${formatDate(entry.fechaFinISO)}`}
+                </td>
                 <td className="p-2">{entry.paidBy ?? "—"}</td>
                 <td className="p-2 text-right">{formatCurrency(entry.totalAmount)}</td>
                 <td className="p-2 text-right">
@@ -164,6 +168,151 @@ export default async function ImprimirReporteViaticosPage({
             )}
           </tbody>
         </table>
+      </section>
+
+      <section className="mt-8">
+        <p className="mb-2 text-sm font-semibold">Detalle completo por viaje</p>
+        {report.viajes.length === 0 && (
+          <p className="p-4 text-center text-sm text-gray-500">No hay viajes cargados en este mes.</p>
+        )}
+        <div className="flex flex-col gap-4">
+          {report.viajes.map((v) => (
+            <div key={v.id} className="break-inside-avoid rounded border border-gray-300 p-3">
+              <div className="mb-2 flex items-center justify-between border-b border-gray-300 pb-2">
+                <div>
+                  <p className="font-semibold">{v.nombre}</p>
+                  <p className="text-xs text-gray-600">
+                    {v.fechaInicioISO === v.fechaFinISO
+                      ? formatDate(v.fechaInicioISO)
+                      : `${formatDate(v.fechaInicioISO)} – ${formatDate(v.fechaFinISO)}`}
+                    {v.paidBy ? ` · Paga: ${v.paidBy}` : ""}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrency(v.totalAmount)}</p>
+                  {v.excedente > 0 && (
+                    <p className="text-xs text-gray-600">Excedente: {formatCurrency(v.excedente)}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 text-xs">
+                {v.empleados.length > 0 && (
+                  <div className="rounded bg-blue-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Empleados</p>
+                    <ul className="list-disc pl-4">
+                      {v.empleados.map((e, i) => (
+                        <li key={i}>
+                          {e.employeeName} —{" "}
+                          {e.honorarioType === "DIA"
+                            ? `${formatCurrency(e.monto)}/día x ${e.dias ?? 1} día(s)`
+                            : formatCurrency(e.monto)}
+                          {" = "}
+                          {formatCurrency(e.montoTotal)}
+                          {e.paymentMode ? ` (${e.paymentMode})` : ""}
+                          {" — "}
+                          {e.saldo <= 0 ? "Completado" : `Saldo: ${formatCurrency(e.saldo)}`}
+                          {e.pagos.length > 0 &&
+                            ` (pagos: ${e.pagos
+                              .map((p) => `${formatDate(p.fechaISO)} ${formatCurrency(p.monto)}`)
+                              .join(", ")})`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {v.topesDiarios.length > 0 && (
+                  <div className="rounded bg-amber-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Tope diario de viático</p>
+                    <ul className="list-disc pl-4">
+                      {v.topesDiarios.map((t, i) => (
+                        <li key={i}>
+                          {t.employeeName} — importe {formatCurrency(t.monto)}/día —{" "}
+                          {t.saldo < 0 ? `Excedido en ${formatCurrency(Math.abs(t.saldo))}` : `Saldo: ${formatCurrency(t.saldo)}`}
+                          {t.gastos.length > 0 &&
+                            ` (gastos: ${t.gastos
+                              .map(
+                                (g) =>
+                                  `${g.descripcion} ${formatCurrency(g.monto)}${
+                                    g.paymentMode ? ` (${g.paymentMode})` : ""
+                                  }`
+                              )
+                              .join(", ")})`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {v.hospedaje && (v.hospedaje.lugar || v.hospedaje.total > 0) && (
+                  <div className="rounded bg-emerald-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Hospedaje</p>
+                    <p>
+                      {v.hospedaje.lugar ?? "—"}
+                      {v.hospedaje.checkInISO ? ` (${formatDate(v.hospedaje.checkInISO)}` : ""}
+                      {v.hospedaje.checkOutISO ? ` – ${formatDate(v.hospedaje.checkOutISO)})` : v.hospedaje.checkInISO ? ")" : ""}
+                      {" — "}
+                      {formatCurrency(v.hospedaje.costoPorDia ?? 0)}/día x {v.hospedaje.cantidadDias ?? 0} día(s) ={" "}
+                      {formatCurrency(v.hospedaje.total)}
+                      {v.hospedaje.paidBy ? ` — paga ${v.hospedaje.paidBy}` : ""}
+                    </p>
+                  </div>
+                )}
+
+                {v.combustible && v.combustible.monto ? (
+                  <div className="rounded bg-orange-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Combustible (EdenRed)</p>
+                    <p>
+                      {formatCurrency(v.combustible.monto)}
+                      {v.combustible.paidBy ? ` — paga ${v.combustible.paidBy}` : ""}
+                    </p>
+                  </div>
+                ) : null}
+
+                {v.extras.length > 0 && (
+                  <div className="rounded bg-purple-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Extras</p>
+                    <ul className="list-disc pl-4">
+                      {v.extras.map((x, i) => (
+                        <li key={i}>
+                          {x.descripcion} — {formatCurrency(x.monto)}
+                          {x.paymentMode ? ` (${x.paymentMode})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {v.materiales.length > 0 && (
+                  <div className="rounded bg-cyan-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Materiales</p>
+                    <ul className="list-disc pl-4">
+                      {v.materiales.map((m, i) => (
+                        <li key={i}>
+                          {m.descripcion} {m.cantidad ? `x${m.cantidad}` : ""} — {formatCurrency(m.monto)}
+                          {m.paymentMode ? ` (${m.paymentMode})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {v.seguro && v.seguro.compania && (
+                  <div className="rounded bg-rose-50 p-2">
+                    <p className="mb-1 font-semibold text-gray-700">Seguro</p>
+                    <p>
+                      {v.seguro.compania} — {v.seguro.cobertura} ({v.seguro.cantidadDias ?? 0} día(s),{" "}
+                      {formatCurrency(v.seguro.costo ?? 0)})
+                    </p>
+                  </div>
+                )}
+
+                {v.notes && <p className="text-gray-600">Notas: {v.notes}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

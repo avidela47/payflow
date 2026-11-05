@@ -57,28 +57,34 @@ const topeDiarioSchema = z.object({
   gastos: z.array(topeGastoSchema).default([]),
 });
 
-const viaticoSchema = z.object({
-  nombre: z.string().min(1, "Falta el nombre del viaje."),
-  paidBy: z.string().optional(),
-  fecha: z.string().min(1, "Falta la fecha."),
-  empleados: z.array(empleadoSchema).default([]),
-  hospedajeLugar: z.string().optional(),
-  hospedajeCheckIn: z.string().optional(),
-  hospedajeCheckOut: z.string().optional(),
-  hospedajeCostoPorDia: z.coerce.number().nonnegative().optional(),
-  hospedajeCantidadDias: z.coerce.number().nonnegative().optional(),
-  hospedajePaidBy: z.string().optional(),
-  combustibleMonto: z.coerce.number().nonnegative().optional(),
-  combustiblePaidBy: z.string().optional(),
-  extras: z.array(extraSchema).default([]),
-  materiales: z.array(materialSchema).default([]),
-  seguroCompania: z.string().optional(),
-  seguroCobertura: z.string().optional(),
-  seguroCantidadDias: z.coerce.number().nonnegative().optional(),
-  seguroCosto: z.coerce.number().nonnegative().optional(),
-  topesDiarios: z.array(topeDiarioSchema).default([]),
-  notes: z.string().optional(),
-});
+const viaticoSchema = z
+  .object({
+    nombre: z.string().min(1, "Falta el nombre del viaje."),
+    paidBy: z.string().optional(),
+    fechaInicio: z.string().min(1, "Falta la fecha de inicio."),
+    fechaFin: z.string().min(1, "Falta la fecha de fin."),
+    empleados: z.array(empleadoSchema).default([]),
+    hospedajeLugar: z.string().optional(),
+    hospedajeCheckIn: z.string().optional(),
+    hospedajeCheckOut: z.string().optional(),
+    hospedajeCostoPorDia: z.coerce.number().nonnegative().optional(),
+    hospedajeCantidadDias: z.coerce.number().nonnegative().optional(),
+    hospedajePaidBy: z.string().optional(),
+    combustibleMonto: z.coerce.number().nonnegative().optional(),
+    combustiblePaidBy: z.string().optional(),
+    extras: z.array(extraSchema).default([]),
+    materiales: z.array(materialSchema).default([]),
+    seguroCompania: z.string().optional(),
+    seguroCobertura: z.string().optional(),
+    seguroCantidadDias: z.coerce.number().nonnegative().optional(),
+    seguroCosto: z.coerce.number().nonnegative().optional(),
+    topesDiarios: z.array(topeDiarioSchema).default([]),
+    notes: z.string().optional(),
+  })
+  .refine((data) => data.fechaFin >= data.fechaInicio, {
+    message: "La fecha de fin no puede ser anterior a la de inicio.",
+    path: ["fechaFin"],
+  });
 
 export type ViaticoFormInput = z.infer<typeof viaticoSchema>;
 
@@ -110,7 +116,8 @@ function buildDoc(data: ViaticoFormInput) {
   return {
     nombre: data.nombre,
     paidBy: data.paidBy || undefined,
-    fecha: new Date(data.fecha),
+    fechaInicio: new Date(data.fechaInicio),
+    fechaFin: new Date(data.fechaFin),
     empleados: data.empleados.map((e) => ({
       employee: e.employeeId,
       honorarioType: e.honorarioType,

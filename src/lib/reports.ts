@@ -819,10 +819,66 @@ function paymentModeLabel(mode?: string): string {
 export type ViaticosReportDetailRow = {
   id: string;
   nombre: string;
-  fechaISO: string;
+  fechaInicioISO: string;
+  fechaFinISO: string;
   paidBy?: string;
   totalAmount: number;
   excedente: number;
+};
+
+// Detalle completo por viaje — una sección por cada cosa que se carga en
+// el modal (empleados, tope diario, hospedaje, combustible, extras,
+// materiales, seguro), para que el reporte no se quede solo en totales
+// por categoría.
+export type ViaticosReportPagoDetail = { monto: number; fechaISO: string };
+export type ViaticosReportEmpleadoDetail = {
+  employeeName: string;
+  honorarioType: string;
+  monto: number;
+  dias?: number;
+  montoTotal: number;
+  paymentMode?: string;
+  pagos: ViaticosReportPagoDetail[];
+  saldo: number;
+};
+export type ViaticosReportTopeGastoDetail = { descripcion: string; monto: number; paymentMode?: string };
+export type ViaticosReportTopeDetail = {
+  employeeName: string;
+  monto: number;
+  gastos: ViaticosReportTopeGastoDetail[];
+  saldo: number;
+};
+export type ViaticosReportExtraDetail = { descripcion: string; monto: number; paymentMode?: string };
+export type ViaticosReportMaterialDetail = {
+  descripcion: string;
+  cantidad?: number;
+  monto: number;
+  paymentMode?: string;
+};
+export type ViaticosReportViajeDetail = {
+  id: string;
+  nombre: string;
+  fechaInicioISO: string;
+  fechaFinISO: string;
+  paidBy?: string;
+  totalAmount: number;
+  excedente: number;
+  empleados: ViaticosReportEmpleadoDetail[];
+  topesDiarios: ViaticosReportTopeDetail[];
+  hospedaje?: {
+    lugar?: string;
+    checkInISO?: string;
+    checkOutISO?: string;
+    costoPorDia?: number;
+    cantidadDias?: number;
+    paidBy?: string;
+    total: number;
+  };
+  combustible?: { monto?: number; paidBy?: string };
+  extras: ViaticosReportExtraDetail[];
+  materiales: ViaticosReportMaterialDetail[];
+  seguro?: { compania?: string; cobertura?: string; cantidadDias?: number; costo?: number };
+  notes?: string;
 };
 
 export type ViaticosReportResult = {
@@ -834,7 +890,12 @@ export type ViaticosReportResult = {
   byCategory: ViaticosCategoryRow[];
   byPaymentMode: ViaticosPaymentModeRow[];
   detail: ViaticosReportDetailRow[];
+  viajes: ViaticosReportViajeDetail[];
 };
+
+function toISODateOpt(date?: Date): string | undefined {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
 
 // Mismo cálculo de total que usa viaticos-client.tsx (calcularTotal): suma
 // de honorarios de empleados (TRABAJO: monto fijo; DIA: monto x días) +
@@ -875,8 +936,9 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
   const from = periodStringToDate(periodISO);
   const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
 
-  const viaticos = await Viatico.find({ fecha: { $gte: from, $lt: to } })
-    .sort({ fecha: 1 })
+  const viaticos = await Viatico.find({ fechaInicio: { $gte: from, $lt: to } })
+    .populate(["empleados.employee", "topesDiarios.employee"])
+    .sort({ fechaInicio: 1 })
     .lean();
 
   let totalAmount = 0;
@@ -888,6 +950,7 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
   let materiales = 0;
   let seguro = 0;
   const detail: ViaticosReportDetailRow[] = [];
+  const viajes: ViaticosReportViajeDetail[] = [];
   const paymentModeTotals = new Map<string, number>();
 
   for (const v of viaticos) {
@@ -917,13 +980,96 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
       paymentModeTotals.set(label, (paymentModeTotals.get(label) ?? 0) + x.monto);
     }
 
+    const fechaInicioISO = v.fechaInicio.toISOString().slice(0, 10);
+    const fechaFinISO = v.fechaFin.toISOString().slice(0, 10);
+
     detail.push({
       id: v._id.toString(),
       nombre: v.nombre,
-      fechaISO: v.fecha.toISOString().slice(0, 10),
+      fechaInicioISO,
+      fechaFinISO,
       paidBy: v.paidBy,
       totalAmount: calc.total,
       excedente: v.excedente ?? 0,
+    });
+
+    // Mismo patrón que page.tsx: si el empleado referenciado fue borrado,
+    // `populate` deja el campo en null.
+    const resolveEmployeeName = (employee: unknown): string => {
+      const doc =
+        employee && typeof employee === "object" && "_id" in employee
+          ? (employee as unknown as { nombre: string; apellido: string })
+          : null;
+      return doc ? `${doc.nombre} ${doc.apellido}` : "Empleado eliminado";
+    };
+
+    viajes.push({
+      id: v._id.toString(),
+      nombre: v.nombre,
+      fechaInicioISO,
+      fechaFinISO,
+      paidBy: v.paidBy,
+      totalAmount: calc.total,
+      excedente: v.excedente ?? 0,
+      empleados: (v.empleados ?? []).map((e) => {
+        const montoTotal = e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto;
+        const pagado = (e.pagos ?? []).reduce((sum, p) => sum + p.monto, 0);
+        return {
+          employeeName: resolveEmployeeName(e.employee),
+          honorarioType: e.honorarioType,
+          monto: e.monto,
+          dias: e.dias,
+          montoTotal,
+          paymentMode: paymentModeLabel(e.paymentMode),
+          pagos: (e.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: p.fecha.toISOString().slice(0, 10) })),
+          saldo: montoTotal - pagado,
+        };
+      }),
+      topesDiarios: (v.topesDiarios ?? []).map((t) => {
+        const gastado = (t.gastos ?? []).reduce((sum, g) => sum + g.monto, 0);
+        return {
+          employeeName: resolveEmployeeName(t.employee),
+          monto: t.monto,
+          gastos: (t.gastos ?? []).map((g) => ({
+            descripcion: g.descripcion,
+            monto: g.monto,
+            paymentMode: paymentModeLabel(g.paymentMode),
+          })),
+          saldo: t.monto - gastado,
+        };
+      }),
+      hospedaje: v.hospedaje
+        ? {
+            lugar: v.hospedaje.lugar,
+            checkInISO: toISODateOpt(v.hospedaje.checkIn),
+            checkOutISO: toISODateOpt(v.hospedaje.checkOut),
+            costoPorDia: v.hospedaje.costoPorDia,
+            cantidadDias: v.hospedaje.cantidadDias,
+            paidBy: v.hospedaje.paidBy,
+            total: calc.hospedajeTotal,
+          }
+        : undefined,
+      combustible: v.combustible ? { monto: v.combustible.monto, paidBy: v.combustible.paidBy } : undefined,
+      extras: (v.extras ?? []).map((x) => ({
+        descripcion: x.descripcion,
+        monto: x.monto,
+        paymentMode: paymentModeLabel(x.paymentMode),
+      })),
+      materiales: (v.materiales ?? []).map((m) => ({
+        descripcion: m.descripcion,
+        cantidad: m.cantidad,
+        monto: m.monto,
+        paymentMode: paymentModeLabel(m.paymentMode),
+      })),
+      seguro: v.seguro
+        ? {
+            compania: v.seguro.compania,
+            cobertura: v.seguro.cobertura,
+            cantidadDias: v.seguro.cantidadDias,
+            costo: v.seguro.costo,
+          }
+        : undefined,
+      notes: v.notes,
     });
   }
 
@@ -949,5 +1095,6 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     byCategory,
     byPaymentMode,
     detail,
+    viajes,
   };
 }

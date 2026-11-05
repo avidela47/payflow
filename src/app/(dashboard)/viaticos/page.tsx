@@ -14,7 +14,7 @@ export default async function ViaticosPage() {
     Employee.find({ active: true }).sort({ nombre: 1 }).lean(),
     Viatico.find({})
       .populate(["empleados.employee", "topesDiarios.employee"])
-      .sort({ fecha: -1 })
+      .sort({ fechaInicio: -1 })
       .limit(500)
       .lean(),
   ]);
@@ -30,7 +30,8 @@ export default async function ViaticosPage() {
     id: v._id.toString(),
     nombre: v.nombre,
     paidBy: v.paidBy,
-    fechaISO: v.fecha.toISOString().slice(0, 10),
+    fechaInicioISO: v.fechaInicio.toISOString().slice(0, 10),
+    fechaFinISO: v.fechaFin.toISOString().slice(0, 10),
     empleados: (v.empleados ?? []).map((e) => {
       // Si el empleado referenciado fue borrado, `populate` deja el campo
       // en null — mismo caso que Compras con el proveedor.

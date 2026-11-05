@@ -82,7 +82,8 @@ export type ViaticoItem = {
   id: string;
   nombre: string;
   paidBy?: string;
-  fechaISO: string;
+  fechaInicioISO: string;
+  fechaFinISO: string;
   empleados: ViaticoEmpleadoItem[];
   hospedajeLugar?: string;
   hospedajeCheckIn?: string;
@@ -234,7 +235,8 @@ export function ViaticosClient({
   // Campos simples
   const [nombre, setNombre] = useState("");
   const [paidBy, setPaidBy] = useState("");
-  const [fecha, setFecha] = useState(todayISO());
+  const [fechaInicio, setFechaInicio] = useState(todayISO());
+  const [fechaFin, setFechaFin] = useState(todayISO());
   const [notes, setNotes] = useState("");
 
   // Hospedaje
@@ -264,7 +266,8 @@ export function ViaticosClient({
   function resetForm() {
     setNombre("");
     setPaidBy("");
-    setFecha(todayISO());
+    setFechaInicio(todayISO());
+    setFechaFin(todayISO());
     setNotes("");
     setHospedajeLugar("");
     setHospedajeCheckIn("");
@@ -293,7 +296,8 @@ export function ViaticosClient({
   function openEdit(v: ViaticoItem) {
     setNombre(v.nombre);
     setPaidBy(v.paidBy ?? "");
-    setFecha(v.fechaISO);
+    setFechaInicio(v.fechaInicioISO);
+    setFechaFin(v.fechaFinISO);
     setNotes(v.notes ?? "");
     setHospedajeLugar(v.hospedajeLugar ?? "");
     setHospedajeCheckIn(v.hospedajeCheckIn ?? "");
@@ -363,7 +367,8 @@ export function ViaticosClient({
     const input: ViaticoFormInput = {
       nombre,
       paidBy: paidBy || undefined,
-      fecha,
+      fechaInicio,
+      fechaFin,
       empleados: empleadosRows
         .filter((r) => r.employeeId)
         .map((r) => ({
@@ -455,7 +460,7 @@ export function ViaticosClient({
         <TableHeader>
           <TableRow>
             <TableHead>Viaje</TableHead>
-            <TableHead>Fecha</TableHead>
+            <TableHead>Fechas</TableHead>
             <TableHead>Paga</TableHead>
             <TableHead>Empleados</TableHead>
             <TableHead>Total estimado</TableHead>
@@ -480,7 +485,11 @@ export function ViaticosClient({
                     {v.nombre}
                   </button>
                 </TableCell>
-                <TableCell>{formatDate(v.fechaISO)}</TableCell>
+                <TableCell>
+                  {v.fechaInicioISO === v.fechaFinISO
+                    ? formatDate(v.fechaInicioISO)
+                    : `${formatDate(v.fechaInicioISO)} – ${formatDate(v.fechaFinISO)}`}
+                </TableCell>
                 <TableCell>{v.paidBy ?? "—"}</TableCell>
                 <TableCell>{v.empleados.length}</TableCell>
                 <TableCell>{formatCurrency(total)}</TableCell>
@@ -528,7 +537,7 @@ export function ViaticosClient({
         className="max-w-3xl"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label htmlFor="nombre">Nombre del viaje</Label>
               <Input
@@ -540,8 +549,24 @@ export function ViaticosClient({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="fecha">Fecha</Label>
-              <Input id="fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+              <Label htmlFor="fechaInicio">Fecha inicio</Label>
+              <Input
+                id="fechaInicio"
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="fechaFin">Fecha fin</Label>
+              <Input
+                id="fechaFin"
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="paidBy">Quién paga (empleador)</Label>
@@ -1272,8 +1297,10 @@ export function ViaticosClient({
         {detailTarget && (
           <div className="flex flex-col gap-3 text-sm">
             <p>
-              <span className="text-muted-foreground">Fecha: </span>
-              {formatDate(detailTarget.fechaISO)}
+              <span className="text-muted-foreground">Fechas: </span>
+              {detailTarget.fechaInicioISO === detailTarget.fechaFinISO
+                ? formatDate(detailTarget.fechaInicioISO)
+                : `${formatDate(detailTarget.fechaInicioISO)} – ${formatDate(detailTarget.fechaFinISO)}`}
             </p>
             <p>
               <span className="text-muted-foreground">Paga: </span>
@@ -1415,7 +1442,7 @@ export function ViaticosClient({
             <p className="text-sm text-muted-foreground">
               ¿Seguro que querés borrar el viaje{" "}
               <span className="font-medium text-foreground">{confirmTarget.nombre}</span> del{" "}
-              {formatDate(confirmTarget.fechaISO)}? No se puede deshacer.
+              {formatDate(confirmTarget.fechaInicioISO)}? No se puede deshacer.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setConfirmTarget(null)}>

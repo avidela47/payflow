@@ -102,7 +102,10 @@ export interface IViatico {
   // (texto libre: "ITELSA", "Rubén", etc.), independiente de paidBy en
   // hospedaje/combustible que puede ser otro.
   paidBy?: string;
-  fecha: Date;
+  // Antes era una sola `fecha` — ahora rango, para poder mostrar cuánto
+  // duró el viaje en el reporte.
+  fechaInicio: Date;
+  fechaFin: Date;
   empleados: IViaticoEmpleado[];
   hospedaje?: IViaticoHospedaje;
   combustible?: IViaticoCombustible;
@@ -205,7 +208,8 @@ const ViaticoTopeDiarioSchema = new Schema<IViaticoTopeDiario>(
 const ViaticoSchema = new Schema<IViatico>({
   nombre: { type: String, required: true },
   paidBy: String,
-  fecha: { type: Date, required: true },
+  fechaInicio: { type: Date, required: true },
+  fechaFin: { type: Date, required: true },
   empleados: { type: [ViaticoEmpleadoSchema], default: [] },
   hospedaje: ViaticoHospedajeSchema,
   combustible: ViaticoCombustibleSchema,
@@ -218,7 +222,7 @@ const ViaticoSchema = new Schema<IViatico>({
   createdAt: { type: Date, default: Date.now },
 });
 
-ViaticoSchema.index({ fecha: -1 });
+ViaticoSchema.index({ fechaInicio: -1 });
 
 export const Viatico =
   (models.Viatico as Model<IViatico>) || model<IViatico>("Viatico", ViaticoSchema);
