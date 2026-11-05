@@ -44,7 +44,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-cover bg-top bg-no-repeat px-4"
+      className="flex min-h-screen items-center justify-center bg-cover bg-[center_15%] bg-no-repeat px-4"
       style={{ backgroundImage: "url(/frente.png)" }}
       onClick={() => setShowLogin(true)}
     >
