@@ -555,7 +555,7 @@ export function ViaticosClient({
           </div>
 
           {/* Empleados */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-blue-50/50 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Empleados en el viaje</span>
               <Button
@@ -785,7 +785,7 @@ export function ViaticosClient({
           </div>
 
           {/* Tope diario de viático, por empleado */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-amber-50/50 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Tope diario de viático (por empleado/día)</span>
               <Button
@@ -982,7 +982,7 @@ export function ViaticosClient({
           </div>
 
           {/* Hospedaje */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-emerald-50/50 p-4">
             <span className="text-sm font-medium">Hospedaje</span>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex flex-col gap-1.5">
@@ -1029,7 +1029,7 @@ export function ViaticosClient({
           </div>
 
           {/* Combustible / EdenRed */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-orange-50/50 p-4">
             <span className="text-sm font-medium">Combustible (EdenRed)</span>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -1054,7 +1054,7 @@ export function ViaticosClient({
           </div>
 
           {/* Extras */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-purple-50/50 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Extras (gastos no previstos)</span>
               <Button
@@ -1123,7 +1123,7 @@ export function ViaticosClient({
           </div>
 
           {/* Materiales */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-cyan-50/50 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Materiales (faltantes para terminar la obra)</span>
               <Button
@@ -1204,7 +1204,7 @@ export function ViaticosClient({
           </div>
 
           {/* Seguro */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-rose-50/50 p-4">
             <span className="text-sm font-medium">Seguro</span>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex flex-col gap-1.5">
