@@ -1,186 +1,144 @@
 import Link from "next/link";
-import { Printer } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+  Wallet,
+  Receipt,
+  TrendingUp,
+  ShoppingCart,
+  Landmark,
+  ArrowRight,
+  FileBarChart,
+  Plane,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/lib/utils";
-import { getViaticosReport, currentPeriodString } from "@/lib/reports";
 import { requireModuleAccess } from "@/lib/auth";
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
-    new Date(y, m - 1, d)
-  );
-}
-
-export default async function ReporteViaticosPage({
-  searchParams,
-}: {
-  searchParams: { period?: string };
-}) {
+// Rediseño (vuelta a neutro, igual que Dashboard/Sidebar): antes cada
+// reporte tenía su propio color (primary/violet/success/warning/
+// destructive) solo para diferenciarse a simple vista — pero usar tokens
+// de estado (success, warning, destructive) como paleta decorativa es
+// justo lo que se dejó de hacer: ningún reporte está "vencido" o
+// "aprobado", así que no correspondía ese color. Ahora las 5 tarjetas
+// comparten el mismo acento (primary); se distinguen por ícono y texto,
+// no por color.
+export default async function ReportesPage() {
   await requireModuleAccess("reportes");
 
-  const periodISO = searchParams.period || currentPeriodString();
-  const report = await getViaticosReport(periodISO);
-
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Reporte de Viajes</h1>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+            <FileBarChart className="h-5 w-5 text-primary" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Reportes</h1>
+        </div>
         <p className="text-sm text-muted-foreground">
-          Total del mes por categoría (honorarios, hospedaje, combustible, extras, materiales, seguro) y excedente.
+          Reportes para imprimir o exportar a PDF, con el encabezado de la empresa.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-        <form method="GET" className="flex items-end gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="period">Período</Label>
-            <Input id="period" name="period" type="month" defaultValue={periodISO} required />
-          </div>
-          <Button type="submit" variant="outline">
-            Ver
-          </Button>
-        </form>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link href="/reportes/ventas" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Ventas</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: total, cobradas/pendientes y formas de pago.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Button asChild variant="outline">
-          <Link href={`/imprimir/reportes/viaticos?period=${periodISO}`} target="_blank">
-            <Printer className="h-4 w-4" />
-            Ver para imprimir / PDF
-          </Link>
-        </Button>
-      </div>
+        <Link href="/reportes/compras" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <ShoppingCart className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Compras</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: total, pagadas/pendientes, formas de pago y estado de recepción.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
 
-      <p className="text-sm font-medium capitalize">{report.periodLabel}</p>
+        <Link href="/reportes/sueldos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Wallet className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Sueldos</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por período: Monotributo, Registrado e Informal/Viáticos, por empleado.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total de viajes</p>
-            <p className="text-2xl font-semibold">{formatCurrency(report.totalAmount)}</p>
-            <p className="text-xs text-muted-foreground">{report.totalCount} viaje(s)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Excedente de viáticos</p>
-            <p className="text-2xl font-semibold text-warning">
-              {formatCurrency(report.totalExcedente)}
-            </p>
-            <p className="text-xs text-muted-foreground">Ya incluido dentro del total, no se suma aparte</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Categorías con gasto</p>
-            <p className="text-2xl font-semibold">{report.byCategory.length}</p>
-            <p className="text-xs text-muted-foreground">de 6 posibles</p>
-          </CardContent>
-        </Card>
-      </div>
+        <Link href="/reportes/gastos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Receipt className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Costos Fijos / Gastos</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por rango de meses: resumen por categoría y detalle cronológico.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
 
-      <div>
-        <p className="mb-2 text-sm font-medium">Por categoría del mes</p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Categoría</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {report.byCategory.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} className="text-center text-muted-foreground">
-                  No hay viajes cargados en este mes.
-                </TableCell>
-              </TableRow>
-            )}
-            {report.byCategory.map((row) => (
-              <TableRow key={row.categoria}>
-                <TableCell className="font-medium">{row.categoria}</TableCell>
-                <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+        <Link href="/reportes/viaticos" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Plane className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Viajes</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: total por categoría (honorarios, hospedaje, combustible, extras, materiales, seguro) y excedente.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
 
-      <div>
-        <p className="mb-2 text-sm font-medium">Por forma de pago (honorarios y materiales)</p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Forma de pago</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {report.byPaymentMode.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} className="text-center text-muted-foreground">
-                  No hay gastos de empleados o materiales cargados en este mes.
-                </TableCell>
-              </TableRow>
-            )}
-            {report.byPaymentMode.map((row) => (
-              <TableRow key={row.paymentMode}>
-                <TableCell className="font-medium">{row.paymentMode}</TableCell>
-                <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div>
-        <p className="mb-2 text-sm font-medium">Detalle cronológico</p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Viaje</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Paga</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead className="text-right">Excedente</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {report.detail.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No hay viajes cargados en este mes.
-                </TableCell>
-              </TableRow>
-            )}
-            {report.detail.map((entry) => (
-              <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.nombre}</TableCell>
-                <TableCell>{formatDate(entry.fechaISO)}</TableCell>
-                <TableCell>{entry.paidBy ?? "—"}</TableCell>
-                <TableCell className="text-right">{formatCurrency(entry.totalAmount)}</TableCell>
-                <TableCell className="text-right">
-                  {entry.excedente > 0 ? (
-                    <Badge variant="warning">{formatCurrency(entry.excedente)}</Badge>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <Link href="/reportes/cheques" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Landmark className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Cheques</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes de vencimiento: totales por estado y por tipo.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
