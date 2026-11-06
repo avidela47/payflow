@@ -41,9 +41,8 @@ export default async function ImprimirReporteViaticosPage({
       <header className="flex items-start justify-between border-b-2 border-primary pb-4">
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={COMPANY.logoUrl} alt={COMPANY.name} className="h-14 w-14 object-contain" />
+          <img src={COMPANY.logoUrl} alt={COMPANY.name} className="h-16 w-auto object-contain" />
           <div>
-            <p className="text-lg font-bold text-primary">{COMPANY.name}</p>
             <p className="text-xs text-gray-600">{COMPANY.address}</p>
             <p className="text-xs text-gray-600">Tel: {COMPANY.phone}</p>
             <p className="text-xs text-gray-600">CUIT: {COMPANY.cuit}</p>
