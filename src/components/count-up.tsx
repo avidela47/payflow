@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 
 // Animación chica (ease-out, ~700ms) para que los números grandes del
 // Dashboard no aparezcan de golpe. Puramente visual — el valor final
 // siempre es el mismo que calculó el server, esto solo anima el camino
 // de 0 hasta ahí con requestAnimationFrame (sin librerías).
+//
+// "format" va como string (no como función): este componente es
+// "use client" y lo renderiza un Server Component (page.tsx), que NO
+// puede pasarle una función como prop (Next.js solo serializa datos
+// entre server y client). El formateo real se hace acá adentro,
+// importando formatCurrency directo — eso sí está permitido.
 export function CountUp({
   value,
   format,
@@ -13,7 +20,7 @@ export function CountUp({
   className,
 }: {
   value: number;
-  format?: (n: number) => string;
+  format?: "currency";
   durationMs?: number;
   className?: string;
 }) {
@@ -37,5 +44,5 @@ export function CountUp({
     return () => cancelAnimationFrame(raf);
   }, [value, durationMs]);
 
-  return <span className={className}>{format ? format(display) : display}</span>;
+  return <span className={className}>{format === "currency" ? formatCurrency(display) : display}</span>;
 }

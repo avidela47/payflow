@@ -420,7 +420,7 @@ export default async function DashboardPage() {
       icon: Receipt,
       value: (
         <p className="text-2xl font-semibold tracking-tight">
-          <CountUp value={totalPendingFixedCosts} format={formatCurrency} />
+          <CountUp value={totalPendingFixedCosts} format="currency" />
         </p>
       ),
       delta:
@@ -731,7 +731,7 @@ export default async function DashboardPage() {
             Resultado del mes
           </span>
           <p className="font-heading text-3xl font-semibold tracking-tight">
-            <CountUp value={resultadoMes} format={formatCurrency} />
+            <CountUp value={resultadoMes} format="currency" />
           </p>
           <p className="text-xs opacity-80">Ventas menos compras de {formatPeriod(now)}</p>
         </SpotlightCard>
