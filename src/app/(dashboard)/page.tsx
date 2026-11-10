@@ -46,6 +46,8 @@ import {
 } from "@/components/dashboard-charts";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { CountUp } from "@/components/count-up";
+import { SpotlightCard } from "@/components/spotlight-card";
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -380,7 +382,11 @@ export default async function DashboardPage() {
     {
       title: "Empleados activos",
       icon: Users,
-      value: <p className="text-2xl font-semibold tracking-tight">{activeEmployees}</p>,
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          <CountUp value={activeEmployees} />
+        </p>
+      ),
       delta:
         newEmployeesThisMonth > 0
           ? { text: `${newEmployeesThisMonth} este mes`, up: true }
@@ -390,7 +396,11 @@ export default async function DashboardPage() {
     {
       title: "Clientes",
       icon: Building2,
-      value: <p className="text-2xl font-semibold tracking-tight">{totalClients}</p>,
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          <CountUp value={totalClients} />
+        </p>
+      ),
       delta:
         newClientsThisMonth > 0 ? { text: `${newClientsThisMonth} este mes`, up: true } : null,
       moduleKey: null,
@@ -408,7 +418,11 @@ export default async function DashboardPage() {
     {
       title: "Costos fijos pendientes",
       icon: Receipt,
-      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPendingFixedCosts)}</p>,
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          <CountUp value={totalPendingFixedCosts} format={formatCurrency} />
+        </p>
+      ),
       delta:
         pendingFixedCosts.length > 0
           ? { text: `${pendingFixedCosts.length} pendiente${pendingFixedCosts.length === 1 ? "" : "s"}`, up: false }
@@ -418,7 +432,11 @@ export default async function DashboardPage() {
     {
       title: "Compras en curso",
       icon: Truck,
-      value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
+      value: (
+        <p className="text-2xl font-semibold tracking-tight">
+          <CountUp value={inProgressPurchasesCount} />
+        </p>
+      ),
       delta: null,
       moduleKey: null,
     },
@@ -622,7 +640,7 @@ export default async function DashboardPage() {
 
       <div>
         <h2 className="mb-2 font-semibold">Módulos</h2>
-        <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
+        <SpotlightCard className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((mod) => {
             const Icon = mod.icon;
             return (
@@ -652,7 +670,7 @@ export default async function DashboardPage() {
               </Link>
             );
           })}
-        </div>
+        </SpotlightCard>
       </div>
 
       {alerts.length > 0 && (
@@ -690,15 +708,15 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
+        <SpotlightCard className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
           <h2 className="mb-1 font-semibold">Ventas vs. compras este mes</h2>
           <p className="mb-2 text-xs text-muted-foreground">
             {salesThisMonth.length} venta{salesThisMonth.length === 1 ? "" : "s"} ·{" "}
             {purchasesThisMonth.length} compra{purchasesThisMonth.length === 1 ? "" : "s"}
           </p>
           <VentasComprasBarChart ventas={totalSalesThisMonth} compras={totalPurchasesThisMonth} />
-        </div>
-        <div
+        </SpotlightCard>
+        <SpotlightCard
           className={cn(
             "flex flex-col justify-center gap-2 rounded-xl p-5 shadow-sm",
             resultadoMes >= 0 ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"
@@ -713,13 +731,13 @@ export default async function DashboardPage() {
             Resultado del mes
           </span>
           <p className="font-heading text-3xl font-semibold tracking-tight">
-            {formatCurrency(resultadoMes)}
+            <CountUp value={resultadoMes} format={formatCurrency} />
           </p>
           <p className="text-xs opacity-80">Ventas menos compras de {formatPeriod(now)}</p>
-        </div>
+        </SpotlightCard>
       </div>
 
-      <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card shadow-sm sm:flex-row sm:divide-x sm:divide-y-0">
+      <SpotlightCard className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card shadow-sm sm:flex-row sm:divide-x sm:divide-y-0">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -747,7 +765,7 @@ export default async function DashboardPage() {
             </div>
           );
         })}
-      </div>
+      </SpotlightCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -802,7 +820,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <SpotlightCard className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <h2 className="mb-1 flex items-center gap-2 font-semibold">
               <Zap className="h-4 w-4 text-primary" />
               Acciones rápidas
@@ -828,9 +846,9 @@ export default async function DashboardPage() {
                 );
               })}
             </div>
-          </div>
+          </SpotlightCard>
 
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <SpotlightCard className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <h2 className="mb-1 flex items-center gap-2 font-semibold">
               <CalendarClock className="h-4 w-4 text-primary" />
               Esta semana
@@ -851,7 +869,7 @@ export default async function DashboardPage() {
                 <span className="font-semibold">{weekEvents}</span>
               </Link>
             </div>
-          </div>
+          </SpotlightCard>
         </div>
       </div>
 
