@@ -584,15 +584,27 @@ export default async function DashboardPage() {
   ].filter((mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never));
 
   const displayName = session?.user?.name ? firstName(session.user.name) : "";
+  // No hay foto cargada para el usuario logueado (User no tiene ese campo,
+  // a diferencia de Employee) — mismo estilo que el avatar de Empleados
+  // (círculo de color con iniciales), pero con las iniciales del nombre
+  // de la cuenta en vez de una foto real.
+  const userInitials = (session?.user?.name ?? "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            {userInitials}
+          </div>
           <h1 className="text-2xl font-semibold">
-            Hola{displayName ? `, ${displayName}` : ""} 👋
+            Hola{displayName ? `, ${displayName}` : ""}
           </h1>
-          <p className="text-sm text-muted-foreground">Acá tenés un resumen de PayFlow.</p>
         </div>
         <p className="text-sm text-muted-foreground">{formatFullDate(now)}</p>
       </div>
