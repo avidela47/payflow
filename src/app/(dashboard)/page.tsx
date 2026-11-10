@@ -605,10 +605,10 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-primary-foreground">
+          <div className="flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             {linkedEmployee?.foto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={linkedEmployee.foto} alt="" className="h-full w-full object-cover" />
+              <img src={linkedEmployee.foto} alt="" className="h-full w-full object-cover object-top" />
             ) : (
               userInitials
             )}
