@@ -13,7 +13,6 @@ import {
   Bar,
 } from "recharts";
 import { formatCurrency, cn } from "@/lib/utils";
-import { SpotlightCard } from "@/components/spotlight-card";
 
 // Colores de las porciones de la dona — mismo criterio que los "bar" de
 // las tarjetas de módulo: clases de Tailwind, nunca strings armados a
@@ -160,10 +159,10 @@ export function DashboardCharts({
   if (!showCostosFijos) return null;
 
   return (
-    <SpotlightCard className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-1 font-semibold">Costos fijos pendientes por categoría</h2>
       <p className="mb-4 text-xs text-muted-foreground">Del mes en curso, sin pagar todavía.</p>
       <CostosDonutChart data={donutData} />
-    </SpotlightCard>
+    </div>
   );
 }
