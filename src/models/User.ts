@@ -24,6 +24,11 @@ export interface IUser {
   role: Role;
   active: boolean;
   restrictedModules: RestrictableModule[];
+  // Opcional: liga esta cuenta de login con su legajo en Empleados, solo
+  // para poder mostrar su foto real (Employee.foto) como avatar en el
+  // Dashboard en vez de un círculo con iniciales. No tiene nada que ver
+  // con permisos — un usuario sin este campo sigue funcionando igual.
+  employeeId?: mongoose.Types.ObjectId;
   createdAt: Date;
 }
 
@@ -38,6 +43,7 @@ const UserSchema = new Schema<IUser>({
     enum: RESTRICTABLE_MODULES,
     default: [],
   },
+  employeeId: { type: Schema.Types.ObjectId, ref: "Employee" },
   createdAt: { type: Date, default: Date.now },
 });
 

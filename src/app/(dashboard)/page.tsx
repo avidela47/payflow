@@ -81,6 +81,12 @@ function firstName(fullName: string) {
 export default async function DashboardPage() {
   await connectDB();
   const session = await getSession();
+  // Avatar del header: si esta cuenta está ligada a un legajo de Empleados
+  // (ver User.employeeId), usamos la foto real de ahí; si no, el círculo
+  // de iniciales de siempre.
+  const linkedEmployee = session?.user?.employeeId
+    ? await Employee.findById(session.user.employeeId, "foto").lean()
+    : null;
   // Mismos módulos restringibles que sidebar.tsx/requireModuleAccess —
   // acá no bloqueamos la página entera (el Dashboard es de todos), pero sí
   // sacamos de la vista las tarjetas/alertas/gráficos/accesos que exponen
@@ -599,8 +605,13 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-            {userInitials}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            {linkedEmployee?.foto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={linkedEmployee.foto} alt="" className="h-full w-full object-cover" />
+            ) : (
+              userInitials
+            )}
           </div>
           <h1 className="text-2xl font-semibold">
             Hola{displayName ? `, ${displayName}` : ""}

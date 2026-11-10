@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           role: user.role,
           restrictedModules: user.restrictedModules ?? [],
+          employeeId: user.employeeId?.toString(),
         };
       },
     }),
@@ -43,6 +44,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.id = user.id;
         token.restrictedModules = user.restrictedModules;
+        token.employeeId = user.employeeId;
       }
       return token;
     },
@@ -50,6 +52,7 @@ export const authOptions: NextAuthOptions = {
       session.user.role = token.role;
       session.user.id = token.id;
       session.user.restrictedModules = token.restrictedModules ?? [];
+      session.user.employeeId = token.employeeId;
       return session;
     },
   },
