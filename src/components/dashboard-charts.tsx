@@ -11,6 +11,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
 } from "recharts";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -39,6 +41,56 @@ const DOT_CLASSES = [
 
 export type SueldosLinePoint = { day: number; total: number };
 export type CostosDonutSlice = { name: string; value: number };
+
+// Barras Ventas vs Compras del mes en curso — reemplaza dos tarjetas KPI
+// sueltas (Ventas del mes / Compras del mes) por una sola comparación
+// visual, igual de rápida de leer pero menos repetitiva que dos cuadros
+// idénticos con solo el título distinto.
+export function VentasComprasBarChart({ ventas, compras }: { ventas: number; compras: number }) {
+  const data = [
+    { name: "Ventas", value: ventas },
+    { name: "Compras", value: compras },
+  ];
+  const hasData = ventas > 0 || compras > 0;
+
+  if (!hasData) {
+    return (
+      <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+        Todavía no hay ventas ni compras cargadas este mes.
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-48 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }} barCategoryGap="30%">
+          <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+          <XAxis
+            dataKey="name"
+            tickLine={false}
+            axisLine={false}
+            fontSize={12}
+            stroke="hsl(var(--muted-foreground))"
+          />
+          <YAxis hide domain={[0, "auto"]} />
+          <Tooltip
+            formatter={(value) => [formatCurrency(Number(value) || 0), "Total"]}
+            contentStyle={{
+              fontSize: 12,
+              borderRadius: 8,
+              border: "1px solid hsl(var(--border))",
+            }}
+          />
+          <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={72}>
+            <Cell className="fill-success" />
+            <Cell className="fill-violet" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 // El importe de sueldos se enmascara en toda la app (ver MaskedAmount) —
 // este gráfico respeta esa misma regla: se ve la tendencia, no el número.

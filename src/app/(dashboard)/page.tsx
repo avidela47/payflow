@@ -34,10 +34,19 @@ import {
   ShoppingCart,
   Truck,
   Banknote,
+  ClipboardList,
+  ChevronRight,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, formatPeriod, cn } from "@/lib/utils";
 import { MaskedAmount } from "@/components/masked-amount";
-import { DashboardCharts, type SueldosLinePoint, type CostosDonutSlice } from "@/components/dashboard-charts";
+import {
+  DashboardCharts,
+  VentasComprasBarChart,
+  type SueldosLinePoint,
+  type CostosDonutSlice,
+} from "@/components/dashboard-charts";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -129,13 +138,17 @@ export default async function DashboardPage() {
     Sale.find({
       saleDate: { $gte: periodStart, $lt: nextPeriodStart },
       collected: false,
-    }).lean(),
+    })
+      .populate("client", "nombre")
+      .lean(),
     Sale.countDocuments({ collected: false, expectedCollectionDate: { $lt: todayStart } }),
     Purchase.find({ purchaseDate: { $gte: periodStart, $lt: nextPeriodStart } }).lean(),
     Purchase.find({
       purchaseDate: { $gte: periodStart, $lt: nextPeriodStart },
       paid: false,
-    }).lean(),
+    })
+      .populate("provider", "nombre")
+      .lean(),
     Purchase.countDocuments({ paid: false, expectedPaymentDate: { $lt: todayStart } }),
     // "En curso / por recibir" es un estado operativo, no atado al mes en
     // que se cargó la compra — una compra pedida hace dos meses que sigue
@@ -191,15 +204,7 @@ export default async function DashboardPage() {
     : 0;
 
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
-  const totalPendingCollectionSalesThisMonth = pendingCollectionSalesThisMonth.reduce(
-    (sum, s) => sum + s.amount,
-    0
-  );
   const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, p) => sum + p.amount, 0);
-  const totalPendingPaymentPurchasesThisMonth = pendingPaymentPurchasesThisMonth.reduce(
-    (sum, p) => sum + p.amount,
-    0
-  );
 
   const totalPayroll = payrollEntries.reduce((sum, e) => sum + e.amount, 0);
   const prevTotalPayroll = prevPayrollEntries.reduce((sum, e) => sum + e.amount, 0);
@@ -287,6 +292,97 @@ export default async function DashboardPage() {
     .filter((a): a is { text: string; tone: string; moduleKey: string | null } => Boolean(a))
     .filter((a) => !a.moduleKey || !restrictedModules.includes(a.moduleKey as never));
 
+  // Resultado del mes: ventas menos compras, mismo criterio simple que el
+  // gráfico de barras de al lado — no incluye sueldos/costos fijos porque
+  // esos se liquidan en fechas distintas y mezclarían períodos distintos.
+  const resultadoMes = totalSalesThisMonth - totalPurchasesThisMonth;
+
+  const formatShortDate = (date: Date) =>
+    new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" }).format(date);
+
+  // Pendientes y vencimientos: una sola tabla con lo que antes eran 4
+  // tarjetas KPI sueltas (cheques por vencer, costos fijos pendientes,
+  // ventas sin cobrar, compras sin pagar) más las alertas de vencido. Cada
+  // fila linkea directo al módulo correspondiente.
+  type PendingItem = {
+    key: string;
+    tipo: string;
+    detalle: string;
+    monto: number;
+    vencimiento?: Date;
+    tone: "destructive" | "warning";
+    href: string;
+  };
+  const pendingItems: PendingItem[] = [];
+
+  if (!restrictedModules.includes("cheques" as never)) {
+    for (const check of activeChecks) {
+      const daysUntil = Math.ceil(
+        (check.paymentDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntil > 7) continue;
+      pendingItems.push({
+        key: `check-${check._id}`,
+        tipo: "Cheque",
+        detalle: `${check.direction === "EMITIDO" ? "A" : "De"} ${check.issuerName} · Nº ${check.checkNumber}`,
+        monto: check.amount,
+        vencimiento: check.paymentDate,
+        tone: daysUntil < 0 ? "destructive" : "warning",
+        href: "/cheques",
+      });
+    }
+  }
+
+  if (!restrictedModules.includes("costos-fijos" as never)) {
+    for (const entry of pendingFixedCosts) {
+      const categoryDoc = entry.category as unknown as { name?: string } | null;
+      pendingItems.push({
+        key: `fixedcost-${entry._id}`,
+        tipo: "Costo fijo",
+        detalle: categoryDoc?.name ?? "Sin categoría",
+        monto: entry.amount,
+        tone: "warning",
+        href: "/costos-fijos",
+      });
+    }
+  }
+
+  for (const sale of pendingCollectionSalesThisMonth) {
+    const clientDoc = sale.client as unknown as { nombre?: string } | null;
+    const vencida = Boolean(sale.expectedCollectionDate && sale.expectedCollectionDate < todayStart);
+    pendingItems.push({
+      key: `sale-${sale._id}`,
+      tipo: "Venta",
+      detalle: clientDoc?.nombre ?? "Cliente",
+      monto: sale.amount,
+      vencimiento: sale.expectedCollectionDate,
+      tone: vencida ? "destructive" : "warning",
+      href: "/ventas",
+    });
+  }
+
+  for (const purchase of pendingPaymentPurchasesThisMonth) {
+    const providerDoc = purchase.provider as unknown as { nombre?: string } | null;
+    const vencida = Boolean(
+      purchase.expectedPaymentDate && purchase.expectedPaymentDate < todayStart
+    );
+    pendingItems.push({
+      key: `purchase-${purchase._id}`,
+      tipo: "Compra",
+      detalle: providerDoc?.nombre ?? "Proveedor",
+      monto: purchase.amount,
+      vencimiento: purchase.expectedPaymentDate,
+      tone: vencida ? "destructive" : "warning",
+      href: "/compras",
+    });
+  }
+
+  pendingItems.sort((a, b) => {
+    if (a.tone !== b.tone) return a.tone === "destructive" ? -1 : 1;
+    return b.monto - a.monto;
+  });
+  const pendingItemsTop = pendingItems.slice(0, 6);
+
   // Las tarjetas de arriba. Sueldos usa MaskedAmount (mismo criterio que
   // el resto de la app); Costos Fijos queda a la vista, como antes. Todas
   // comparten el mismo ícono en círculo bg-primary/10 — ya no hay un color
@@ -331,65 +427,7 @@ export default async function DashboardPage() {
       moduleKey: "costos-fijos",
     },
     {
-      title: "Ventas del mes",
-      icon: TrendingUp,
-      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalSalesThisMonth)}</p>,
-      delta:
-        salesThisMonth.length > 0
-          ? { text: `${salesThisMonth.length} venta${salesThisMonth.length === 1 ? "" : "s"}`, up: true }
-          : null,
-      moduleKey: null,
-    },
-    {
-      title: "Pendiente de cobro",
-      icon: Receipt,
-      value: (
-        <p className="text-2xl font-semibold tracking-tight">
-          {formatCurrency(totalPendingCollectionSalesThisMonth)}
-        </p>
-      ),
-      delta:
-        pendingCollectionSalesThisMonth.length > 0
-          ? {
-              text: `${pendingCollectionSalesThisMonth.length} pendiente${
-                pendingCollectionSalesThisMonth.length === 1 ? "" : "s"
-              }`,
-              up: false,
-            }
-          : null,
-      moduleKey: null,
-    },
-    {
-      title: "Compras del mes",
-      icon: ShoppingCart,
-      value: <p className="text-2xl font-semibold tracking-tight">{formatCurrency(totalPurchasesThisMonth)}</p>,
-      delta:
-        purchasesThisMonth.length > 0
-          ? { text: `${purchasesThisMonth.length} compra${purchasesThisMonth.length === 1 ? "" : "s"}`, up: true }
-          : null,
-      moduleKey: null,
-    },
-    {
-      title: "Pendiente de pago (compras)",
-      icon: Receipt,
-      value: (
-        <p className="text-2xl font-semibold tracking-tight">
-          {formatCurrency(totalPendingPaymentPurchasesThisMonth)}
-        </p>
-      ),
-      delta:
-        pendingPaymentPurchasesThisMonth.length > 0
-          ? {
-              text: `${pendingPaymentPurchasesThisMonth.length} pendiente${
-                pendingPaymentPurchasesThisMonth.length === 1 ? "" : "s"
-              }`,
-              up: false,
-            }
-          : null,
-      moduleKey: null,
-    },
-    {
-      title: "En curso / por recibir",
+      title: "Compras en curso",
       icon: Truck,
       value: <p className="text-2xl font-semibold tracking-tight">{inProgressPurchasesCount}</p>,
       delta: null,
@@ -577,29 +615,77 @@ export default async function DashboardPage() {
       </div>
 
       {alerts.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 p-4">
-          {alerts.map((alert) => (
-            <div key={alert.text} className="flex items-center gap-2 text-sm">
-              <AlertTriangle className={cn("h-4 w-4 shrink-0", alert.tone)} />
-              <span className={alert.tone}>{alert.text}</span>
-            </div>
-          ))}
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          {alerts.map((alert) => {
+            const row = (
+              <div className="flex items-center gap-3 px-4 py-3 text-sm">
+                <span
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                    alert.tone === "text-destructive" ? "bg-destructive/10" : "bg-warning/10"
+                  )}
+                >
+                  <AlertTriangle className={cn("h-3.5 w-3.5", alert.tone)} />
+                </span>
+                <span className={cn("flex-1", alert.tone)}>{alert.text}</span>
+                {alert.moduleKey && (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+              </div>
+            );
+            return alert.moduleKey ? (
+              <Link
+                key={alert.text}
+                href={`/${alert.moduleKey}`}
+                className="transition-colors hover:bg-muted/50"
+              >
+                {row}
+              </Link>
+            ) : (
+              <div key={alert.text}>{row}</div>
+            );
+          })}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
+          <h2 className="mb-1 font-semibold">Ventas vs. compras este mes</h2>
+          <p className="mb-2 text-xs text-muted-foreground">
+            {salesThisMonth.length} venta{salesThisMonth.length === 1 ? "" : "s"} ·{" "}
+            {purchasesThisMonth.length} compra{purchasesThisMonth.length === 1 ? "" : "s"}
+          </p>
+          <VentasComprasBarChart ventas={totalSalesThisMonth} compras={totalPurchasesThisMonth} />
+        </div>
+        <div
+          className={cn(
+            "flex flex-col justify-center gap-2 rounded-xl p-5 shadow-sm",
+            resultadoMes >= 0 ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"
+          )}
+        >
+          <span className="flex items-center gap-2 text-sm opacity-80">
+            {resultadoMes >= 0 ? (
+              <ArrowUpRight className="h-4 w-4" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4" />
+            )}
+            Resultado del mes
+          </span>
+          <p className="font-heading text-3xl font-semibold tracking-tight">
+            {formatCurrency(resultadoMes)}
+          </p>
+          <p className="text-xs opacity-80">Ventas menos compras de {formatPeriod(now)}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card shadow-sm sm:flex-row sm:divide-x sm:divide-y-0">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <div
-              key={kpi.title}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                  <Icon className="h-4 w-4 text-primary" />
-                </div>
-                <span className="text-sm text-muted-foreground">{kpi.title}</span>
+            <div key={kpi.title} className="flex flex-1 flex-col gap-2 p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Icon className="h-3.5 w-3.5 text-primary" />
+                {kpi.title}
               </div>
               {kpi.value}
               {kpi.delta && (
@@ -610,9 +696,9 @@ export default async function DashboardPage() {
                   )}
                 >
                   {kpi.delta.up ? (
-                    <ArrowUpRight className="h-3.5 w-3.5" />
+                    <ArrowUpRight className="h-3 w-3" />
                   ) : (
-                    <ArrowDownRight className="h-3.5 w-3.5" />
+                    <ArrowDownRight className="h-3 w-3" />
                   )}
                   {kpi.delta.text}
                 </span>
@@ -622,30 +708,109 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-        <h2 className="mb-4 flex items-center gap-2 font-semibold">
-          <Zap className="h-4 w-4 text-primary" />
-          Acciones rápidas
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <h2 className="mb-2 flex items-center gap-2 font-semibold">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            Pendientes y vencimientos
+          </h2>
+          {pendingItemsTop.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-sm">
+              No hay nada pendiente ni por vencer. Todo en orden.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Detalle</TableHead>
+                  <TableHead>Vencimiento</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-right">Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingItemsTop.map((item) => (
+                  <TableRow key={item.key}>
+                    <TableCell>
+                      <Link href={item.href} className="font-medium hover:text-primary">
+                        {item.tipo}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{item.detalle}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.vencimiento ? formatShortDate(item.vencimiento) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.monto)}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={item.tone}>
+                        {item.tone === "destructive" ? "Vencido" : "Pendiente"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {pendingItems.length > pendingItemsTop.length && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              +{pendingItems.length - pendingItemsTop.length} más — revisá cada módulo para el detalle
+              completo.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <h2 className="mb-1 flex items-center gap-2 font-semibold">
+              <Zap className="h-4 w-4 text-primary" />
+              Acciones rápidas
+            </h2>
+            <div className="flex flex-col divide-y divide-border">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="group flex items-center gap-3 py-2.5 transition-colors first:pt-2 last:pb-1 hover:text-primary"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{action.title}</span>
+                      <p className="truncate text-xs text-muted-foreground">{action.description}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <h2 className="mb-1 flex items-center gap-2 font-semibold">
+              <CalendarClock className="h-4 w-4 text-primary" />
+              Esta semana
+            </h2>
+            <div className="flex flex-col divide-y divide-border text-sm">
               <Link
-                key={action.href}
-                href={action.href}
-                className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                href="/agenda"
+                className="flex items-center justify-between py-2 transition-colors first:pt-2 hover:text-primary"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <span className="font-medium">{action.title}</span>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
-                </div>
+                <span className="text-muted-foreground">Recordatorios pendientes</span>
+                <span className="font-semibold">{pendingAgenda}</span>
               </Link>
-            );
-          })}
+              <Link
+                href="/calendario"
+                className="flex items-center justify-between py-2 transition-colors last:pb-1 hover:text-primary"
+              >
+                <span className="text-muted-foreground">Eventos en el calendario</span>
+                <span className="font-semibold">{weekEvents}</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -657,39 +822,34 @@ export default async function DashboardPage() {
       />
 
       <div>
-        <h2 className="mb-3 font-semibold">Todos los módulos</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <h2 className="mb-2 font-semibold">Todos los módulos</h2>
+        <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((mod) => {
             const Icon = mod.icon;
             return (
               <Link
                 key={mod.href}
                 href={mod.href}
-                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/60"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
                 </div>
-                <div>
-                  <h3 className="font-semibold">{mod.title}</h3>
-                  <p className="text-xs text-muted-foreground">{mod.description}</p>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{mod.title}</span>
+                  <p className="truncate text-xs text-muted-foreground">{mod.description}</p>
                 </div>
-                <div>
+                <div className="shrink-0 text-right">
                   {mod.href === "/sueldos" ? (
-                    <MaskedAmount
-                      value={mod.value}
-                      className="text-xl font-semibold tracking-tight"
-                    />
+                    <MaskedAmount value={mod.value} className="block text-sm font-semibold" />
                   ) : (
-                    <p className="text-xl font-semibold tracking-tight">{mod.value}</p>
+                    <span className="block text-sm font-semibold">{mod.value}</span>
                   )}
-                  <p className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
+                  <span className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
                     {mod.caption}
-                  </p>
+                  </span>
                 </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
               </Link>
             );
           })}
