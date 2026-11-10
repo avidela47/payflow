@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -39,7 +37,6 @@ const DOT_CLASSES = [
   "bg-slate-400",
 ] as const;
 
-export type SueldosLinePoint = { day: number; total: number };
 export type CostosDonutSlice = { name: string; value: number };
 
 // Barras Ventas vs Compras del mes en curso — reemplaza dos tarjetas KPI
@@ -88,56 +85,6 @@ export function VentasComprasBarChart({ ventas, compras }: { ventas: number; com
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
-  );
-}
-
-// El importe de sueldos se enmascara en toda la app (ver MaskedAmount) —
-// este gráfico respeta esa misma regla: se ve la tendencia, no el número.
-// Por eso el eje Y va oculto y el tooltip muestra puntitos en vez del
-// monto real.
-function SueldosLineChart({ data }: { data: SueldosLinePoint[] }) {
-  const hasData = data.some((d) => d.total > 0);
-
-  return (
-    <div className="h-56 w-full">
-      {hasData ? (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-            <XAxis
-              dataKey="day"
-              tickLine={false}
-              axisLine={false}
-              fontSize={11}
-              stroke="hsl(var(--muted-foreground))"
-              interval={4}
-            />
-            <YAxis hide domain={[0, "auto"]} />
-            <Tooltip
-              formatter={() => ["••••••", "Acumulado"]}
-              labelFormatter={(day) => `Día ${day}`}
-              contentStyle={{
-                fontSize: 12,
-                borderRadius: 8,
-                border: "1px solid hsl(var(--border))",
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="total"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Todavía no hay liquidaciones este mes.
-        </div>
-      )}
     </div>
   );
 }
@@ -202,39 +149,20 @@ function CostosDonutChart({ data }: { data: CostosDonutSlice[] }) {
 }
 
 export function DashboardCharts({
-  lineData,
   donutData,
-  showSueldos = true,
   showCostosFijos = true,
 }: {
-  lineData: SueldosLinePoint[];
   donutData: CostosDonutSlice[];
-  // Para usuarios con esos módulos restringidos (ver User.restrictedModules)
-  // — cada panel se puede ocultar de forma independiente, y si ambos están
-  // restringidos el componente entero no renderiza nada.
-  showSueldos?: boolean;
+  // Para usuarios con ese módulo restringido (ver User.restrictedModules).
   showCostosFijos?: boolean;
 }) {
-  if (!showSueldos && !showCostosFijos) return null;
+  if (!showCostosFijos) return null;
 
   return (
-    <div className={cn("grid grid-cols-1 gap-4", showSueldos && showCostosFijos && "lg:grid-cols-2")}>
-      {showSueldos && (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="mb-1 font-semibold">Sueldos liquidados este mes</h2>
-          <p className="mb-2 text-xs text-muted-foreground">
-            Acumulado por día. El monto queda tapado, igual que en la tabla de Sueldos.
-          </p>
-          <SueldosLineChart data={lineData} />
-        </div>
-      )}
-      {showCostosFijos && (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="mb-1 font-semibold">Costos fijos pendientes por categoría</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Del mes en curso, sin pagar todavía.</p>
-          <CostosDonutChart data={donutData} />
-        </div>
-      )}
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="mb-1 font-semibold">Costos fijos pendientes por categoría</h2>
+      <p className="mb-4 text-xs text-muted-foreground">Del mes en curso, sin pagar todavía.</p>
+      <CostosDonutChart data={donutData} />
     </div>
   );
 }

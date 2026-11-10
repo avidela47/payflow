@@ -42,7 +42,6 @@ import { MaskedAmount } from "@/components/masked-amount";
 import {
   DashboardCharts,
   VentasComprasBarChart,
-  type SueldosLinePoint,
   type CostosDonutSlice,
 } from "@/components/dashboard-charts";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +92,6 @@ export default async function DashboardPage() {
   const todayStart = startOfToday();
   const in7Days = new Date(todayStart);
   in7Days.setDate(in7Days.getDate() + 7);
-  const daysInMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
   const nextPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
 
   // Sueldos: igual que en /sueldos, la imputación siempre va un mes atrás
@@ -212,21 +210,6 @@ export default async function DashboardPage() {
     prevTotalPayroll > 0 ? Math.round(((totalPayroll - prevTotalPayroll) / prevTotalPayroll) * 100) : null;
 
   const totalPendingFixedCosts = pendingFixedCosts.reduce((sum, e) => sum + e.amount, 0);
-
-  // Serie diaria acumulada del mes en curso, en base a cuándo se cargó
-  // cada liquidación (no hay un campo de "fecha de pago" separado en
-  // PayrollEntry — createdAt es el único dato con granularidad diaria).
-  const dailyTotals = new Array(daysInMonth + 1).fill(0);
-  for (const entry of payrollEntries) {
-    const day = new Date(entry.createdAt).getDate();
-    dailyTotals[day] = (dailyTotals[day] ?? 0) + entry.amount;
-  }
-  let running = 0;
-  const lineData: SueldosLinePoint[] = [];
-  for (let day = 1; day <= daysInMonth; day++) {
-    running += dailyTotals[day] ?? 0;
-    lineData.push({ day, total: running });
-  }
 
   // Costos fijos pendientes agrupados por categoría (nombre real de
   // FixedCostCategory, poblado arriba), ordenados de mayor a menor.
@@ -614,6 +597,41 @@ export default async function DashboardPage() {
         <p className="text-sm text-muted-foreground">{formatFullDate(now)}</p>
       </div>
 
+      <div>
+        <h2 className="mb-2 font-semibold">Módulos</h2>
+        <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((mod) => {
+            const Icon = mod.icon;
+            return (
+              <Link
+                key={mod.href}
+                href={mod.href}
+                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/60"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{mod.title}</span>
+                  <p className="truncate text-xs text-muted-foreground">{mod.description}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  {mod.href === "/sueldos" ? (
+                    <MaskedAmount value={mod.value} className="block text-sm font-semibold" />
+                  ) : (
+                    <span className="block text-sm font-semibold">{mod.value}</span>
+                  )}
+                  <span className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
+                    {mod.caption}
+                  </span>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       {alerts.length > 0 && (
         <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           {alerts.map((alert) => {
@@ -815,46 +833,9 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardCharts
-        lineData={lineData}
         donutData={donutData}
-        showSueldos={!restrictedModules.includes("sueldos" as never)}
         showCostosFijos={!restrictedModules.includes("costos-fijos" as never)}
       />
-
-      <div>
-        <h2 className="mb-2 font-semibold">Todos los módulos</h2>
-        <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
-          {modules.map((mod) => {
-            const Icon = mod.icon;
-            return (
-              <Link
-                key={mod.href}
-                href={mod.href}
-                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/60"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Icon className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{mod.title}</span>
-                  <p className="truncate text-xs text-muted-foreground">{mod.description}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  {mod.href === "/sueldos" ? (
-                    <MaskedAmount value={mod.value} className="block text-sm font-semibold" />
-                  ) : (
-                    <span className="block text-sm font-semibold">{mod.value}</span>
-                  )}
-                  <span className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
-                    {mod.caption}
-                  </span>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
-              </Link>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
