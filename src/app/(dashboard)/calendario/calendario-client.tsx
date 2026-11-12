@@ -256,6 +256,17 @@ function EventForm({
         <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes} />
       </div>
 
+      {mode === "create" && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="repeatCount">Repetir mensualmente (cuotas)</Label>
+          <Input id="repeatCount" name="repeatCount" type="number" min={1} max={36} defaultValue={1} />
+          <p className="text-xs text-muted-foreground">
+            Para un plan de pagos: poné cuántos meses (ej: 6) y se crea este mismo evento, el mismo
+            día, en cada uno de los próximos meses. Dejalo en 1 para un evento único.
+          </p>
+        </div>
+      )}
+
       <ColorPicker name="color" defaultValue={defaultValues?.color ?? "blue"} />
 
       <div className="flex justify-end gap-2">
