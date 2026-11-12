@@ -44,10 +44,18 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-cover bg-[center_15%] bg-no-repeat px-4"
+      // En pantallas anchas la foto cubre todo el fondo. En celular (vertical)
+      // "cover" recortaba a la gente, así que se muestra la foto completa
+      // sobre un fondo azul del mismo tono que la pared.
+      className="relative flex min-h-screen items-center justify-center bg-cover bg-[center_15%] bg-no-repeat px-4 max-md:min-h-dvh max-md:bg-[#16263b] max-md:bg-contain max-md:bg-center"
       style={{ backgroundImage: "url(/frente.png)" }}
       onClick={() => setShowLogin(true)}
     >
+      {!showLogin && (
+        <p className="pointer-events-none absolute inset-x-0 bottom-10 text-center text-sm font-medium tracking-wide text-white/80 md:hidden">
+          Tocá la pantalla para ingresar
+        </p>
+      )}
       {showLogin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
