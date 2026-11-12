@@ -5,7 +5,7 @@ export const COMPANY = {
   name: "ITELSA SAS",
   address: "Bv. Cristóbal Berritella 7365, Córdoba, Córdoba",
   phone: "+54 9 3517 33 1063",
-  cuit: "30-71630098-2",
+  cuit: "30-71592010-3",
   taxStatus: "RESPONSABLE INSCRIPTO",
   logoUrl: "/logo.png",
 };
