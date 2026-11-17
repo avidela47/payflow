@@ -93,7 +93,8 @@ function SensorFuenteForm({
             id="codigo"
             name="codigo"
             required
-            disabled={mode === "edit"}
+            readOnly={mode === "edit"}
+            className={mode === "edit" ? "bg-muted" : undefined}
             placeholder="Ej: SF-001"
             defaultValue={defaultValues?.codigo}
           />
