@@ -14,6 +14,7 @@ export const RESTRICTABLE_MODULES = [
   "vault",
   "caja-chica",
   "pagos",
+  "sensores",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 

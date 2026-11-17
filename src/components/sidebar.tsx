@@ -25,6 +25,8 @@ import {
   Banknote,
   Plane,
   CreditCard,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +40,22 @@ import { cn } from "@/lib/utils";
 // ícono amarillo porque ahí el color es parte de la metáfora visual
 // ("post-it"), no decoración de módulo — Ariel pidió explícitamente no
 // tocar esa.
-const navItems = [
+//
+// "section" (opcional): agrupa visualmente con un encabezado en el sidebar
+// — ver fusión con Gestión de Luminarias (planificacion/fusion-gestion-
+// luminarias.md). Sin section = los módulos administrativos de siempre,
+// sin encabezado.
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  roles: string[];
+  moduleKey?: string;
+  special?: string;
+  section?: string;
+};
+
+const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
   {
     href: "/empleados",
@@ -117,6 +134,21 @@ const navItems = [
     // Única excepción al acento único: post-it amarillo a propósito.
     special: "bg-yellow-100 text-yellow-700",
   },
+  // Primer módulo de la fusión con "Gestión de Luminarias" (ver
+  // planificacion/fusion-gestion-luminarias.md en el proyecto). Es el
+  // arranque de una sección nueva de planta — por eso lleva "section":
+  // separa visualmente del resto con un encabezado, siguiendo el estilo
+  // agrupado por secciones que tenía esa app y que a Ariel le gustó. Más
+  // módulos de planta (Luminarias, Herramientas, Materiales, etc.) van a
+  // sumarse a esta misma sección más adelante.
+  {
+    href: "/sensores",
+    label: "Sensores y Fuentes",
+    icon: Zap,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "sensores",
+    section: "STOCK",
+  },
 ];
 
 export function Sidebar({
@@ -191,31 +223,43 @@ export function Sidebar({
           {navItems
             .filter((item) => item.roles.includes(role))
             .filter((item) => !item.moduleKey || !restrictedModules.includes(item.moduleKey))
-            .map((item) => {
+            .map((item, index, visibleItems) => {
               const Icon = item.icon;
               const active = pathname === item.href;
+              // Encabezado de sección: se muestra antes de un ítem cuando
+              // su "section" es distinta a la del ítem anterior visible
+              // (o es el primero con section). Los módulos sin "section"
+              // (todo lo administrativo de siempre) no muestran encabezado.
+              const prevSection = index > 0 ? visibleItems[index - 1].section : undefined;
+              const showSectionHeader = item.section && item.section !== prevSection;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary/10 font-semibold text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                <div key={item.href}>
+                  {showSectionHeader && (
+                    <p className="mb-1 mt-4 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground first:mt-1">
+                      {item.section}
+                    </p>
                   )}
-                >
-                  <div
+                  <Link
+                    href={item.href}
+                    onClick={() => setOpen(false)}
                     className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      item.special ?? (active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")
+                      "flex items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-primary/10 font-semibold text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  {item.label}
-                </Link>
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        item.special ?? (active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    {item.label}
+                  </Link>
+                </div>
               );
             })}
         </nav>
