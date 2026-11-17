@@ -13,6 +13,7 @@ export const RESTRICTABLE_MODULES = [
   "reportes",
   "vault",
   "caja-chica",
+  "pagos",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 

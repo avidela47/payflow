@@ -1,5 +1,6 @@
 import mongoose, { Schema, models, model, Model } from "mongoose";
 import { IVA_CONDITIONS, type IvaCondition } from "@/lib/iva-conditions";
+import { GANANCIAS_CONDITIONS, type GananciasCondition } from "@/lib/ganancias-conditions";
 
 // Base de datos de proveedores — mismo criterio que Clientes: código
 // correlativo autogenerado (PROV-001, PROV-002, ...) y nombre único, para
@@ -17,6 +18,10 @@ export interface IProvider {
   provincia?: string;
   contacto?: string;
   condicionIva?: IvaCondition;
+  // Condición frente a Ganancias (distinta de condicionIva) — define la
+  // alícuota de retención que le corresponde en el módulo Pagos. Opcional
+  // porque los proveedores cargados antes de este módulo no la tienen.
+  condicionGanancias?: GananciasCondition;
   notas?: string;
   createdAt: Date;
 }
@@ -34,6 +39,7 @@ const ProviderSchema = new Schema<IProvider>(
     provincia: String,
     contacto: String,
     condicionIva: { type: String, enum: IVA_CONDITIONS },
+    condicionGanancias: { type: String, enum: GANANCIAS_CONDITIONS },
     notas: String,
   },
   { timestamps: { createdAt: true, updatedAt: false } }

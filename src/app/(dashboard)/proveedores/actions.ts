@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth";
 import { Provider } from "@/models/Provider";
 import { getNextSequence } from "@/models/Counter";
 import { IVA_CONDITIONS } from "@/lib/iva-conditions";
+import { GANANCIAS_CONDITIONS } from "@/lib/ganancias-conditions";
 
 // Detecta el error de índice único de MongoDB (E11000) sin depender de un
 // tipo de error específico — Mongoose lo tira como un objeto plano, no
@@ -35,6 +36,7 @@ const providerSchema = z.object({
   provincia: z.string().optional(),
   contacto: z.string().optional(),
   condicionIva: z.enum(IVA_CONDITIONS).optional().or(z.literal("")),
+  condicionGanancias: z.enum(GANANCIAS_CONDITIONS).optional().or(z.literal("")),
   notas: z.string().optional(),
 });
 
@@ -50,6 +52,7 @@ function parseProviderForm(formData: FormData) {
     provincia: formData.get("provincia") || undefined,
     contacto: formData.get("contacto") || undefined,
     condicionIva: formData.get("condicionIva") || undefined,
+    condicionGanancias: formData.get("condicionGanancias") || undefined,
     notas: formData.get("notas") || undefined,
   });
 }
@@ -73,6 +76,7 @@ export async function createProvider(formData: FormData) {
       ...parsed.data,
       codigo,
       condicionIva: parsed.data.condicionIva || undefined,
+      condicionGanancias: parsed.data.condicionGanancias || undefined,
     });
   } catch (err) {
     console.error("createProvider error:", err);
@@ -103,6 +107,7 @@ export async function updateProvider(providerId: string, formData: FormData) {
     const provider = await Provider.findByIdAndUpdate(providerId, {
       ...parsed.data,
       condicionIva: parsed.data.condicionIva || undefined,
+      condicionGanancias: parsed.data.condicionGanancias || undefined,
     });
     if (!provider) {
       return { ok: false, error: "El proveedor ya no existe." };

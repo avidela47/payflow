@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   Banknote,
   Plane,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,13 @@ const navItems = [
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"] },
   { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"] },
+  {
+    href: "/pagos",
+    label: "Pagos",
+    icon: CreditCard,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "pagos",
+  },
   {
     href: "/sueldos",
     label: "Sueldos",

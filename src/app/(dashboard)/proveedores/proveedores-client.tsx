@@ -20,6 +20,11 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { IVA_CONDITIONS, type IvaCondition } from "@/lib/iva-conditions";
+import {
+  GANANCIAS_CONDITIONS,
+  gananciasConditionLabel,
+  type GananciasCondition,
+} from "@/lib/ganancias-conditions";
 import { ARGENTINA_PROVINCES } from "@/lib/argentina-provinces";
 import { createProvider, updateProvider, deleteProvider } from "./actions";
 
@@ -36,6 +41,7 @@ export type ProviderItem = {
   provincia?: string;
   contacto?: string;
   condicionIva?: IvaCondition;
+  condicionGanancias?: GananciasCondition;
   notas?: string;
 };
 
@@ -155,6 +161,27 @@ function ProviderForm({
               </option>
             ))}
           </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="condicionGanancias">Condición Ganancias</Label>
+          <Select
+            id="condicionGanancias"
+            name="condicionGanancias"
+            defaultValue={defaultValues?.condicionGanancias ?? ""}
+          >
+            <option value="">Sin especificar</option>
+            {GANANCIAS_CONDITIONS.map((cond) => (
+              <option key={cond} value={cond}>
+                {gananciasConditionLabel(cond)}
+              </option>
+            ))}
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Para calcular la retención en el módulo Pagos — distinta de la condición de IVA.
+          </p>
         </div>
       </div>
 

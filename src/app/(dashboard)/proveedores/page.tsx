@@ -20,6 +20,7 @@ export default async function ProveedoresPage() {
     provincia: provider.provincia,
     contacto: provider.contacto,
     condicionIva: provider.condicionIva,
+    condicionGanancias: provider.condicionGanancias,
     notas: provider.notas,
   }));
 
