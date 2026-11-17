@@ -19,13 +19,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
-import { formatCurrency } from "@/lib/utils";
 import {
   SENSOR_FUENTE_TIPOS,
   sensorFuenteTipoLabel,
   type SensorFuenteTipo,
 } from "@/lib/sensor-fuente-tipos";
 import { createSensorFuente, updateSensorFuente, deleteSensorFuente } from "./actions";
+
+// Mismo criterio que reportes/gastos/page.tsx: estos ítems de planta se
+// cotizan en dólares, no en pesos (a diferencia del resto de PayFlow, que
+// es todo ARS) — por eso NO se usa formatCurrency acá.
+function formatUsd(value: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 export type SensorFuenteItem = {
   id: string;
@@ -139,7 +148,7 @@ function SensorFuenteForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="precio">Precio</Label>
+          <Label htmlFor="precio">Precio (U$D)</Label>
           <Input
             id="precio"
             name="precio"
@@ -252,13 +261,13 @@ export function SensoresClient({ items }: { items: SensorFuenteItem[] }) {
       <Table compact>
         <TableHeader>
           <TableRow>
-            <TableHead>Código</TableHead>
+            <TableHead className="whitespace-nowrap">Código</TableHead>
             <TableHead>Descripción</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Stock</TableHead>
-            <TableHead>Precio</TableHead>
-            <TableHead>Proveedor</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+            <TableHead className="whitespace-nowrap">Tipo</TableHead>
+            <TableHead className="whitespace-nowrap">Stock</TableHead>
+            <TableHead className="whitespace-nowrap">Precio</TableHead>
+            <TableHead className="whitespace-nowrap">Proveedor</TableHead>
+            <TableHead className="whitespace-nowrap text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -275,10 +284,10 @@ export function SensoresClient({ items }: { items: SensorFuenteItem[] }) {
             const bajoMinimo = item.stockActual < item.stockMinimo;
             return (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.codigo}</TableCell>
-                <TableCell className="truncate">{item.descripcion}</TableCell>
-                <TableCell className="truncate">{sensorFuenteTipoLabel(item.tipo)}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap font-medium">{item.codigo}</TableCell>
+                <TableCell className="max-w-[260px] truncate">{item.descripcion}</TableCell>
+                <TableCell className="whitespace-nowrap">{sensorFuenteTipoLabel(item.tipo)}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <span>{item.stockActual}</span>
                     {bajoMinimo && (
@@ -286,9 +295,9 @@ export function SensoresClient({ items }: { items: SensorFuenteItem[] }) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="truncate">{formatCurrency(item.precio)}</TableCell>
-                <TableCell className="truncate">{item.proveedor || "—"}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">U$D {formatUsd(item.precio)}</TableCell>
+                <TableCell className="max-w-[160px] truncate">{item.proveedor || "—"}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       size="sm"
