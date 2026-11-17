@@ -14,7 +14,7 @@ export type LuminariaOrigen = (typeof LUMINARIA_ORIGENES)[number];
 const LABELS: Record<LuminariaOrigen, string> = {
   FABRICADA: "Fabricada",
   IMPORTADA: "Importada",
-  NACIONAL: "Depósito nacional",
+  NACIONAL: "Nacional",
 };
 
 export function luminariaOrigenLabel(origen: LuminariaOrigen): string {
@@ -23,8 +23,12 @@ export function luminariaOrigenLabel(origen: LuminariaOrigen): string {
 
 export function luminariaOrigenBadgeVariant(
   origen: LuminariaOrigen
-): "default" | "success" | "primary" {
+): "success" | "primary" | "warning" {
   if (origen === "FABRICADA") return "success";
   if (origen === "IMPORTADA") return "primary";
-  return "default";
+  // NACIONAL: con "default" el badge era gris claro casi invisible contra
+  // el fondo blanco de la fila (se veía como texto en negrita suelto, sin
+  // la "pastilla" de color). "warning" (ámbar) le da un color propio para
+  // que los tres orígenes se distingan de un vistazo.
+  return "warning";
 }
