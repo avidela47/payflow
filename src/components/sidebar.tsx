@@ -26,6 +26,7 @@ import {
   Plane,
   CreditCard,
   Zap,
+  Lightbulb,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,14 @@ const navItems: NavItem[] = [
     icon: Zap,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "sensores",
+    section: "STOCK",
+  },
+  {
+    href: "/luminarias",
+    label: "Luminarias",
+    icon: Lightbulb,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "luminarias",
     section: "STOCK",
   },
 ];
