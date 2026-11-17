@@ -8,6 +8,13 @@ import { LUMINARIA_ORIGENES, type LuminariaOrigen } from "@/lib/luminaria-origen
 // (true para las fabricadas) — todavía no hay Recetas/Fabricar en PayFlow
 // (Fase 4 del plan de fusión), cuando se construya ese módulo este campo
 // pasa a tener efecto real (stock automático vía BOM).
+//
+// IMPORTANTE (aclarado por Ariel): el mismo código puede existir a la vez
+// como FABRICADA (con receta, pendiente de fabricar) y como NACIONAL (ya
+// fabricada, lista en depósito, sale directo sin pasar por Fabricar) — NO
+// son el mismo stock duplicado, son dos estados distintos del mismo
+// producto. Por eso el código solo no puede ser único: lo único es la
+// combinación (código, origen).
 export interface ILuminaria {
   _id: mongoose.Types.ObjectId;
   codigo: string;
@@ -24,7 +31,7 @@ export interface ILuminaria {
 
 const LuminariaSchema = new Schema<ILuminaria>(
   {
-    codigo: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    codigo: { type: String, required: true, uppercase: true, trim: true },
     descripcion: { type: String, required: true, trim: true },
     origen: { type: String, required: true, enum: LUMINARIA_ORIGENES },
     stockActual: { type: Number, default: 0 },
@@ -37,7 +44,8 @@ const LuminariaSchema = new Schema<ILuminaria>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-LuminariaSchema.index({ origen: 1, codigo: 1 });
+// Único por (código, origen) — no por código solo. Ver nota arriba.
+LuminariaSchema.index({ codigo: 1, origen: 1 }, { unique: true });
 
 export const Luminaria =
   (models.Luminaria as Model<ILuminaria>) || model<ILuminaria>("Luminaria", LuminariaSchema);

@@ -65,7 +65,10 @@ export async function createLuminaria(formData: FormData) {
   } catch (err) {
     console.error("createLuminaria error:", err);
     if (isDuplicateKeyError(err)) {
-      return { ok: false, error: `Ya existe una luminaria con el código ${parsed.data.codigo}.` };
+      return {
+        ok: false,
+        error: `Ya existe una luminaria con el código ${parsed.data.codigo} y ese mismo origen.`,
+      };
     }
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `No se pudo crear: ${message}` };
@@ -95,7 +98,7 @@ export async function updateLuminaria(id: string, formData: FormData) {
   } catch (err) {
     console.error("updateLuminaria error:", err);
     if (isDuplicateKeyError(err)) {
-      return { ok: false, error: "Ya existe otra luminaria con ese código." };
+      return { ok: false, error: "Ya existe otra luminaria con ese código y ese origen." };
     }
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `No se pudo actualizar: ${message}` };
