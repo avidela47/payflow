@@ -267,13 +267,11 @@ function MovimientoForm({
 
       {(tipo === "SALIDA" || tipo === "DEVOLUCION") && (
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="numeroOrden">
-            Número de OT{tipo === "SALIDA" ? " *" : ""}
-          </Label>
+          <Label htmlFor="numeroOrden">Número de OT *</Label>
           <Input
             id="numeroOrden"
             name="numeroOrden"
-            required={tipo === "SALIDA"}
+            required
             placeholder="Ej: OT-0042"
           />
         </div>

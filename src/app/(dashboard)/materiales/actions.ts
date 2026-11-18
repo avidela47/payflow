@@ -127,11 +127,11 @@ export async function deleteMaterial(id: string) {
 // ---------- movimientos (entrada/salida/devolución) ----------
 //
 // Portado de Gestión de Luminarias: ahí el stock de Materiales no se edita
-// solo a mano, se mueve con estos tres tipos y queda historial. La regla
-// de "requiere número de OT" se copia tal cual del backend original: ahí
-// SOLO la salida lo exige de verdad (el modal del cliente también se lo
-// pedía a la devolución, pero el servidor no) — achá se respeta lo que de
-// verdad validaba el servidor, no lo que pedía la UI.
+// solo a mano, se mueve con estos tres tipos y queda historial. "Requiere
+// número de OT" exige Salida Y Devolución (igual que el modal del original
+// — el backend original solo lo exigía de verdad para la salida, pero
+// Ariel pidió explícitamente igualar el comportamiento del original tal
+// como lo ve el usuario, no el detalle interno del servidor viejo).
 
 const movimientoSchema = z.object({
   tipo: z.enum(MOVIMIENTO_MATERIAL_TIPOS, { message: "Falta el tipo de movimiento." }),
@@ -157,8 +157,8 @@ export async function registrarMovimientoMaterial(materialId: string, formData: 
   }
   const { tipo, cantidad, numeroOrden, notas } = parsed.data;
 
-  if (tipo === "SALIDA" && !numeroOrden) {
-    return { ok: false, error: "La salida requiere un número de Orden de Trabajo." };
+  if ((tipo === "SALIDA" || tipo === "DEVOLUCION") && !numeroOrden) {
+    return { ok: false, error: "Este movimiento requiere un número de Orden de Trabajo." };
   }
 
   try {
