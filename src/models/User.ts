@@ -19,6 +19,7 @@ export const RESTRICTABLE_MODULES = [
   "herramientas",
   "materiales",
   "presupuestos",
+  "remitos",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 

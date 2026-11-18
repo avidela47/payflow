@@ -32,6 +32,7 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -191,6 +192,14 @@ const navItems: NavItem[] = [
     icon: FileText,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "presupuestos",
+    section: "COMERCIAL PLANTA",
+  },
+  {
+    href: "/remitos",
+    label: "Remitos",
+    icon: ClipboardList,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "remitos",
     section: "COMERCIAL PLANTA",
   },
 ];
