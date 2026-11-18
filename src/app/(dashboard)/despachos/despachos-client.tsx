@@ -96,8 +96,20 @@ function DespachoForm({
   const [items, setItems] = useState<ItemDespachoForm[]>([]);
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
 
+  // Los presupuestos migrados desde Gestión de Luminarias no tienen
+  // clientId (los Clientes de esa app se descartaron, ver planificacion/
+  // fusion-gestion-luminarias.md) — si solo filtrara por clientId exacto,
+  // quedarían invisibles en este combo apenas se elige un cliente. Como
+  // respaldo, si un presupuesto no tiene clientId, se lo relaciona por
+  // razón social (coincide con el snapshot que guardó al migrarse).
   const presupuestosFiltrados = clientId
-    ? presupuestos.filter((p) => p.clientId === clientId)
+    ? presupuestos.filter(
+        (p) =>
+          p.clientId === clientId ||
+          (!p.clientId &&
+            razonSocial.trim().length > 0 &&
+            p.razonSocial.trim().toLowerCase() === razonSocial.trim().toLowerCase())
+      )
     : presupuestos;
 
   function seleccionarCliente(id: string) {

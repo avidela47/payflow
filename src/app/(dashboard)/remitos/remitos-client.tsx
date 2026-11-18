@@ -88,8 +88,18 @@ function RemitoForm({
   const [numeroOrden, setNumeroOrden] = useState("");
   const [lineas, setLineas] = useState<LineaRemitoItem[]>([]);
 
+  // Mismo respaldo que en Despachos: los presupuestos migrados desde
+  // Gestión de Luminarias no tienen clientId, así que si no matchea por
+  // clientId se los relaciona por razón social (el snapshot que trajeron
+  // de la migración).
   const presupuestosFiltrados = clientId
-    ? presupuestos.filter((p) => p.clientId === clientId)
+    ? presupuestos.filter(
+        (p) =>
+          p.clientId === clientId ||
+          (!p.clientId &&
+            razonSocial.trim().length > 0 &&
+            p.razonSocial.trim().toLowerCase() === razonSocial.trim().toLowerCase())
+      )
     : presupuestos;
 
   function seleccionarCliente(id: string) {
