@@ -215,8 +215,8 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -226,32 +226,34 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => setCreatingOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nueva herramienta
+          </Button>
+        </div>
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+          <Button
+            type="button"
+            size="sm"
+            variant={filtroEstado === "todos" ? "default" : "outline"}
+            className="shrink-0"
+            onClick={() => setFiltroEstado("todos")}
+          >
+            Todos
+          </Button>
+          {HERRAMIENTA_ESTADOS.map((estado) => (
             <Button
+              key={estado}
               type="button"
               size="sm"
-              variant={filtroEstado === "todos" ? "default" : "outline"}
-              onClick={() => setFiltroEstado("todos")}
+              variant={filtroEstado === estado ? "default" : "outline"}
+              className="shrink-0"
+              onClick={() => setFiltroEstado(estado)}
             >
-              Todos
+              {herramientaEstadoLabel(estado)}
             </Button>
-            {HERRAMIENTA_ESTADOS.map((estado) => (
-              <Button
-                key={estado}
-                type="button"
-                size="sm"
-                variant={filtroEstado === estado ? "default" : "outline"}
-                onClick={() => setFiltroEstado(estado)}
-              >
-                {herramientaEstadoLabel(estado)}
-              </Button>
-            ))}
-          </div>
+          ))}
         </div>
-        <Button onClick={() => setCreatingOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nueva herramienta
-        </Button>
       </div>
 
       <Table compact>
