@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -30,6 +30,8 @@ import {
   Wrench,
   Package,
   FileText,
+  ChevronDown,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -207,6 +209,48 @@ export function Sidebar({
   // siempre visible y este estado no se usa para nada.
   const [open, setOpen] = useState(false);
 
+  // Secciones colapsadas (STOCK, COMERCIAL PLANTA, ...): sin esto la
+  // lista crece sin fin a medida que se suman módulos de la fusión con
+  // Gestión de Luminarias. Se guarda en localStorage para que la
+  // preferencia de cada uno se mantenga entre sesiones — es una
+  // comodidad de UI por navegador, no datos que haya que leer de vuelta
+  // desde el servidor.
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("payflow-sidebar-collapsed");
+      if (raw) setCollapsedSections(JSON.parse(raw));
+    } catch {
+      // localStorage puede fallar (modo privado, storage bloqueado) — la
+      // barra simplemente arranca con el default de abajo.
+    }
+  }, []);
+
+  const visibleItems = navItems
+    .filter((item) => item.roles.includes(role))
+    .filter((item) => !item.moduleKey || !restrictedModules.includes(item.moduleKey));
+
+  // Secciones que contienen la ruta activa: arrancan expandidas aunque
+  // todavía no haya preferencia guardada para esa sección.
+  const sectionsConRutaActiva = new Set(
+    visibleItems.filter((item) => item.section && item.href === pathname).map((item) => item.section!)
+  );
+
+  function toggleSection(section: string, expandidaPorDefault: boolean) {
+    setCollapsedSections((prev) => {
+      const colapsadaActual = prev[section] ?? !expandidaPorDefault;
+      const next = { ...prev, [section]: !colapsadaActual };
+      try {
+        localStorage.setItem("payflow-sidebar-collapsed", JSON.stringify(next));
+      } catch {
+        // Ídem arriba: si falla, el toggle sigue funcionando en memoria,
+        // solo no persiste entre sesiones.
+      }
+      return next;
+    });
+  }
+
   return (
     <>
       {/* Barra superior: solo se ve en mobile/tablet (md:hidden). En
@@ -262,25 +306,44 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems
-            .filter((item) => item.roles.includes(role))
-            .filter((item) => !item.moduleKey || !restrictedModules.includes(item.moduleKey))
-            .map((item, index, visibleItems) => {
+          {visibleItems.map((item, index) => {
               const Icon = item.icon;
               const active = pathname === item.href;
               // Encabezado de sección: se muestra antes de un ítem cuando
               // su "section" es distinta a la del ítem anterior visible
               // (o es el primero con section). Los módulos sin "section"
-              // (todo lo administrativo de siempre) no muestran encabezado.
+              // (todo lo administrativo de siempre) no muestran encabezado
+              // y nunca se colapsan.
               const prevSection = index > 0 ? visibleItems[index - 1].section : undefined;
               const showSectionHeader = item.section && item.section !== prevSection;
+              const expandidaPorDefault = item.section ? sectionsConRutaActiva.has(item.section) : true;
+              const colapsada = item.section
+                ? (collapsedSections[item.section] ?? !expandidaPorDefault)
+                : false;
+
+              if (item.section && colapsada && !showSectionHeader) {
+                // Sección colapsada: no se renderiza ningún ítem salvo su
+                // propio encabezado (ya renderizado en la primera vuelta).
+                return null;
+              }
+
               return (
                 <div key={item.href}>
                   {showSectionHeader && (
-                    <p className="mb-1 mt-4 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground first:mt-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(item.section!, expandidaPorDefault)}
+                      className="mb-1 mt-4 flex w-full items-center justify-between px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground first:mt-1"
+                    >
                       {item.section}
-                    </p>
+                      {colapsada ? (
+                        <ChevronRight className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                    </button>
                   )}
+                  {(!item.section || !colapsada) && (
                   <Link
                     href={item.href}
                     onClick={() => setOpen(false)}
@@ -301,6 +364,7 @@ export function Sidebar({
                     </div>
                     {item.label}
                   </Link>
+                  )}
                 </div>
               );
             })}
