@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp, Plus, RotateCcw, Search } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,7 +24,18 @@ import {
   materialUnidadLabel,
   type MaterialUnidad,
 } from "@/lib/material-unidades";
-import { createMaterial, updateMaterial, deleteMaterial } from "./actions";
+import {
+  movimientoMaterialTipoLabel,
+  movimientoMaterialTipoBadgeVariant,
+  type MovimientoMaterialTipo,
+} from "@/lib/movimiento-material-tipos";
+import {
+  createMaterial,
+  updateMaterial,
+  deleteMaterial,
+  registrarMovimientoMaterial,
+  getMovimientosMaterial,
+} from "./actions";
 
 // Mismo criterio que Sensores/Luminarias: estos ítems de planta se cotizan
 // en dólares, no en pesos (confirmado por Ariel para Materiales de obra).
@@ -184,6 +195,108 @@ function MaterialForm({
   );
 }
 
+// ---------- formulario de movimiento (Entrada/Salida/Devolución) ----------
+
+type MovimientoRow = {
+  id: string;
+  tipo: MovimientoMaterialTipo;
+  cantidad: number;
+  stockResultante: number;
+  numeroOrden?: string;
+  notas?: string;
+  usuario: string;
+  createdAt: string;
+};
+
+const MOVIMIENTO_CONFIG: Record<
+  MovimientoMaterialTipo,
+  { icon: typeof ArrowDownCircle; placeholderNotas: string }
+> = {
+  ENTRADA: { icon: ArrowDownCircle, placeholderNotas: "Observaciones" },
+  SALIDA: { icon: ArrowUpCircle, placeholderNotas: "Observaciones" },
+  DEVOLUCION: { icon: RotateCcw, placeholderNotas: "Ej: Sobrante de obra" },
+};
+
+function MovimientoForm({
+  material,
+  tipo,
+  onDone,
+}: {
+  material: MaterialItem;
+  tipo: MovimientoMaterialTipo;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const cfg = MOVIMIENTO_CONFIG[tipo];
+  const Icon = cfg.icon;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set("tipo", tipo);
+    const result = await registrarMovimientoMaterial(material.id, formData);
+    setSaving(false);
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+
+    toast.success("Movimiento registrado.");
+    router.refresh();
+    onDone();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="rounded-md bg-muted p-3 text-sm">
+        <p className="font-medium">{material.codigo}</p>
+        <p className="text-muted-foreground">{material.descripcion}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Stock actual: <span className="font-semibold text-foreground">{material.stockActual}</span>{" "}
+          {materialUnidadLabel(material.unidad)}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="cantidad">Cantidad</Label>
+        <Input id="cantidad" name="cantidad" type="number" min={1} step={1} required defaultValue={1} />
+      </div>
+
+      {(tipo === "SALIDA" || tipo === "DEVOLUCION") && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="numeroOrden">
+            Número de OT{tipo === "SALIDA" ? " *" : ""}
+          </Label>
+          <Input
+            id="numeroOrden"
+            name="numeroOrden"
+            required={tipo === "SALIDA"}
+            placeholder="Ej: OT-0042"
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="notas">Notas</Label>
+        <Input id="notas" name="notas" placeholder={cfg.placeholderNotas} />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={saving}>
+          <Icon className="h-4 w-4" />
+          {saving ? "Guardando..." : "Confirmar"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 // ---------- componente principal ----------
 
 export function MaterialesClient({ items }: { items: MaterialItem[] }) {
@@ -194,6 +307,32 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
   const [editTarget, setEditTarget] = useState<MaterialItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MaterialItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movimientoTarget, setMovimientoTarget] = useState<{
+    item: MaterialItem;
+    tipo: MovimientoMaterialTipo;
+  } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [historial, setHistorial] = useState<Record<string, MovimientoRow[] | undefined>>({});
+  const [loadingHistorialId, setLoadingHistorialId] = useState<string | null>(null);
+
+  async function toggleHistorial(item: MaterialItem) {
+    if (expandedId === item.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(item.id);
+    if (historial[item.id]) return;
+
+    setLoadingHistorialId(item.id);
+    const result = await getMovimientosMaterial(item.id);
+    setLoadingHistorialId(null);
+
+    if (!result.ok) {
+      toast.error(result.error ?? "No se pudo cargar el historial.");
+      return;
+    }
+    setHistorial((prev) => ({ ...prev, [item.id]: result.data }));
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -264,13 +403,14 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
             <TableHead className="whitespace-nowrap">Stock</TableHead>
             <TableHead className="whitespace-nowrap">Precio</TableHead>
             <TableHead className="whitespace-nowrap">Proveedor</TableHead>
+            <TableHead className="whitespace-nowrap">Movimientos</TableHead>
             <TableHead className="whitespace-nowrap text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 {items.length === 0
                   ? "Todavía no hay materiales cargados."
                   : "No se encontró ningún material con esa búsqueda."}
@@ -279,42 +419,146 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
           )}
           {filtered.map((item) => {
             const bajoMinimo = item.stockActual < item.stockMinimo;
+            const expanded = expandedId === item.id;
+            const rows = historial[item.id];
             return (
-              <TableRow key={item.id}>
-                <TableCell className="whitespace-nowrap font-medium">{item.codigo}</TableCell>
-                <TableCell className="max-w-[260px] truncate">{item.descripcion}</TableCell>
-                <TableCell className="whitespace-nowrap">{materialUnidadLabel(item.unidad)}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span>{item.stockActual}</span>
-                    {bajoMinimo && (
-                      <Badge variant="warning">Bajo mínimo ({item.stockMinimo})</Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="whitespace-nowrap">U$D {formatUsd(item.precio)}</TableCell>
-                <TableCell className="max-w-[160px] truncate">{item.proveedor || "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-primary hover:bg-primary/10"
-                      onClick={() => setEditTarget(item)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteTarget(item)}
-                    >
-                      Borrar
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <Fragment key={item.id}>
+                <TableRow>
+                  <TableCell className="whitespace-nowrap font-medium">{item.codigo}</TableCell>
+                  <TableCell className="max-w-[220px] truncate">{item.descripcion}</TableCell>
+                  <TableCell className="whitespace-nowrap">{materialUnidadLabel(item.unidad)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span>{item.stockActual}</span>
+                      {bajoMinimo && (
+                        <Badge variant="warning">Bajo mínimo ({item.stockMinimo})</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">U$D {formatUsd(item.precio)}</TableCell>
+                  <TableCell className="max-w-[140px] truncate">{item.proveedor || "—"}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-success text-success hover:bg-success/10"
+                        onClick={() => setMovimientoTarget({ item, tipo: "ENTRADA" })}
+                      >
+                        <ArrowDownCircle className="h-3.5 w-3.5" />
+                        Entrada
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive/10"
+                        onClick={() => setMovimientoTarget({ item, tipo: "SALIDA" })}
+                      >
+                        <ArrowUpCircle className="h-3.5 w-3.5" />
+                        Salida
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-primary text-primary hover:bg-primary/10"
+                        onClick={() => setMovimientoTarget({ item, tipo: "DEVOLUCION" })}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Dev.
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:bg-muted"
+                        onClick={() => toggleHistorial(item)}
+                      >
+                        {expanded ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                        Historial
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-primary hover:bg-primary/10"
+                        onClick={() => setEditTarget(item)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget(item)}
+                      >
+                        Borrar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {expanded && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="bg-muted/40 p-0">
+                      <div className="p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Historial de movimientos
+                        </p>
+                        {loadingHistorialId === item.id ? (
+                          <p className="text-sm text-muted-foreground">Cargando...</p>
+                        ) : !rows || rows.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Sin movimientos registrados.</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-border text-left text-muted-foreground">
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">Fecha</th>
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">Tipo</th>
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">Cantidad</th>
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">Stock resultante</th>
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">OT</th>
+                                  <th className="py-1.5 pr-4 font-medium">Notas</th>
+                                  <th className="whitespace-nowrap py-1.5 pr-4 font-medium">Usuario</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((mov) => (
+                                  <tr key={mov.id} className="border-b border-border/60">
+                                    <td className="whitespace-nowrap py-1.5 pr-4">
+                                      {new Date(mov.createdAt).toLocaleDateString("es-AR")}
+                                    </td>
+                                    <td className="whitespace-nowrap py-1.5 pr-4">
+                                      <Badge variant={movimientoMaterialTipoBadgeVariant(mov.tipo)}>
+                                        {movimientoMaterialTipoLabel(mov.tipo)}
+                                      </Badge>
+                                    </td>
+                                    <td className="whitespace-nowrap py-1.5 pr-4 font-medium">
+                                      {mov.tipo === "SALIDA" ? "-" : "+"}
+                                      {mov.cantidad}
+                                    </td>
+                                    <td className="whitespace-nowrap py-1.5 pr-4">{mov.stockResultante}</td>
+                                    <td className="whitespace-nowrap py-1.5 pr-4">{mov.numeroOrden || "—"}</td>
+                                    <td className="py-1.5 pr-4 text-muted-foreground">{mov.notas || "—"}</td>
+                                    <td className="whitespace-nowrap py-1.5 pr-4 text-muted-foreground">
+                                      {mov.usuario || "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             );
           })}
         </TableBody>
@@ -343,6 +587,33 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
             itemId={editTarget.id}
             defaultValues={editTarget}
             onDone={() => setEditTarget(null)}
+          />
+        )}
+      </Dialog>
+
+      <Dialog
+        open={movimientoTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setMovimientoTarget(null);
+        }}
+        title={
+          movimientoTarget ? `${movimientoMaterialTipoLabel(movimientoTarget.tipo)} de material` : ""
+        }
+        className="max-w-md"
+      >
+        {movimientoTarget && (
+          <MovimientoForm
+            material={movimientoTarget.item}
+            tipo={movimientoTarget.tipo}
+            onDone={() => {
+              const id = movimientoTarget.item.id;
+              setMovimientoTarget(null);
+              setHistorial((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              });
+            }}
           />
         )}
       </Dialog>

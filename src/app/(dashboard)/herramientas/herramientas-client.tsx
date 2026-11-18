@@ -190,7 +190,7 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
     return items.filter((item) => {
       const matchSearch =
         !q ||
-        [item.codigo, item.nombre, item.ubicacion].some((field) =>
+        [item.codigo, item.nombre, item.descripcion, item.ubicacion].some((field) =>
           field?.toLowerCase().includes(q)
         );
       const matchEstado = filtroEstado === "todos" || item.estado === filtroEstado;
@@ -226,18 +226,27 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
               className="pl-9"
             />
           </div>
-          <Select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            className="sm:w-48"
-          >
-            <option value="todos">Todos los estados</option>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={filtroEstado === "todos" ? "default" : "outline"}
+              onClick={() => setFiltroEstado("todos")}
+            >
+              Todos
+            </Button>
             {HERRAMIENTA_ESTADOS.map((estado) => (
-              <option key={estado} value={estado}>
+              <Button
+                key={estado}
+                type="button"
+                size="sm"
+                variant={filtroEstado === estado ? "default" : "outline"}
+                onClick={() => setFiltroEstado(estado)}
+              >
                 {herramientaEstadoLabel(estado)}
-              </option>
+              </Button>
             ))}
-          </Select>
+          </div>
         </div>
         <Button onClick={() => setCreatingOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -249,8 +258,10 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
         <TableHeader>
           <TableRow>
             <TableHead className="whitespace-nowrap">Código</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead className="whitespace-nowrap">Cantidad</TableHead>
+            <TableHead className="whitespace-nowrap">Nombre</TableHead>
+            <TableHead>Descripción</TableHead>
+            <TableHead className="whitespace-nowrap">Total</TableHead>
+            <TableHead className="whitespace-nowrap">Disponible</TableHead>
             <TableHead className="whitespace-nowrap">Estado</TableHead>
             <TableHead className="whitespace-nowrap">Ubicación</TableHead>
             <TableHead className="whitespace-nowrap text-right">Acciones</TableHead>
@@ -259,7 +270,7 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 {items.length === 0
                   ? "Todavía no hay herramientas cargadas."
                   : "No se encontró ninguna herramienta con esa búsqueda."}
@@ -271,12 +282,14 @@ export function HerramientasClient({ items }: { items: HerramientaItem[] }) {
             return (
               <TableRow key={item.id}>
                 <TableCell className="whitespace-nowrap font-medium">{item.codigo}</TableCell>
-                <TableCell className="max-w-[260px] truncate">{item.nombre}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{item.nombre}</TableCell>
+                <TableCell className="max-w-[220px] truncate text-muted-foreground">
+                  {item.descripcion || "—"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-center">{item.cantidadTotal}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <span>
-                      {item.cantidadDisponible} / {item.cantidadTotal}
-                    </span>
+                    <span>{item.cantidadDisponible}</span>
                     {sinDisponibles && <Badge variant="warning">Sin stock libre</Badge>}
                   </div>
                 </TableCell>
