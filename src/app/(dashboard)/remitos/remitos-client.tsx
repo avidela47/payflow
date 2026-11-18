@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Plus, Printer, Search, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -488,10 +489,16 @@ export function RemitosClient({
 
             {viewTarget.notas && <p className="text-muted-foreground">{viewTarget.notas}</p>}
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setViewTarget(null)}>
                 Cerrar
               </Button>
+              <Link href={`/imprimir/remitos/${viewTarget.id}`} target="_blank">
+                <Button type="button">
+                  <Printer className="h-4 w-4" />
+                  Imprimir
+                </Button>
+              </Link>
             </div>
           </div>
         )}
