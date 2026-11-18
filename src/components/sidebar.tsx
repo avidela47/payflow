@@ -29,6 +29,7 @@ import {
   Lightbulb,
   Wrench,
   Package,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,20 @@ const navItems: NavItem[] = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "materiales",
     section: "STOCK",
+  },
+  // Fase 4 de la fusión con Gestión de Luminarias: documentos de venta de
+  // planta (Presupuesto → Orden de Trabajo → Remito → Despacho → Recibo).
+  // Sección nueva porque es un circuito propio de planta, separado de
+  // Ventas/Compras (que siguen siendo el registro contable de siempre
+  // para la contadora, sin tocar). Más módulos de este bloque se suman acá
+  // a medida que se construyen.
+  {
+    href: "/presupuestos",
+    label: "Presupuestos",
+    icon: FileText,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "presupuestos",
+    section: "COMERCIAL PLANTA",
   },
 ];
 

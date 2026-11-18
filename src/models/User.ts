@@ -18,6 +18,7 @@ export const RESTRICTABLE_MODULES = [
   "luminarias",
   "herramientas",
   "materiales",
+  "presupuestos",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 
