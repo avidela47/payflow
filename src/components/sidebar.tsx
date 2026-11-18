@@ -27,6 +27,8 @@ import {
   CreditCard,
   Zap,
   Lightbulb,
+  Wrench,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -156,6 +158,22 @@ const navItems: NavItem[] = [
     icon: Lightbulb,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "luminarias",
+    section: "STOCK",
+  },
+  {
+    href: "/herramientas",
+    label: "Herramientas",
+    icon: Wrench,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "herramientas",
+    section: "STOCK",
+  },
+  {
+    href: "/materiales",
+    label: "Materiales de Obra",
+    icon: Package,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "materiales",
     section: "STOCK",
   },
 ];
