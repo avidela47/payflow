@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -200,6 +201,14 @@ const navItems: NavItem[] = [
     icon: ClipboardList,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "remitos",
+    section: "COMERCIAL PLANTA",
+  },
+  {
+    href: "/despachos",
+    label: "Despachos",
+    icon: Send,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "despachos",
     section: "COMERCIAL PLANTA",
   },
 ];

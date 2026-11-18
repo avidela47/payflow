@@ -6,7 +6,10 @@ import { COMPANY } from "@/lib/company";
 import { PrintButton } from "@/components/print-button";
 
 // Igual criterio que /imprimir/presupuestos/[id] y /imprimir/reportes/*:
-// fuera de (dashboard), sin sidebar, encabezado de ITELSA (COMPANY).
+// fuera de (dashboard), sin sidebar, encabezado de ITELSA (COMPANY). Los
+// renglones de firma ("Firma recepción" / "Firma ITELSA") se corrigieron
+// para igualar los de la vista de impresión real de Despacho en el
+// original — la primera versión los había inventado sin confirmar.
 export default async function ImprimirRemitoPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session?.user) {
@@ -95,8 +98,8 @@ export default async function ImprimirRemitoPage({ params }: { params: { id: str
       )}
 
       <section className="mt-12 grid grid-cols-2 gap-8 text-xs text-gray-600">
-        <div className="border-t border-gray-400 pt-2 text-center">Firma entrega</div>
-        <div className="border-t border-gray-400 pt-2 text-center">Firma recibí conforme</div>
+        <div className="border-t border-gray-400 pt-2 text-center">Firma recepción</div>
+        <div className="border-t border-gray-400 pt-2 text-center">Firma ITELSA</div>
       </section>
     </div>
   );
