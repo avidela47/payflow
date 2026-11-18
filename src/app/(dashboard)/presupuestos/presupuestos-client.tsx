@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,7 +26,12 @@ import {
   presupuestoEstadoBadgeVariant,
   type PresupuestoEstado,
 } from "@/lib/presupuesto-estados";
-import { createPresupuesto, updatePresupuesto, deletePresupuesto } from "./actions";
+import {
+  createPresupuesto,
+  updatePresupuesto,
+  updatePresupuestoEstado,
+  deletePresupuesto,
+} from "./actions";
 
 function formatMoneda(value: number, moneda: string): string {
   const formatted = new Intl.NumberFormat("es-AR", {
@@ -465,21 +470,36 @@ export function PresupuestosClient({
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [creatingOpen, setCreatingOpen] = useState(false);
+  const [viewTarget, setViewTarget] = useState<PresupuestoItem | null>(null);
   const [editTarget, setEditTarget] = useState<PresupuestoItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PresupuestoItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((item) => {
-      const matchSearch =
-        !q || [item.numero, item.razonSocial, item.cuit].some((f) => f?.toLowerCase().includes(q));
-      const matchEstado = filtroEstado === "todos" || item.estado === filtroEstado;
-      return matchSearch && matchEstado;
+      if (!q) return true;
+      return [item.numero, item.razonSocial, item.cuit, presupuestoEstadoLabel(item.estado)].some(
+        (f) => f?.toLowerCase().includes(q)
+      );
     });
-  }, [items, search, filtroEstado]);
+  }, [items, search]);
+
+  async function cambiarEstado(item: PresupuestoItem, estado: PresupuestoEstado) {
+    setCambiandoEstadoId(item.id);
+    const result = await updatePresupuestoEstado(item.id, estado);
+    setCambiandoEstadoId(null);
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+
+    toast.success("Estado actualizado.");
+    router.refresh();
+  }
 
   async function performDelete(item: PresupuestoItem) {
     setDeletingId(item.id);
@@ -498,53 +518,29 @@ export function PresupuestosClient({
 
   return (
     <>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por número, cliente o CUIT..."
-              className="pl-9"
-            />
-          </div>
-          <Button onClick={() => setCreatingOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nuevo presupuesto
-          </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por número, cliente o estado..."
+            className="pl-9"
+          />
         </div>
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
-          <Button
-            type="button"
-            size="sm"
-            variant={filtroEstado === "todos" ? "default" : "outline"}
-            className="shrink-0"
-            onClick={() => setFiltroEstado("todos")}
-          >
-            Todos
-          </Button>
-          {PRESUPUESTO_ESTADOS.map((estado) => (
-            <Button
-              key={estado}
-              type="button"
-              size="sm"
-              variant={filtroEstado === estado ? "default" : "outline"}
-              className="shrink-0"
-              onClick={() => setFiltroEstado(estado)}
-            >
-              {presupuestoEstadoLabel(estado)}
-            </Button>
-          ))}
-        </div>
+        <Button onClick={() => setCreatingOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Nuevo presupuesto
+        </Button>
       </div>
 
       <Table compact>
         <TableHeader>
           <TableRow>
             <TableHead className="whitespace-nowrap">Número</TableHead>
-            <TableHead>Cliente</TableHead>
             <TableHead className="whitespace-nowrap">Fecha</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead className="whitespace-nowrap">Items</TableHead>
             <TableHead className="whitespace-nowrap">Total</TableHead>
             <TableHead className="whitespace-nowrap">Estado</TableHead>
             <TableHead className="whitespace-nowrap text-right">Acciones</TableHead>
@@ -553,7 +549,7 @@ export function PresupuestosClient({
         <TableBody>
           {filtered.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 {items.length === 0
                   ? "Todavía no hay presupuestos cargados."
                   : "No se encontró ningún presupuesto con esa búsqueda."}
@@ -563,35 +559,63 @@ export function PresupuestosClient({
           {filtered.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="whitespace-nowrap font-medium">{item.numero}</TableCell>
-              <TableCell className="max-w-[220px] truncate">{item.razonSocial}</TableCell>
               <TableCell className="whitespace-nowrap">
                 {new Date(item.fechaISO).toLocaleDateString("es-AR")}
+              </TableCell>
+              <TableCell className="max-w-[220px]">
+                <p className="truncate">{item.razonSocial}</p>
+                {item.condicionIva && (
+                  <p className="truncate text-xs text-muted-foreground">{item.condicionIva}</p>
+                )}
+              </TableCell>
+              <TableCell className="whitespace-nowrap text-muted-foreground">
+                {item.lineas.length} item{item.lineas.length === 1 ? "" : "s"}
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatMoneda(item.total, item.moneda)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                <Badge variant={presupuestoEstadoBadgeVariant(item.estado)}>
-                  {presupuestoEstadoLabel(item.estado)}
-                </Badge>
+                <Select
+                  className="h-8 py-0 text-xs"
+                  value={item.estado}
+                  disabled={cambiandoEstadoId === item.id}
+                  onChange={(e) => cambiarEstado(item, e.target.value as PresupuestoEstado)}
+                >
+                  {PRESUPUESTO_ESTADOS.map((estado) => (
+                    <option key={estado} value={estado}>
+                      {presupuestoEstadoLabel(estado)}
+                    </option>
+                  ))}
+                </Select>
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-muted-foreground hover:bg-muted"
+                    title="Ver"
+                    onClick={() => setViewTarget(item)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-primary hover:bg-primary/10"
+                    title="Editar"
                     onClick={() => setEditTarget(item)}
                   >
-                    Editar
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10"
+                    title="Borrar"
                     onClick={() => setDeleteTarget(item)}
                   >
-                    Borrar
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </TableCell>
@@ -599,6 +623,96 @@ export function PresupuestosClient({
           ))}
         </TableBody>
       </Table>
+
+      <Dialog
+        open={viewTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewTarget(null);
+        }}
+        title={viewTarget ? `Presupuesto ${viewTarget.numero}` : ""}
+        className="max-w-2xl"
+      >
+        {viewTarget && (
+          <div className="flex flex-col gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Cliente
+                </p>
+                <p className="font-medium">{viewTarget.razonSocial}</p>
+                {viewTarget.cuit && <p className="text-muted-foreground">CUIT {viewTarget.cuit}</p>}
+                {viewTarget.direccion && (
+                  <p className="text-muted-foreground">
+                    {viewTarget.direccion}
+                    {viewTarget.localidad ? `, ${viewTarget.localidad}` : ""}
+                  </p>
+                )}
+                {viewTarget.condicionIva && (
+                  <p className="text-muted-foreground">{viewTarget.condicionIva}</p>
+                )}
+              </div>
+              <div className="sm:text-right">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Presupuesto
+                </p>
+                <p className="font-medium">{viewTarget.numero}</p>
+                <p className="text-muted-foreground">
+                  {new Date(viewTarget.fechaISO).toLocaleDateString("es-AR")} — validez{" "}
+                  {viewTarget.validezDias} días
+                </p>
+                <Badge variant={presupuestoEstadoBadgeVariant(viewTarget.estado)}>
+                  {presupuestoEstadoLabel(viewTarget.estado)}
+                </Badge>
+              </div>
+            </div>
+
+            <Table compact>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Código</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="whitespace-nowrap text-right">Cant.</TableHead>
+                  <TableHead className="whitespace-nowrap text-right">P. unit.</TableHead>
+                  <TableHead className="whitespace-nowrap text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {viewTarget.lineas.map((l, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="whitespace-nowrap">{l.codigo || "—"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{l.descripcion}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">{l.cantidad}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatMoneda(l.precioUnitario, viewTarget.moneda)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatMoneda(l.precioTotal, viewTarget.moneda)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <div className="flex flex-col items-end gap-1 text-sm">
+              <p>Subtotal: {formatMoneda(viewTarget.subtotal, viewTarget.moneda)}</p>
+              <p>IVA: {formatMoneda(viewTarget.iva, viewTarget.moneda)}</p>
+              <p className="text-base font-semibold text-primary">
+                Total: {formatMoneda(viewTarget.total, viewTarget.moneda)}
+              </p>
+            </div>
+
+            {viewTarget.comentario && (
+              <p className="text-muted-foreground">{viewTarget.comentario}</p>
+            )}
+
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setViewTarget(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
 
       <Dialog
         open={creatingOpen}

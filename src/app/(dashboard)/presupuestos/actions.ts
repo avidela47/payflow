@@ -182,6 +182,36 @@ export async function updatePresupuesto(id: string, formData: FormData) {
   return { ok: true };
 }
 
+// Cambio rápido de estado desde el desplegable de la fila en la lista —
+// igual que el original, que no obliga a abrir el formulario completo
+// para pasar un presupuesto de Borrador a Aprobado.
+export async function updatePresupuestoEstado(id: string, estado: string) {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  const parsedEstado = z.enum(PRESUPUESTO_ESTADOS).safeParse(estado);
+  if (!parsedEstado.success) {
+    return { ok: false, error: "Estado inválido." };
+  }
+
+  try {
+    await connectDB();
+    const item = await Presupuesto.findByIdAndUpdate(id, { estado: parsedEstado.data });
+    if (!item) {
+      return { ok: false, error: "El presupuesto ya no existe." };
+    }
+  } catch (err) {
+    console.error("updatePresupuestoEstado error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo actualizar el estado: ${message}` };
+  }
+
+  revalidatePath("/presupuestos");
+  return { ok: true };
+}
+
 export async function deletePresupuesto(id: string) {
   const session = await getSession();
   if (!session?.user) {
