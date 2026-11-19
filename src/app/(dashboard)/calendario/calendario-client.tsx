@@ -137,6 +137,12 @@ const COLOR_STYLES: Record<NoteColor, { chip: string; block: string; swatch: str
     swatch: "bg-orange-400",
     ring: "ring-orange-500",
   },
+  red: {
+    chip: "bg-red-100 text-red-800 border border-red-300",
+    block: "bg-red-200 border-l-4 border-red-500 text-red-900",
+    swatch: "bg-red-500",
+    ring: "ring-red-500",
+  },
 };
 
 const HOUR_HEIGHT = 48; // px por hora, en la vista semana/día

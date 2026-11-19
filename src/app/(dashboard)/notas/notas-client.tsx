@@ -55,6 +55,11 @@ const COLOR_STYLES: Record<NoteColor, { card: string; swatch: string; ring: stri
     swatch: "bg-orange-300",
     ring: "ring-orange-500",
   },
+  red: {
+    card: "bg-red-100 border-red-300",
+    swatch: "bg-red-400",
+    ring: "ring-red-500",
+  },
 };
 
 function ColorPicker({
