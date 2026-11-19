@@ -36,8 +36,10 @@ import {
   Banknote,
   ClipboardList,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, formatPeriod, cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { MaskedAmount } from "@/components/masked-amount";
 import {
   DashboardCharts,
@@ -633,7 +635,25 @@ export default async function DashboardPage() {
             Hola{displayName ? `, ${displayName}` : ""}
           </h1>
         </div>
-        <p className="text-sm text-muted-foreground">{formatFullDate(now)}</p>
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-sm text-muted-foreground">{formatFullDate(now)}</p>
+          {/* Accesos directos pedidos por Ariel (2026-11-19): links externos
+              rápidos a la web de ITELSA y a Xubio, debajo de la fecha. */}
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href="https://itelsasas.com" target="_blank" rel="noopener noreferrer">
+                Itelsa Web
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href="https://xubio.com/ar/" target="_blank" rel="noopener noreferrer">
+                Xubio
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div>
