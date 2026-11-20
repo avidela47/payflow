@@ -34,6 +34,7 @@ import {
   ChevronRight,
   ClipboardList,
   Send,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -209,6 +210,14 @@ const navItems: NavItem[] = [
     icon: Send,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "despachos",
+    section: "COMERCIAL PLANTA",
+  },
+  {
+    href: "/recibos",
+    label: "Recibos",
+    icon: HandCoins,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "recibos",
     section: "COMERCIAL PLANTA",
   },
 ];

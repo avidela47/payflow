@@ -21,6 +21,7 @@ export const RESTRICTABLE_MODULES = [
   "presupuestos",
   "remitos",
   "despachos",
+  "recibos",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 
