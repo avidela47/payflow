@@ -36,8 +36,12 @@ export default async function RecibosPage() {
     saldoUsd: item.saldoUsd,
     estado: item.estado,
     notas: item.notas,
-    pagos: item.pagos.map((p) => ({
-      id: p._id.toString(),
+    // Los pagos migrados desde Gestión de Luminarias se insertaron por
+    // fuera de Mongoose (script directo a la colección), así que esos
+    // subdocumentos no tienen _id propio — sin este respaldo, p._id.
+    // toString() revienta toda la página en cuanto aparece el primero.
+    pagos: item.pagos.map((p, i) => ({
+      id: p._id ? p._id.toString() : `${item._id.toString()}-pago-${i}`,
       fechaISO: p.fecha.toISOString().slice(0, 10),
       montoUsd: p.montoUsd,
       tipoCambio: p.tipoCambio,
