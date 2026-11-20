@@ -37,6 +37,7 @@ export default async function DespachosPage() {
       descripcion: i.descripcion,
       origen: i.origen,
       cantidad: i.cantidad,
+      fueraDeCatalogo: i.fueraDeCatalogo,
     })),
     observaciones: item.observaciones,
     estado: item.estado,

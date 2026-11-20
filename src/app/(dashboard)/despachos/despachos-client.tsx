@@ -34,6 +34,9 @@ export type ItemDespachoForm = {
   origen: LuminariaOrigen;
   cantidad: number;
   precioUnitario?: number;
+  // Se fabrica/consigue en el momento — no está en el catálogo de
+  // Luminaria. No participa del control de stock al confirmar/anular.
+  fueraDeCatalogo?: boolean;
 };
 
 export type DespachoItem = {
@@ -95,6 +98,11 @@ function DespachoForm({
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
   const [items, setItems] = useState<ItemDespachoForm[]>([]);
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
+  const [manualAbierto, setManualAbierto] = useState(false);
+  const [manualCodigo, setManualCodigo] = useState("");
+  const [manualDescripcion, setManualDescripcion] = useState("");
+  const [manualOrigen, setManualOrigen] = useState<LuminariaOrigen>("FABRICADA");
+  const [manualCantidad, setManualCantidad] = useState(1);
 
   // Los presupuestos migrados desde Gestión de Luminarias no tienen
   // clientId (los Clientes de esa app se descartaron, ver planificacion/
@@ -161,6 +169,30 @@ function DespachoForm({
       },
     ]);
     setBusquedaCatalogo("");
+  }
+
+  // Ítem que se fabrica/consigue en el momento (no está en el catálogo de
+  // Luminaria) — Ariel, 2026-11-20: "a veces son productos que se hacen
+  // en el momento". No participa del control de stock.
+  function agregarFueraDeCatalogo() {
+    if (!manualCodigo.trim() || !manualDescripcion.trim()) {
+      toast.error("Completá código y descripción del ítem.");
+      return;
+    }
+    setItems((prev) => [
+      ...prev,
+      {
+        codigo: manualCodigo.trim().toUpperCase(),
+        descripcion: manualDescripcion.trim(),
+        origen: manualOrigen,
+        cantidad: manualCantidad,
+        fueraDeCatalogo: true,
+      },
+    ]);
+    setManualCodigo("");
+    setManualDescripcion("");
+    setManualCantidad(1);
+    setManualAbierto(false);
   }
 
   const catalogoFiltrado = useMemo(() => {
@@ -267,6 +299,54 @@ function DespachoForm({
           )}
         </div>
 
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            onClick={() => setManualAbierto((v) => !v)}
+          >
+            {manualAbierto ? "Cancelar ítem fuera de catálogo" : "+ Agregar ítem fuera de catálogo (hecho en el momento)"}
+          </Button>
+          {manualAbierto && (
+            <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-dashed border-border p-3 sm:grid-cols-12">
+              <Input
+                className="sm:col-span-3"
+                placeholder="Código"
+                value={manualCodigo}
+                onChange={(e) => setManualCodigo(e.target.value)}
+              />
+              <Input
+                className="sm:col-span-4"
+                placeholder="Descripción"
+                value={manualDescripcion}
+                onChange={(e) => setManualDescripcion(e.target.value)}
+              />
+              <Select
+                className="h-8 py-0 text-xs sm:col-span-3"
+                value={manualOrigen}
+                onChange={(e) => setManualOrigen(e.target.value as LuminariaOrigen)}
+              >
+                <option value="FABRICADA">Fabricada</option>
+                <option value="NACIONAL">Nacional</option>
+                <option value="IMPORTADA">Importada</option>
+              </Select>
+              <Input
+                className="sm:col-span-1"
+                type="number"
+                min={1}
+                step={1}
+                value={manualCantidad}
+                onChange={(e) => setManualCantidad(Number(e.target.value))}
+              />
+              <Button type="button" size="sm" className="sm:col-span-1" onClick={agregarFueraDeCatalogo}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+
         {items.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
             Seleccioná un presupuesto aprobado o buscá luminarias arriba para agregarlas.
@@ -279,7 +359,14 @@ function DespachoForm({
                 className="grid grid-cols-2 items-center gap-2 border-b border-border/60 pb-2 last:border-0 last:pb-0 sm:grid-cols-12"
               >
                 <div className="sm:col-span-6">
-                  <p className="text-sm font-medium">{item.codigo}</p>
+                  <p className="text-sm font-medium">
+                    {item.codigo}
+                    {item.fueraDeCatalogo && (
+                      <Badge variant="default" className="ml-2 align-middle text-[10px]">
+                        Fuera de catálogo
+                      </Badge>
+                    )}
+                  </p>
                   <p className="truncate text-xs text-muted-foreground">{item.descripcion}</p>
                 </div>
                 <Select
@@ -533,7 +620,13 @@ export function DespachosClient({
                     <TableCell className="whitespace-nowrap">{item.codigo}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{item.descripcion}</TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                      {luminariaOrigenLabel(item.origen)}
+                      {item.fueraDeCatalogo ? (
+                        <Badge variant="default" className="text-[10px]">
+                          Fuera de catálogo
+                        </Badge>
+                      ) : (
+                        luminariaOrigenLabel(item.origen)
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right">{item.cantidad}</TableCell>
                   </TableRow>

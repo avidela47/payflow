@@ -238,9 +238,10 @@ export async function updateRecibo(id: string, formData: FormData) {
   return { ok: true };
 }
 
-// Borrar: sin restricción, igual que el original (que no bloquea borrar
-// un recibo aunque ya tenga pagos registrados). Queda como punto a
-// revisar con Ariel — ver nota en el mensaje de entrega.
+// Borrar: bloqueado si ya tiene pagos registrados (decisión de Ariel,
+// 2026-11-20: "que quede el historial") — a diferencia del original, que
+// no tenía esta restricción. Un recibo sin cobros todavía se puede borrar
+// sin restricción, igual que antes.
 export async function deleteRecibo(id: string) {
   const session = await getSession();
   if (!session?.user) {
@@ -249,6 +250,16 @@ export async function deleteRecibo(id: string) {
 
   try {
     await connectDB();
+    const recibo = await Recibo.findById(id);
+    if (!recibo) {
+      return { ok: false, error: "El recibo ya no existe." };
+    }
+    if (recibo.pagos.length > 0) {
+      return {
+        ok: false,
+        error: "No se puede borrar un recibo con pagos registrados — queda como historial.",
+      };
+    }
     await Recibo.findByIdAndDelete(id);
   } catch (err) {
     console.error("deleteRecibo error:", err);

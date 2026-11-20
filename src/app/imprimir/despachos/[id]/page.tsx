@@ -84,7 +84,7 @@ export default async function ImprimirDespachoPage({ params }: { params: { id: s
                 <td className="p-2">{item.codigo}</td>
                 <td className="p-2">{item.descripcion}</td>
                 <td className="p-2 text-center text-xs text-gray-600">
-                  {luminariaOrigenLabel(item.origen)}
+                  {item.fueraDeCatalogo ? "Fuera de catálogo" : luminariaOrigenLabel(item.origen)}
                 </td>
                 <td className="p-2 text-right">{item.cantidad}</td>
               </tr>

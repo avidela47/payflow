@@ -506,15 +506,17 @@ export function RecibosClient({
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
-                    title="Borrar"
-                    onClick={() => setDeleteTarget(item)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {item.pagos.length === 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10"
+                      title="Borrar"
+                      onClick={() => setDeleteTarget(item)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>
@@ -774,15 +776,8 @@ export function RecibosClient({
             <p className="text-sm text-muted-foreground">
               ¿Seguro que querés borrar el recibo{" "}
               <span className="font-medium text-foreground">{deleteTarget.numero}</span> de{" "}
-              {deleteTarget.razonSocial}
-              {deleteTarget.totalPagadoUsd > 0 && (
-                <>
-                  {" "}
-                  — tiene <span className="font-medium text-foreground">U$S {money(deleteTarget.totalPagadoUsd)}</span>{" "}
-                  ya cobrados
-                </>
-              )}
-              ? No se puede deshacer.
+              {deleteTarget.razonSocial}? No se puede deshacer. (Un recibo con pagos registrados no se puede
+              borrar — queda como historial.)
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>

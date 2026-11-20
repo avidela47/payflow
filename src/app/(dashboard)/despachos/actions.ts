@@ -26,6 +26,7 @@ const itemSchema = z.object({
   origen: z.enum(LUMINARIA_ORIGENES),
   cantidad: z.coerce.number().positive("La cantidad debe ser mayor a 0."),
   precioUnitario: z.coerce.number().optional(),
+  fueraDeCatalogo: z.coerce.boolean().optional(),
 });
 
 const despachoSchema = z.object({
@@ -104,8 +105,12 @@ export async function confirmarDespacho(id: string) {
       return { ok: false, error: "El despacho ya fue procesado." };
     }
 
+    // Los ítems "fuera de catálogo" (se fabrican/consiguen en el momento,
+    // no son stock de Luminaria) no entran en el control de stock — ni
+    // bloquean la confirmación ni descuentan nada.
     const faltantes: string[] = [];
     for (const item of despacho.items) {
+      if (item.fueraDeCatalogo) continue;
       const lum = await Luminaria.findOne({ codigo: item.codigo, origen: item.origen });
       if (!lum || lum.stockActual < item.cantidad) {
         faltantes.push(
@@ -118,6 +123,7 @@ export async function confirmarDespacho(id: string) {
     }
 
     for (const item of despacho.items) {
+      if (item.fueraDeCatalogo) continue;
       await Luminaria.findOneAndUpdate(
         { codigo: item.codigo, origen: item.origen },
         { $inc: { stockActual: -item.cantidad } }
@@ -158,6 +164,7 @@ export async function anularDespacho(id: string) {
     }
 
     for (const item of despacho.items) {
+      if (item.fueraDeCatalogo) continue;
       await Luminaria.findOneAndUpdate(
         { codigo: item.codigo, origen: item.origen },
         { $inc: { stockActual: item.cantidad } }

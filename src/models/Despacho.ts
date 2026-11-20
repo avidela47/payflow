@@ -25,6 +25,13 @@ export interface IItemDespacho {
   origen: LuminariaOrigen;
   cantidad: number;
   precioUnitario?: number;
+  // Ariel (2026-11-20): a veces se despacha algo que se hizo "en el
+  // momento" — no está en el catálogo de Luminaria (fue el caso real de
+  // CHAP-E en DESP-2026-0005, migrado antes de que existiera esta
+  // bandera). Un ítem con fueraDeCatalogo=true no participa del control
+  // de stock: confirmarDespacho/anularDespacho lo saltan por completo
+  // (ni bloquea por "stock insuficiente" ni mueve nada de Luminaria).
+  fueraDeCatalogo?: boolean;
 }
 
 export interface IDespacho {
@@ -48,6 +55,7 @@ const ItemDespachoSchema = new Schema<IItemDespacho>(
     origen: { type: String, required: true, enum: LUMINARIA_ORIGENES },
     cantidad: { type: Number, required: true, min: 1 },
     precioUnitario: { type: Number, default: 0 },
+    fueraDeCatalogo: { type: Boolean, default: false },
   },
   { _id: false }
 );
