@@ -35,6 +35,7 @@ import {
   ClipboardList,
   Send,
   HandCoins,
+  Puzzle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -180,6 +181,19 @@ const navItems: NavItem[] = [
     icon: Package,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "materiales",
+    section: "STOCK",
+  },
+  // Primer módulo de la Fase 5 (Producción). Entra en la misma sección
+  // STOCK y no en una nueva: son piezas de planta igual que Sensores/
+  // Luminarias/Materiales, con historial de movimientos embebido en el
+  // propio módulo (igual patrón que Materiales de Obra) en vez de una
+  // pantalla global aparte como tenía el original.
+  {
+    href: "/componentes",
+    label: "Componentes",
+    icon: Puzzle,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "componentes",
     section: "STOCK",
   },
   // Fase 4 de la fusión con Gestión de Luminarias: documentos de venta de
