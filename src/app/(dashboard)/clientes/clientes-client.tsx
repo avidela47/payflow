@@ -358,10 +358,17 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
               <TableCell className="text-muted-foreground">{client.cuit ?? "—"}</TableCell>
               <TableCell className="text-muted-foreground">{client.localidad ?? "—"}</TableCell>
               <TableCell className="text-muted-foreground">{client.telefono ?? "—"}</TableCell>
-              <TableCell className="text-muted-foreground">{client.email ?? "—"}</TableCell>
+              <TableCell className="max-w-[160px] truncate text-muted-foreground" title={client.email ?? undefined}>
+                {client.email ?? "—"}
+              </TableCell>
               <TableCell>
                 {client.condicionIva ? (
-                  <Badge variant={ivaBadgeVariant(client.condicionIva)}>{client.condicionIva}</Badge>
+                  <Badge
+                    variant={ivaBadgeVariant(client.condicionIva)}
+                    className="whitespace-nowrap px-2 py-0.5 text-[10px]"
+                  >
+                    {client.condicionIva}
+                  </Badge>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
