@@ -19,6 +19,7 @@ export const RESTRICTABLE_MODULES = [
   "herramientas",
   "materiales",
   "componentes",
+  "movimientos-componentes",
   "presupuestos",
   "remitos",
   "despachos",

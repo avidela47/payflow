@@ -36,6 +36,7 @@ import {
   Send,
   HandCoins,
   Puzzle,
+  ArrowLeftRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -144,6 +145,31 @@ const navItems: NavItem[] = [
     // Única excepción al acento único: post-it amarillo a propósito.
     special: "bg-yellow-100 text-yellow-700",
   },
+  // Fase 5 de la fusión (Producción): sección nueva, separada de STOCK.
+  // Primero Componentes y su historial de Movimientos; más adelante se
+  // suman acá Recetas/BOM, Fabricar, Proyectos de Fábrica y Órdenes de
+  // Trabajo (ver planificacion/fusion-gestion-luminarias.md). Corregido
+  // 2026-11-22: al principio Componentes había entrado en STOCK con los
+  // movimientos embebidos adentro de la tabla — Ariel lo comparó contra la
+  // pantalla real de Sistema de Fábrica (que tiene Componentes y
+  // Movimientos como dos pantallas separadas, en su propia sección
+  // "Producción") y se corrigió para igualar eso.
+  {
+    href: "/componentes",
+    label: "Componentes",
+    icon: Puzzle,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "componentes",
+    section: "PRODUCCIÓN",
+  },
+  {
+    href: "/movimientos-componentes",
+    label: "Movimientos",
+    icon: ArrowLeftRight,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "movimientos-componentes",
+    section: "PRODUCCIÓN",
+  },
   // Primer módulo de la fusión con "Gestión de Luminarias" (ver
   // planificacion/fusion-gestion-luminarias.md en el proyecto). Es el
   // arranque de una sección nueva de planta — por eso lleva "section":
@@ -181,19 +207,6 @@ const navItems: NavItem[] = [
     icon: Package,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "materiales",
-    section: "STOCK",
-  },
-  // Primer módulo de la Fase 5 (Producción). Entra en la misma sección
-  // STOCK y no en una nueva: son piezas de planta igual que Sensores/
-  // Luminarias/Materiales, con historial de movimientos embebido en el
-  // propio módulo (igual patrón que Materiales de Obra) en vez de una
-  // pantalla global aparte como tenía el original.
-  {
-    href: "/componentes",
-    label: "Componentes",
-    icon: Puzzle,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "componentes",
     section: "STOCK",
   },
   // Fase 4 de la fusión con Gestión de Luminarias: documentos de venta de

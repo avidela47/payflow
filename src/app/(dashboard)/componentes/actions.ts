@@ -172,6 +172,11 @@ export async function updateComponente(id: string, formData: FormData) {
   return { ok: true };
 }
 
+// Borrar: bloqueado si el Componente ya tiene movimientos registrados
+// (decisión de Ariel, 2026-11-22, mismo criterio que Recibos con pagos) —
+// a diferencia del original, que nunca borraba de verdad (ocultaba con un
+// flag "activo", sin forma de verlo ni recuperarlo desde la pantalla). Un
+// Componente sin historial todavía se puede borrar libre.
 export async function deleteComponente(id: string) {
   const session = await getSession();
   if (!session?.user) {
@@ -180,6 +185,14 @@ export async function deleteComponente(id: string) {
 
   try {
     await connectDB();
+    const tieneMovimientos = await MovimientoComponente.countDocuments({ componenteId: id });
+    if (tieneMovimientos > 0) {
+      return {
+        ok: false,
+        error: "No se puede borrar un componente con movimientos registrados — queda como historial.",
+      };
+    }
+
     const existing = await Componente.findById(id).select("foto").lean();
     await Componente.findByIdAndDelete(id);
     if (existing?.foto) {
@@ -264,33 +277,5 @@ export async function registrarMovimientoComponente(componenteId: string, formDa
   return { ok: true };
 }
 
-export async function getMovimientosComponente(componenteId: string) {
-  const session = await getSession();
-  if (!session?.user) {
-    return { ok: false as const, error: "No autenticado." };
-  }
-
-  try {
-    await connectDB();
-    const movimientos = await MovimientoComponente.find({ componenteId })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return {
-      ok: true as const,
-      data: movimientos.map((m) => ({
-        id: m._id.toString(),
-        tipo: m.tipo,
-        cantidad: m.cantidad,
-        stockResultante: m.stockResultante,
-        referencia: m.referencia,
-        notas: m.notas,
-        usuario: m.usuario,
-        createdAt: m.createdAt.toISOString(),
-      })),
-    };
-  } catch (err) {
-    console.error("getMovimientosComponente error:", err);
-    return { ok: false as const, error: "No se pudo obtener el historial." };
-  }
-}
+// getMovimientosComponente se movió a /movimientos-componentes (pantalla
+// global del historial, ver page.tsx de ese módulo) — ya no hace falta acá.
