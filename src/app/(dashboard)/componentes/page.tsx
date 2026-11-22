@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { requireModuleAccess } from "@/lib/auth";
 import { Componente } from "@/models/Componente";
 import { MovimientoComponente } from "@/models/MovimientoComponente";
+import { Receta } from "@/models/Receta";
 import { ComponentesClient, type ComponenteItem } from "./componentes-client";
 
 export default async function ComponentesPage() {
@@ -10,10 +11,14 @@ export default async function ComponentesPage() {
 
   const items = await Componente.find({}).sort({ codigo: 1 }).lean();
 
-  // Para saber qué componentes tienen historial y ocultarles el botón de
-  // borrar (ver actions.ts, deleteComponente) sin una consulta por fila.
+  // Para saber qué componentes tienen historial o están usados en una
+  // Receta, y deshabilitarles el botón de borrar (ver actions.ts,
+  // deleteComponente) sin una consulta por fila.
   const idsConMovimientos = new Set(
     (await MovimientoComponente.distinct("componenteId")).map((id) => id.toString())
+  );
+  const idsEnReceta = new Set(
+    (await Receta.distinct("componentes.componenteId")).map((id) => id.toString())
   );
 
   const componenteItems: ComponenteItem[] = items.map((item) => ({
@@ -29,6 +34,7 @@ export default async function ComponentesPage() {
     notas: item.notas,
     foto: item.foto,
     tieneMovimientos: idsConMovimientos.has(item._id.toString()),
+    enReceta: idsEnReceta.has(item._id.toString()),
   }));
 
   return (

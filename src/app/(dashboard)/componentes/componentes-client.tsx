@@ -50,6 +50,7 @@ export type ComponenteItem = {
   notas?: string;
   foto?: string;
   tieneMovimientos?: boolean;
+  enReceta?: boolean;
 };
 
 // ---------- formulario de crear/editar (contenido del Dialog) ----------
@@ -374,11 +375,13 @@ export function ComponentesClient({ items }: { items: ComponenteItem[] }) {
                     <Button
                       size="sm"
                       variant="delete"
-                      disabled={item.tieneMovimientos}
+                      disabled={item.tieneMovimientos || item.enReceta}
                       title={
                         item.tieneMovimientos
                           ? "No se puede borrar: tiene movimientos registrados — queda como historial."
-                          : undefined
+                          : item.enReceta
+                            ? "No se puede borrar: está usado en una o más Recetas."
+                            : undefined
                       }
                       onClick={() => setDeleteTarget(item)}
                     >
@@ -433,7 +436,7 @@ export function ComponentesClient({ items }: { items: ComponenteItem[] }) {
               ¿Seguro que querés borrar{" "}
               <span className="font-medium text-foreground">{deleteTarget.descripcion}</span> (
               {deleteTarget.codigo})? No se puede deshacer. (Un componente con movimientos
-              registrados no se puede borrar — queda como historial.)
+              registrados o usado en una Receta no se puede borrar.)
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>

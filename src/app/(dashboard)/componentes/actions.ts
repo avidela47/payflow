@@ -9,6 +9,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Componente } from "@/models/Componente";
 import { MovimientoComponente } from "@/models/MovimientoComponente";
+import { Receta } from "@/models/Receta";
 import { COMPONENTE_UNIDADES } from "@/lib/componente-unidades";
 import {
   MOVIMIENTO_COMPONENTE_TIPOS_MANUALES,
@@ -177,6 +178,11 @@ export async function updateComponente(id: string, formData: FormData) {
 // a diferencia del original, que nunca borraba de verdad (ocultaba con un
 // flag "activo", sin forma de verlo ni recuperarlo desde la pantalla). Un
 // Componente sin historial todavía se puede borrar libre.
+//
+// 2026-11-22 (Recetas): también bloqueado si el Componente está usado en
+// alguna Receta — esto ya estaba anotado como pendiente en el comentario
+// de Componente.ts desde que se construyó ese módulo, antes de que
+// existiera Recetas.
 export async function deleteComponente(id: string) {
   const session = await getSession();
   if (!session?.user) {
@@ -190,6 +196,14 @@ export async function deleteComponente(id: string) {
       return {
         ok: false,
         error: "No se puede borrar un componente con movimientos registrados — queda como historial.",
+      };
+    }
+
+    const enReceta = await Receta.countDocuments({ "componentes.componenteId": id });
+    if (enReceta > 0) {
+      return {
+        ok: false,
+        error: "No se puede borrar un componente que está usado en una o más Recetas.",
       };
     }
 
