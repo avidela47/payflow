@@ -383,6 +383,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
                   <Button
                     size="sm"
                     variant="edit"
+                    className="h-6 px-2 text-[11px]"
                     onClick={() => setEditTarget(client)}
                   >
                     Editar
@@ -390,6 +391,7 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
                   <Button
                     size="sm"
                     variant="delete"
+                    className="h-6 px-2 text-[11px]"
                     onClick={() => setDeleteTarget(client)}
                   >
                     Borrar
