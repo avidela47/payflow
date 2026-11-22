@@ -13,6 +13,16 @@ const buttonVariants = cva(
           "border border-border bg-background hover:bg-muted text-foreground",
         ghost: "hover:bg-muted text-foreground",
         destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
+        // "Editar"/"Borrar" en pastilla verde/roja — pedido explícito de
+        // Ariel (2026-11-22) para que estos dos botones se vean siempre
+        // igual en TODA la app, mismo estilo que ya usaban los botones de
+        // movimiento (Compra/Ajuste) en Componentes.
+        edit: "border border-success text-success bg-transparent hover:bg-success/10",
+        delete: "border border-destructive text-destructive bg-transparent hover:bg-destructive/10",
+        // Misma pastilla que edit/delete pero en azul — para acciones que no
+        // son ni "editar" ni "borrar" (ej. Devolución en Materiales), sin
+        // forzarlas al binario verde/rojo donde no corresponde.
+        info: "border border-primary text-primary bg-transparent hover:bg-primary/10",
       },
       size: {
         default: "h-10 px-4 py-2",

@@ -439,8 +439,7 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
                     <div className="flex items-center gap-1.5">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-success text-success hover:bg-success/10"
+                        variant="edit"
                         onClick={() => setMovimientoTarget({ item, tipo: "ENTRADA" })}
                       >
                         <ArrowDownCircle className="h-3.5 w-3.5" />
@@ -448,8 +447,7 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-destructive text-destructive hover:bg-destructive/10"
+                        variant="delete"
                         onClick={() => setMovimientoTarget({ item, tipo: "SALIDA" })}
                       >
                         <ArrowUpCircle className="h-3.5 w-3.5" />
@@ -457,8 +455,7 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-primary text-primary hover:bg-primary/10"
+                        variant="info"
                         onClick={() => setMovimientoTarget({ item, tipo: "DEVOLUCION" })}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -483,16 +480,14 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="text-primary hover:bg-primary/10"
+                        variant="edit"
                         onClick={() => setEditTarget(item)}
                       >
                         Editar
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive/10"
+                        variant="delete"
                         onClick={() => setDeleteTarget(item)}
                       >
                         Borrar

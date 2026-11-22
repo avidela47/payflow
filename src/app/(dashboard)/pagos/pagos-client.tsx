@@ -497,9 +497,9 @@ function PaymentForm({
               />
               <Button
                 type="button"
-                variant="ghost"
+                variant="delete"
                 size="sm"
-                className="text-destructive hover:bg-destructive/10 sm:col-span-1"
+                className="sm:col-span-1"
                 onClick={() => removeCheckRow(i)}
                 disabled={checks.length === 1}
               >
@@ -672,9 +672,8 @@ export function PagosClient({
                 <TableCell className="text-right">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="delete"
                     size="sm"
-                    className="text-destructive hover:bg-destructive/10"
                     onClick={() => setDeleteTarget(payment)}
                   >
                     <Trash2 className="h-4 w-4" />

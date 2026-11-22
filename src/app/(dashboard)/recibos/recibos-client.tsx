@@ -128,8 +128,7 @@ function LineasEditor({
               <Button
                 type="button"
                 size="sm"
-                variant="ghost"
-                className="text-destructive hover:bg-destructive/10"
+                variant="delete"
                 disabled={lineas.length === 1}
                 onClick={() => quitar(i)}
               >
@@ -506,17 +505,19 @@ export function RecibosClient({
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
-                  {item.pagos.length === 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      title="Borrar"
-                      onClick={() => setDeleteTarget(item)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="delete"
+                    disabled={item.pagos.length > 0}
+                    title={
+                      item.pagos.length === 0
+                        ? "Borrar"
+                        : "No se puede borrar: tiene pagos registrados — queda como historial."
+                    }
+                    onClick={() => setDeleteTarget(item)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
@@ -633,7 +634,7 @@ export function RecibosClient({
                   Imprimir
                 </Button>
               </Link>
-              <Button variant="outline" onClick={() => abrirEditar(viewTarget)}>
+              <Button variant="edit" onClick={() => abrirEditar(viewTarget)}>
                 <Pencil className="h-4 w-4" />
                 Editar
               </Button>

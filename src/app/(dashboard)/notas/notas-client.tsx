@@ -215,16 +215,14 @@ export function NotasClient({ notes }: { notes: NoteItem[] }) {
                 <div className="mt-auto flex justify-end gap-1 pt-2">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-neutral-700 hover:bg-black/10"
+                    variant="edit"
                     onClick={() => setEditTarget(note)}
                   >
                     Editar
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => setDeleteTarget(note)}
                   >
                     Borrar
