@@ -520,16 +520,14 @@ export function ComprasClient({
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-primary hover:bg-primary/10"
+                      variant="edit"
                       onClick={() => openEdit(purchase)}
                     >
                       Editar
                     </Button>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
+                      variant="delete"
                       onClick={() => setConfirmTarget(purchase)}
                     >
                       Borrar

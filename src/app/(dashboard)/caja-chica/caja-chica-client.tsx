@@ -169,8 +169,7 @@ export function CajaChicaClient({
               <TableCell className="text-right">
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
+                  variant="delete"
                   onClick={() => setConfirmTarget(m)}
                 >
                   Borrar

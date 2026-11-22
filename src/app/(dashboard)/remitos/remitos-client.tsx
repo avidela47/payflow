@@ -263,8 +263,7 @@ function RemitoForm({
                   <Button
                     type="button"
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => quitarLinea(index)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -433,8 +432,7 @@ export function RemitosClient({
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     title="Borrar"
                     onClick={() => setDeleteTarget(item)}
                   >

@@ -155,16 +155,14 @@ export function EmployeesClient({ employees }: { employees: EmployeeListItem[] }
                 <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-primary hover:bg-primary/10"
+                    variant="edit"
                     onClick={() => setEditing(emp)}
                   >
                     Editar
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => setConfirmTarget(emp)}
                   >
                     Borrar

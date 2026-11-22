@@ -370,16 +370,14 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
                 <div className="flex justify-end gap-1">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-primary hover:bg-primary/10"
+                    variant="edit"
                     onClick={() => setEditTarget(client)}
                   >
                     Editar
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => setDeleteTarget(client)}
                   >
                     Borrar

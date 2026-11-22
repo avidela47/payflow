@@ -366,22 +366,24 @@ export function ComponentesClient({ items }: { items: ComponenteItem[] }) {
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-primary hover:bg-primary/10"
+                      variant="edit"
                       onClick={() => setEditTarget(item)}
                     >
                       Editar
                     </Button>
-                    {!item.tieneMovimientos && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteTarget(item)}
-                      >
-                        Borrar
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="delete"
+                      disabled={item.tieneMovimientos}
+                      title={
+                        item.tieneMovimientos
+                          ? "No se puede borrar: tiene movimientos registrados — queda como historial."
+                          : undefined
+                      }
+                      onClick={() => setDeleteTarget(item)}
+                    >
+                      Borrar
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

@@ -370,8 +370,7 @@ function PresupuestoForm({
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
+                  variant="delete"
                   onClick={() => quitarLinea(index)}
                   disabled={lineas.length <= 1}
                 >
@@ -602,8 +601,7 @@ export function PresupuestosClient({
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-primary hover:bg-primary/10"
+                    variant="edit"
                     title="Editar"
                     onClick={() => setEditTarget(item)}
                   >
@@ -611,8 +609,7 @@ export function PresupuestosClient({
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     title="Borrar"
                     onClick={() => setDeleteTarget(item)}
                   >

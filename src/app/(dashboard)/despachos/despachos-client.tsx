@@ -391,8 +391,7 @@ function DespachoForm({
                   <Button
                     type="button"
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => quitarItem(index)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -562,17 +561,19 @@ export function DespachosClient({
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
-                  {item.estado === "PENDIENTE" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      title="Borrar"
-                      onClick={() => setDeleteTarget(item)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="delete"
+                    disabled={item.estado !== "PENDIENTE"}
+                    title={
+                      item.estado === "PENDIENTE"
+                        ? "Borrar"
+                        : "No se puede borrar: un despacho confirmado se anula, no se borra."
+                    }
+                    onClick={() => setDeleteTarget(item)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>

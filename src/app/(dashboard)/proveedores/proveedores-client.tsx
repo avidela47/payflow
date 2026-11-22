@@ -380,16 +380,14 @@ export function ProvidersClient({ providers }: { providers: ProviderItem[] }) {
                 <div className="flex items-center justify-end gap-2">
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-primary hover:bg-primary/10"
+                    variant="edit"
                     onClick={() => setEditTarget(provider)}
                   >
                     Editar
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => setDeleteTarget(provider)}
                   >
                     Borrar

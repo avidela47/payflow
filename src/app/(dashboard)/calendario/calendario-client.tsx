@@ -690,8 +690,7 @@ export function CalendarClient({ events }: { events: CalendarEventItem[] }) {
           <div className="mt-2 border-t border-border pt-3 text-right">
             <Button
               type="button"
-              variant="ghost"
-              className="text-destructive hover:bg-destructive/10"
+              variant="delete"
               onClick={() => {
                 setDeleteTarget(formState.event);
                 setFormState(null);

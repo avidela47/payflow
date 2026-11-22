@@ -504,16 +504,14 @@ export function ViaticosClient({
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-primary hover:bg-primary/10"
+                      variant="edit"
                       onClick={() => openEdit(v)}
                     >
                       Editar
                     </Button>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
+                      variant="delete"
                       onClick={() => setConfirmTarget(v)}
                     >
                       Borrar
@@ -676,8 +674,7 @@ export function ViaticosClient({
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
+                  variant="delete"
                   onClick={() => setEmpleadosRows((rows) => rows.filter((r) => r._key !== row._key))}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -778,8 +775,7 @@ export function ViaticosClient({
                     <Button
                       type="button"
                       size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
+                      variant="delete"
                       onClick={() =>
                         setEmpleadosRows((rows) =>
                           rows.map((r) =>
@@ -869,8 +865,7 @@ export function ViaticosClient({
                   <Button
                     type="button"
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/10"
+                    variant="delete"
                     onClick={() => setTopesRows((rows) => rows.filter((r) => r._key !== row._key))}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -975,8 +970,7 @@ export function ViaticosClient({
                       <Button
                         type="button"
                         size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive/10"
+                        variant="delete"
                         onClick={() =>
                           setTopesRows((rows) =>
                             rows.map((r) =>
@@ -1137,8 +1131,7 @@ export function ViaticosClient({
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
+                  variant="delete"
                   onClick={() => setExtrasRows((rows) => rows.filter((r) => r._key !== row._key))}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -1218,8 +1211,7 @@ export function ViaticosClient({
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
+                  variant="delete"
                   onClick={() => setMaterialesRows((rows) => rows.filter((r) => r._key !== row._key))}
                 >
                   <Trash2 className="h-4 w-4" />
