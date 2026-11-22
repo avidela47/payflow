@@ -356,9 +356,14 @@ export function ClientsClient({ clients }: { clients: ClientItem[] }) {
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">{client.cuit ?? "—"}</TableCell>
-              <TableCell className="text-muted-foreground">{client.localidad ?? "—"}</TableCell>
+              <TableCell
+                className="max-w-[110px] truncate text-muted-foreground"
+                title={client.localidad ?? undefined}
+              >
+                {client.localidad ?? "—"}
+              </TableCell>
               <TableCell className="text-muted-foreground">{client.telefono ?? "—"}</TableCell>
-              <TableCell className="max-w-[160px] truncate text-muted-foreground" title={client.email ?? undefined}>
+              <TableCell className="max-w-[120px] truncate text-muted-foreground" title={client.email ?? undefined}>
                 {client.email ?? "—"}
               </TableCell>
               <TableCell>
