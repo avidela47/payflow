@@ -39,6 +39,8 @@ import {
   ListTree,
   ArrowLeftRight,
   Factory,
+  Radio,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -148,12 +150,11 @@ const navItems: NavItem[] = [
     special: "bg-yellow-100 text-yellow-700",
   },
   // Fase 5 de la fusión (Producción): sección nueva, separada de STOCK.
-  // Componentes, Recetas (BOM), Fabricar y el historial de Movimientos ya
-  // están; más adelante se suman acá Proyectos de Fábrica y Órdenes de
-  // Trabajo (ver planificacion/fusion-gestion-luminarias.md). El orden
-  // Componentes → Recetas → Fabricar → Movimientos sigue el mismo orden
-  // real del menú de Sistema de Fábrica (components/Sidebar.tsx del
-  // original). Corregido
+  // Completa con Componentes, Recetas (BOM), Fabricar, el historial de
+  // Movimientos y Proyectos Fábrica (ver planificacion/fusion-gestion-
+  // luminarias.md). El orden Componentes → Recetas → Fabricar →
+  // Movimientos sigue el mismo orden real del menú de Sistema de Fábrica
+  // (components/Sidebar.tsx del original). Corregido
   // 2026-11-22: al principio Componentes había entrado en STOCK con los
   // movimientos embebidos adentro de la tabla — Ariel lo comparó contra la
   // pantalla real de Sistema de Fábrica (que tiene Componentes y
@@ -189,6 +190,21 @@ const navItems: NavItem[] = [
     icon: ArrowLeftRight,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "movimientos-componentes",
+    section: "PRODUCCIÓN",
+  },
+  // Pantalla kiosco de taller (/fabrica-proyectos) — fuera del grupo de
+  // rutas (dashboard) a propósito (sin sidebar propia dentro de ella,
+  // ver fabrica-proyectos/page.tsx), pero el acceso desde el menú vive
+  // acá igual que en el original (un solo ítem de menú para esta
+  // pantalla; la administración de /proyectos se llega desde el botón
+  // "Gestionar proyectos" de la pantalla kiosco, no desde el sidebar —
+  // mismo criterio real que el original).
+  {
+    href: "/fabrica-proyectos",
+    label: "Proyectos Fábrica",
+    icon: Radio,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "proyectos",
     section: "PRODUCCIÓN",
   },
   // Primer módulo de la fusión con "Gestión de Luminarias" (ver
@@ -242,6 +258,14 @@ const navItems: NavItem[] = [
     icon: FileText,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "presupuestos",
+    section: "COMERCIAL PLANTA",
+  },
+  {
+    href: "/ordenes",
+    label: "Órdenes de Trabajo",
+    icon: ClipboardCheck,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "ordenes",
     section: "COMERCIAL PLANTA",
   },
   {
