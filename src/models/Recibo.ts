@@ -7,8 +7,9 @@ import { RECIBO_ESTADOS, FORMAS_PAGO, type ReciboEstado, type FormaPago } from "
 // el original: cada línea de "pagos" guarda el tipo de cambio del día en
 // que se cobró, no uno global del recibo).
 //
-// numeroOrden queda como texto libre, igual criterio que Remito: todavía
-// no existe un módulo real de Órdenes de Trabajo en PayFlow.
+// numeroOrden ahora es el snapshot de texto de una Orden de Trabajo real
+// (ref OrdenTrabajo vía ordenTrabajoId), conectado el 2026-11-23, igual
+// criterio que Remito.
 //
 // A diferencia de Despacho/Remito, Recibo no mueve stock ni tiene un flujo
 // de aprobación — es simplemente un registro de cobro. No tiene "anular":
@@ -37,6 +38,7 @@ export interface IRecibo {
   razonSocial: string;
   presupuestoId?: mongoose.Types.ObjectId;
   numeroPresupuesto?: string;
+  ordenTrabajoId?: mongoose.Types.ObjectId;
   numeroOrden?: string;
   concepto: string;
   lineas: ILineaRecibo[];
@@ -77,6 +79,7 @@ const ReciboSchema = new Schema<IRecibo>(
     razonSocial: { type: String, required: true },
     presupuestoId: { type: Schema.Types.ObjectId, ref: "Presupuesto" },
     numeroPresupuesto: { type: String, default: "" },
+    ordenTrabajoId: { type: Schema.Types.ObjectId, ref: "OrdenTrabajo" },
     numeroOrden: { type: String, default: "" },
     concepto: { type: String, required: true },
     lineas: { type: [LineaReciboSchema], default: [] },

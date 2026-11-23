@@ -10,10 +10,12 @@ import {
 // edita solo a mano: cada entrada/salida/devolución queda registrada acá
 // y ajusta Material.stockActual (ver actions.ts, registrarMovimientoMaterial).
 //
-// "numeroOrden" es texto libre por ahora — en la app original se elige de
-// un select contra Órdenes de Trabajo reales, pero ese módulo todavía no
-// existe en PayFlow (Fase 5 del plan de fusión). Cuando exista, esto pasa
-// a ser una referencia real en vez de texto suelto.
+// "numeroOrden" ahora es el snapshot de texto de una Orden de Trabajo
+// real (ref OrdenTrabajo vía ordenTrabajoId), mismo patrón que
+// presupuestoId/numeroPresupuesto en Despacho/Remito/Recibo — conectado
+// el 2026-11-23, una vez que el módulo de Órdenes de Trabajo existe
+// (Fase 5 del plan de fusión). ordenTrabajoId queda opcional: un
+// movimiento también puede no estar atado a ninguna OT.
 export interface IMovimientoMaterial {
   _id: mongoose.Types.ObjectId;
   materialId: mongoose.Types.ObjectId;
@@ -22,6 +24,7 @@ export interface IMovimientoMaterial {
   tipo: MovimientoMaterialTipo;
   cantidad: number;
   stockResultante: number;
+  ordenTrabajoId?: mongoose.Types.ObjectId;
   numeroOrden?: string;
   notas?: string;
   usuario: string;
@@ -36,6 +39,7 @@ const MovimientoMaterialSchema = new Schema<IMovimientoMaterial>(
     tipo: { type: String, required: true, enum: MOVIMIENTO_MATERIAL_TIPOS },
     cantidad: { type: Number, required: true },
     stockResultante: { type: Number, required: true },
+    ordenTrabajoId: { type: Schema.Types.ObjectId, ref: "OrdenTrabajo" },
     numeroOrden: { type: String, default: "" },
     notas: { type: String, default: "" },
     usuario: { type: String, default: "" },

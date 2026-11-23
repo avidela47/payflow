@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Recibo } from "@/models/Recibo";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
 import { FORMAS_PAGO } from "@/lib/recibo-estados";
 
 function generarNumero(): Promise<string> {
@@ -34,7 +35,7 @@ const reciboSchema = z.object({
   razonSocial: z.string().min(1, "Falta el cliente."),
   presupuestoId: z.string().optional(),
   numeroPresupuesto: z.string().optional(),
-  numeroOrden: z.string().optional(),
+  ordenTrabajoId: z.string().optional(),
   concepto: z.string().min(1, "Falta el concepto."),
   notas: z.string().optional(),
   lineas: z.array(lineaSchema).min(1, "Agregá al menos una línea de detalle."),
@@ -55,7 +56,7 @@ function parseReciboForm(formData: FormData) {
     razonSocial: formData.get("razonSocial"),
     presupuestoId: formData.get("presupuestoId") || undefined,
     numeroPresupuesto: formData.get("numeroPresupuesto") || undefined,
-    numeroOrden: formData.get("numeroOrden") || undefined,
+    ordenTrabajoId: formData.get("ordenTrabajoId") || undefined,
     concepto: formData.get("concepto"),
     notas: formData.get("notas") || undefined,
     lineas: parseLineasJson(formData),
@@ -79,11 +80,22 @@ export async function createRecibo(formData: FormData) {
 
   try {
     await connectDB();
+
+    let numeroOrden = "";
+    if (parsed.data.ordenTrabajoId) {
+      const orden = await OrdenTrabajo.findById(parsed.data.ordenTrabajoId);
+      if (!orden) {
+        return { ok: false, error: "La Orden de Trabajo elegida ya no existe." };
+      }
+      numeroOrden = orden.numero;
+    }
+
     const numero = await generarNumero();
     const totalUsd = round2(parsed.data.lineas.reduce((acc, l) => acc + l.montoUsd, 0));
     await Recibo.create({
       ...parsed.data,
       numero,
+      numeroOrden,
       totalUsd,
       totalPagadoUsd: 0,
       saldoUsd: totalUsd,

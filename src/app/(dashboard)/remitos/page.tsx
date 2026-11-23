@@ -3,16 +3,24 @@ import { requireModuleAccess } from "@/lib/auth";
 import { Client } from "@/models/Client";
 import { Presupuesto } from "@/models/Presupuesto";
 import { Remito } from "@/models/Remito";
-import { RemitosClient, type RemitoItem, type ClienteOption, type PresupuestoOption } from "./remitos-client";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import {
+  RemitosClient,
+  type RemitoItem,
+  type ClienteOption,
+  type PresupuestoOption,
+  type OrdenTrabajoOption,
+} from "./remitos-client";
 
 export default async function RemitosPage() {
   await requireModuleAccess("remitos");
   await connectDB();
 
-  const [items, clients, presupuestos] = await Promise.all([
+  const [items, clients, presupuestos, ordenes] = await Promise.all([
     Remito.find({}).sort({ createdAt: -1 }).lean(),
     Client.find({}).sort({ nombre: 1 }).lean(),
     Presupuesto.find({}).sort({ createdAt: -1 }).lean(),
+    OrdenTrabajo.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
   ]);
 
   const remitoItems: RemitoItem[] = items.map((item) => ({
@@ -47,6 +55,12 @@ export default async function RemitosPage() {
     lineas: p.lineas.map((l) => ({ codigo: l.codigo, descripcion: l.descripcion, cantidad: l.cantidad })),
   }));
 
+  const ordenTrabajoOptions: OrdenTrabajoOption[] = ordenes.map((o) => ({
+    id: o._id.toString(),
+    numero: o.numero,
+    razonSocial: o.razonSocial,
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -57,7 +71,12 @@ export default async function RemitosPage() {
         </p>
       </div>
 
-      <RemitosClient items={remitoItems} clientes={clienteOptions} presupuestos={presupuestoOptions} />
+      <RemitosClient
+        items={remitoItems}
+        clientes={clienteOptions}
+        presupuestos={presupuestoOptions}
+        ordenesTrabajo={ordenTrabajoOptions}
+      />
     </div>
   );
 }

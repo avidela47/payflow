@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Remito } from "@/models/Remito";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
 import { REMITO_ESTADOS } from "@/lib/remito-estados";
 
 function generarNumero(): Promise<string> {
@@ -32,7 +33,7 @@ const remitoSchema = z.object({
   razonSocial: z.string().min(1, "Falta el cliente."),
   presupuestoId: z.string().optional(),
   numeroPresupuesto: z.string().optional(),
-  numeroOrden: z.string().optional(),
+  ordenTrabajoId: z.string().optional(),
   notas: z.string().optional(),
   lineas: z.array(lineaSchema).min(1, "Agregá al menos un ítem."),
 });
@@ -51,7 +52,7 @@ function parseRemitoForm(formData: FormData) {
     razonSocial: formData.get("razonSocial"),
     presupuestoId: formData.get("presupuestoId") || undefined,
     numeroPresupuesto: formData.get("numeroPresupuesto") || undefined,
-    numeroOrden: formData.get("numeroOrden") || undefined,
+    ordenTrabajoId: formData.get("ordenTrabajoId") || undefined,
     notas: formData.get("notas") || undefined,
     lineas: lineasRaw,
   });
@@ -70,8 +71,18 @@ export async function createRemito(formData: FormData) {
 
   try {
     await connectDB();
+
+    let numeroOrden = "";
+    if (parsed.data.ordenTrabajoId) {
+      const orden = await OrdenTrabajo.findById(parsed.data.ordenTrabajoId);
+      if (!orden) {
+        return { ok: false, error: "La Orden de Trabajo elegida ya no existe." };
+      }
+      numeroOrden = orden.numero;
+    }
+
     const numero = await generarNumero();
-    await Remito.create({ ...parsed.data, numero });
+    await Remito.create({ ...parsed.data, numero, numeroOrden });
   } catch (err) {
     console.error("createRemito error:", err);
     const message = err instanceof Error ? err.message : String(err);

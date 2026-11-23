@@ -8,10 +8,9 @@ import { REMITO_ESTADOS, type RemitoEstado } from "@/lib/remito-estados";
 // borra, igual que el original (que tampoco tiene una pantalla de editar
 // remito).
 //
-// numeroOrden queda como texto libre: todavía no existe un módulo real de
-// Órdenes de Trabajo en PayFlow (pendiente, se construye junto con
-// Producción). Cuando exista, esto pasa a ser una referencia real como
-// presupuestoId/numeroPresupuesto.
+// numeroOrden ahora es el snapshot de texto de una Orden de Trabajo real
+// (ref OrdenTrabajo vía ordenTrabajoId), conectado el 2026-11-23 — mismo
+// patrón que presupuestoId/numeroPresupuesto.
 export interface ILineaRemito {
   codigo?: string;
   descripcion: string;
@@ -27,6 +26,7 @@ export interface IRemito {
   razonSocial: string;
   presupuestoId?: mongoose.Types.ObjectId;
   numeroPresupuesto?: string;
+  ordenTrabajoId?: mongoose.Types.ObjectId;
   numeroOrden?: string;
   lineas: ILineaRemito[];
   notas?: string;
@@ -52,6 +52,7 @@ const RemitoSchema = new Schema<IRemito>(
     razonSocial: { type: String, required: true },
     presupuestoId: { type: Schema.Types.ObjectId, ref: "Presupuesto" },
     numeroPresupuesto: { type: String, default: "" },
+    ordenTrabajoId: { type: Schema.Types.ObjectId, ref: "OrdenTrabajo" },
     numeroOrden: { type: String, default: "" },
     lineas: { type: [LineaRemitoSchema], default: [] },
     notas: { type: String, default: "" },

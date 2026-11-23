@@ -62,6 +62,12 @@ export type PresupuestoOption = {
   lineas: { codigo: string; descripcion: string; cantidad: number }[];
 };
 
+export type OrdenTrabajoOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+};
+
 const LINEA_VACIA: LineaRemitoItem = { codigo: "", descripcion: "", cantidad: 1, unidad: "unidad" };
 
 // ---------- formulario de creación (contenido del Dialog) ----------
@@ -73,10 +79,12 @@ const LINEA_VACIA: LineaRemitoItem = { codigo: "", descripcion: "", cantidad: 1,
 function RemitoForm({
   clientes,
   presupuestos,
+  ordenesTrabajo,
   onDone,
 }: {
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
+  ordenesTrabajo: OrdenTrabajoOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -85,7 +93,7 @@ function RemitoForm({
   const [razonSocial, setRazonSocial] = useState("");
   const [presupuestoId, setPresupuestoId] = useState("");
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
-  const [numeroOrden, setNumeroOrden] = useState("");
+  const [ordenTrabajoId, setOrdenTrabajoId] = useState("");
   const [lineas, setLineas] = useState<LineaRemitoItem[]>([]);
 
   // Mismo respaldo que en Despachos: los presupuestos migrados desde
@@ -200,16 +208,20 @@ function RemitoForm({
           <input type="hidden" name="numeroPresupuesto" value={numeroPresupuesto} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="numeroOrden">
-            Número de OT (opcional, todavía no hay módulo de Órdenes de Trabajo)
-          </Label>
-          <Input
-            id="numeroOrden"
-            name="numeroOrden"
-            value={numeroOrden}
-            onChange={(e) => setNumeroOrden(e.target.value)}
-            placeholder="Ej: OT-0042"
-          />
+          <Label htmlFor="ordenTrabajoSelect">Orden de Trabajo (opcional)</Label>
+          <Select
+            id="ordenTrabajoSelect"
+            value={ordenTrabajoId}
+            onChange={(e) => setOrdenTrabajoId(e.target.value)}
+          >
+            <option value="">Sin OT</option>
+            {ordenesTrabajo.map((ot) => (
+              <option key={ot.id} value={ot.id}>
+                {ot.numero} — {ot.razonSocial}
+              </option>
+            ))}
+          </Select>
+          <input type="hidden" name="ordenTrabajoId" value={ordenTrabajoId} />
         </div>
       </div>
 
@@ -298,10 +310,12 @@ export function RemitosClient({
   items,
   clientes,
   presupuestos,
+  ordenesTrabajo,
 }: {
   items: RemitoItem[];
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
+  ordenesTrabajo: OrdenTrabajoOption[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -513,7 +527,12 @@ export function RemitosClient({
       </Dialog>
 
       <Dialog open={creatingOpen} onOpenChange={setCreatingOpen} title="Nuevo remito" className="max-w-2xl">
-        <RemitoForm clientes={clientes} presupuestos={presupuestos} onDone={() => setCreatingOpen(false)} />
+        <RemitoForm
+          clientes={clientes}
+          presupuestos={presupuestos}
+          ordenesTrabajo={ordenesTrabajo}
+          onDone={() => setCreatingOpen(false)}
+        />
       </Dialog>
 
       <Dialog

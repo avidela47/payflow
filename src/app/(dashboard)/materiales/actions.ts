@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Material } from "@/models/Material";
 import { MovimientoMaterial } from "@/models/MovimientoMaterial";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
 import { MATERIAL_UNIDADES } from "@/lib/material-unidades";
 import { MOVIMIENTO_MATERIAL_TIPOS } from "@/lib/movimiento-material-tipos";
 
@@ -132,11 +133,16 @@ export async function deleteMaterial(id: string) {
 // — el backend original solo lo exigía de verdad para la salida, pero
 // Ariel pidió explícitamente igualar el comportamiento del original tal
 // como lo ve el usuario, no el detalle interno del servidor viejo).
+//
+// ordenTrabajoId: conectado el 2026-11-23, ahora que el módulo de Órdenes
+// de Trabajo existe (Fase 5) — se elige de una lista real en vez de texto
+// libre, igual que el original. numeroOrden queda como snapshot del
+// numero de esa OT al momento del movimiento.
 
 const movimientoSchema = z.object({
   tipo: z.enum(MOVIMIENTO_MATERIAL_TIPOS, { message: "Falta el tipo de movimiento." }),
   cantidad: z.coerce.number().positive("La cantidad debe ser mayor a 0."),
-  numeroOrden: z.string().optional(),
+  ordenTrabajoId: z.string().optional(),
   notas: z.string().optional(),
 });
 
@@ -149,16 +155,16 @@ export async function registrarMovimientoMaterial(materialId: string, formData: 
   const parsed = movimientoSchema.safeParse({
     tipo: formData.get("tipo"),
     cantidad: formData.get("cantidad"),
-    numeroOrden: formData.get("numeroOrden") || undefined,
+    ordenTrabajoId: formData.get("ordenTrabajoId") || undefined,
     notas: formData.get("notas") || undefined,
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
-  const { tipo, cantidad, numeroOrden, notas } = parsed.data;
+  const { tipo, cantidad, ordenTrabajoId, notas } = parsed.data;
 
-  if ((tipo === "SALIDA" || tipo === "DEVOLUCION") && !numeroOrden) {
-    return { ok: false, error: "Este movimiento requiere un número de Orden de Trabajo." };
+  if ((tipo === "SALIDA" || tipo === "DEVOLUCION") && !ordenTrabajoId) {
+    return { ok: false, error: "Este movimiento requiere elegir una Orden de Trabajo." };
   }
 
   try {
@@ -166,6 +172,15 @@ export async function registrarMovimientoMaterial(materialId: string, formData: 
     const material = await Material.findById(materialId);
     if (!material) {
       return { ok: false, error: "El material ya no existe." };
+    }
+
+    let numeroOrden = "";
+    if (ordenTrabajoId) {
+      const orden = await OrdenTrabajo.findById(ordenTrabajoId);
+      if (!orden) {
+        return { ok: false, error: "La Orden de Trabajo elegida ya no existe." };
+      }
+      numeroOrden = orden.numero;
     }
 
     if (tipo === "SALIDA" && material.stockActual < cantidad) {
@@ -184,7 +199,8 @@ export async function registrarMovimientoMaterial(materialId: string, formData: 
       tipo,
       cantidad,
       stockResultante,
-      numeroOrden: numeroOrden || "",
+      ordenTrabajoId: ordenTrabajoId || undefined,
+      numeroOrden,
       notas: notas || "",
       usuario: session.user.name || session.user.email || "",
     });

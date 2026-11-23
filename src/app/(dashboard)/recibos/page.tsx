@@ -3,22 +3,25 @@ import { requireModuleAccess } from "@/lib/auth";
 import { Client } from "@/models/Client";
 import { Presupuesto } from "@/models/Presupuesto";
 import { Recibo } from "@/models/Recibo";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
 import {
   RecibosClient,
   type ReciboItem,
   type ClienteOption,
   type PresupuestoOption,
+  type OrdenTrabajoOption,
 } from "./recibos-client";
 
 export default async function RecibosPage() {
   await requireModuleAccess("recibos");
   await connectDB();
 
-  const [items, clients, presupuestos] = await Promise.all([
+  const [items, clients, presupuestos, ordenes] = await Promise.all([
     Recibo.find({}).sort({ createdAt: -1 }).lean(),
     Client.find({}).sort({ nombre: 1 }).lean(),
     // Solo presupuestos aprobados, igual criterio que Despachos.
     Presupuesto.find({ estado: "APROBADO" }).sort({ createdAt: -1 }).lean(),
+    OrdenTrabajo.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
   ]);
 
   const reciboItems: ReciboItem[] = items.map((item) => ({
@@ -65,6 +68,12 @@ export default async function RecibosPage() {
     total: p.total,
   }));
 
+  const ordenTrabajoOptions: OrdenTrabajoOption[] = ordenes.map((o) => ({
+    id: o._id.toString(),
+    numero: o.numero,
+    razonSocial: o.razonSocial,
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -74,7 +83,12 @@ export default async function RecibosPage() {
         </p>
       </div>
 
-      <RecibosClient items={reciboItems} clientes={clienteOptions} presupuestos={presupuestoOptions} />
+      <RecibosClient
+        items={reciboItems}
+        clientes={clienteOptions}
+        presupuestos={presupuestoOptions}
+        ordenesTrabajo={ordenTrabajoOptions}
+      />
     </div>
   );
 }

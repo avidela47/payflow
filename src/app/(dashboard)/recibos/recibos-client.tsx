@@ -77,6 +77,12 @@ export type PresupuestoOption = {
   total: number;
 };
 
+export type OrdenTrabajoOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+};
+
 const money = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
 
 function LineasEditor({
@@ -150,10 +156,12 @@ function LineasEditor({
 function ReciboForm({
   clientes,
   presupuestos,
+  ordenesTrabajo,
   onDone,
 }: {
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
+  ordenesTrabajo: OrdenTrabajoOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -162,6 +170,7 @@ function ReciboForm({
   const [razonSocial, setRazonSocial] = useState("");
   const [presupuestoId, setPresupuestoId] = useState("");
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
+  const [ordenTrabajoId, setOrdenTrabajoId] = useState("");
   const [concepto, setConcepto] = useState("");
   const [lineas, setLineas] = useState<LineaReciboForm[]>([{ descripcion: "", montoUsd: 0 }]);
 
@@ -273,8 +282,20 @@ function ReciboForm({
           <input type="hidden" name="numeroPresupuesto" value={numeroPresupuesto} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="numeroOrden">Número de OT (opcional, todavía no hay módulo de Órdenes de Trabajo)</Label>
-          <Input id="numeroOrden" name="numeroOrden" placeholder="Ej: OT-2026-003" />
+          <Label htmlFor="ordenTrabajoSelect">Orden de Trabajo (opcional)</Label>
+          <Select
+            id="ordenTrabajoSelect"
+            value={ordenTrabajoId}
+            onChange={(e) => setOrdenTrabajoId(e.target.value)}
+          >
+            <option value="">Sin OT</option>
+            {ordenesTrabajo.map((ot) => (
+              <option key={ot.id} value={ot.id}>
+                {ot.numero} — {ot.razonSocial}
+              </option>
+            ))}
+          </Select>
+          <input type="hidden" name="ordenTrabajoId" value={ordenTrabajoId} />
         </div>
       </div>
 
@@ -314,10 +335,12 @@ export function RecibosClient({
   items,
   clientes,
   presupuestos,
+  ordenesTrabajo,
 }: {
   items: ReciboItem[];
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
+  ordenesTrabajo: OrdenTrabajoOption[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -651,7 +674,12 @@ export function RecibosClient({
 
       {/* Nuevo recibo */}
       <Dialog open={creatingOpen} onOpenChange={setCreatingOpen} title="Nuevo recibo" className="max-w-2xl">
-        <ReciboForm clientes={clientes} presupuestos={presupuestos} onDone={() => setCreatingOpen(false)} />
+        <ReciboForm
+          clientes={clientes}
+          presupuestos={presupuestos}
+          ordenesTrabajo={ordenesTrabajo}
+          onDone={() => setCreatingOpen(false)}
+        />
       </Dialog>
 
       {/* Editar recibo */}

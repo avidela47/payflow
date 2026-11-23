@@ -1,13 +1,17 @@
 import { connectDB } from "@/lib/db";
 import { requireModuleAccess } from "@/lib/auth";
 import { Material } from "@/models/Material";
-import { MaterialesClient, type MaterialItem } from "./materiales-client";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { MaterialesClient, type MaterialItem, type OrdenTrabajoOption } from "./materiales-client";
 
 export default async function MaterialesPage() {
   await requireModuleAccess("materiales");
   await connectDB();
 
-  const items = await Material.find({}).sort({ codigo: 1 }).lean();
+  const [items, ordenes] = await Promise.all([
+    Material.find({}).sort({ codigo: 1 }).lean(),
+    OrdenTrabajo.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
+  ]);
 
   const materialItems: MaterialItem[] = items.map((item) => ({
     id: item._id.toString(),
@@ -21,6 +25,12 @@ export default async function MaterialesPage() {
     notas: item.notas,
   }));
 
+  const ordenTrabajoOptions: OrdenTrabajoOption[] = ordenes.map((o) => ({
+    id: o._id.toString(),
+    numero: o.numero,
+    razonSocial: o.razonSocial,
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -31,7 +41,7 @@ export default async function MaterialesPage() {
         </p>
       </div>
 
-      <MaterialesClient items={materialItems} />
+      <MaterialesClient items={materialItems} ordenesTrabajo={ordenTrabajoOptions} />
     </div>
   );
 }

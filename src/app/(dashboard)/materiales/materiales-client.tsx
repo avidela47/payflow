@@ -58,6 +58,12 @@ export type MaterialItem = {
   notas?: string;
 };
 
+export type OrdenTrabajoOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+};
+
 // ---------- formulario de crear/editar (contenido del Dialog) ----------
 
 function MaterialForm({
@@ -220,14 +226,17 @@ const MOVIMIENTO_CONFIG: Record<
 function MovimientoForm({
   material,
   tipo,
+  ordenesTrabajo,
   onDone,
 }: {
   material: MaterialItem;
   tipo: MovimientoMaterialTipo;
+  ordenesTrabajo: OrdenTrabajoOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [ordenTrabajoId, setOrdenTrabajoId] = useState("");
   const cfg = MOVIMIENTO_CONFIG[tipo];
   const Icon = cfg.icon;
 
@@ -267,13 +276,21 @@ function MovimientoForm({
 
       {(tipo === "SALIDA" || tipo === "DEVOLUCION") && (
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="numeroOrden">Número de OT *</Label>
-          <Input
-            id="numeroOrden"
-            name="numeroOrden"
+          <Label htmlFor="ordenTrabajoSelect">Orden de Trabajo *</Label>
+          <Select
+            id="ordenTrabajoSelect"
+            value={ordenTrabajoId}
+            onChange={(e) => setOrdenTrabajoId(e.target.value)}
             required
-            placeholder="Ej: OT-0042"
-          />
+          >
+            <option value="">Elegir OT...</option>
+            {ordenesTrabajo.map((ot) => (
+              <option key={ot.id} value={ot.id}>
+                {ot.numero} — {ot.razonSocial}
+              </option>
+            ))}
+          </Select>
+          <input type="hidden" name="ordenTrabajoId" value={ordenTrabajoId} />
         </div>
       )}
 
@@ -297,7 +314,13 @@ function MovimientoForm({
 
 // ---------- componente principal ----------
 
-export function MaterialesClient({ items }: { items: MaterialItem[] }) {
+export function MaterialesClient({
+  items,
+  ordenesTrabajo,
+}: {
+  items: MaterialItem[];
+  ordenesTrabajo: OrdenTrabajoOption[];
+}) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filtroUnidad, setFiltroUnidad] = useState<string>("todos");
@@ -598,6 +621,7 @@ export function MaterialesClient({ items }: { items: MaterialItem[] }) {
           <MovimientoForm
             material={movimientoTarget.item}
             tipo={movimientoTarget.tipo}
+            ordenesTrabajo={ordenesTrabajo}
             onDone={() => {
               const id = movimientoTarget.item.id;
               setMovimientoTarget(null);
