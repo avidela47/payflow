@@ -5,9 +5,15 @@
 // construida, es un paso posterior dentro de la Fase 5). Mismo criterio que
 // "numeroOrden" en MovimientoMaterial: se deja el lugar para lo que todavía
 // no existe en vez de inventar algo a mitad de camino.
+//
+// "SALIDA_REPARACION" agregado el 2026-11-23 para el módulo Reparación
+// (no existe en el original, ver models/Reparacion.ts): mismo criterio que
+// SALIDA_PRODUCCION — reservado para la acción "ejecutar" de Reparación,
+// no elegible a mano desde este formulario.
 export const MOVIMIENTO_COMPONENTE_TIPOS = [
   "ENTRADA_COMPRA",
   "SALIDA_PRODUCCION",
+  "SALIDA_REPARACION",
   "AJUSTE_ENTRADA",
   "AJUSTE_SALIDA",
 ] as const;
@@ -25,6 +31,7 @@ export const MOVIMIENTO_COMPONENTE_TIPOS_MANUALES = [
 const LABELS: Record<MovimientoComponenteTipo, string> = {
   ENTRADA_COMPRA: "Compra",
   SALIDA_PRODUCCION: "Producción",
+  SALIDA_REPARACION: "Reparación",
   AJUSTE_ENTRADA: "Ajuste entrada",
   AJUSTE_SALIDA: "Ajuste salida",
 };

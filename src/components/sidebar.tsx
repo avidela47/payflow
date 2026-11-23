@@ -41,6 +41,7 @@ import {
   Factory,
   Radio,
   ClipboardCheck,
+  Hammer,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -266,6 +267,14 @@ const navItems: NavItem[] = [
     icon: ClipboardCheck,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "ordenes",
+    section: "COMERCIAL PLANTA",
+  },
+  {
+    href: "/reparaciones",
+    label: "Reparaciones",
+    icon: Hammer,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "reparaciones",
     section: "COMERCIAL PLANTA",
   },
   {

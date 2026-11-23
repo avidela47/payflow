@@ -25,6 +25,7 @@ export const RESTRICTABLE_MODULES = [
   "proyectos",
   "presupuestos",
   "ordenes",
+  "reparaciones",
   "remitos",
   "despachos",
   "recibos",
