@@ -20,6 +20,7 @@ export const RESTRICTABLE_MODULES = [
   "materiales",
   "componentes",
   "recetas",
+  "fabricar",
   "movimientos-componentes",
   "presupuestos",
   "remitos",

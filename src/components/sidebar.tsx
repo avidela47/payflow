@@ -38,6 +38,7 @@ import {
   Puzzle,
   ListTree,
   ArrowLeftRight,
+  Factory,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -147,12 +148,12 @@ const navItems: NavItem[] = [
     special: "bg-yellow-100 text-yellow-700",
   },
   // Fase 5 de la fusión (Producción): sección nueva, separada de STOCK.
-  // Componentes, Recetas (BOM) y su historial de Movimientos ya están;
-  // más adelante se suman acá Fabricar, Proyectos de Fábrica y Órdenes de
+  // Componentes, Recetas (BOM), Fabricar y el historial de Movimientos ya
+  // están; más adelante se suman acá Proyectos de Fábrica y Órdenes de
   // Trabajo (ver planificacion/fusion-gestion-luminarias.md). El orden
-  // Componentes → Recetas → Movimientos sigue el mismo orden real del
-  // menú de Sistema de Fábrica (components/Sidebar.tsx del original).
-  // Corregido
+  // Componentes → Recetas → Fabricar → Movimientos sigue el mismo orden
+  // real del menú de Sistema de Fábrica (components/Sidebar.tsx del
+  // original). Corregido
   // 2026-11-22: al principio Componentes había entrado en STOCK con los
   // movimientos embebidos adentro de la tabla — Ariel lo comparó contra la
   // pantalla real de Sistema de Fábrica (que tiene Componentes y
@@ -172,6 +173,14 @@ const navItems: NavItem[] = [
     icon: ListTree,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "recetas",
+    section: "PRODUCCIÓN",
+  },
+  {
+    href: "/fabricar",
+    label: "Fabricar",
+    icon: Factory,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "fabricar",
     section: "PRODUCCIÓN",
   },
   {
