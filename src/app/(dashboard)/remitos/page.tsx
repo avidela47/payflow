@@ -4,23 +4,26 @@ import { Client } from "@/models/Client";
 import { Presupuesto } from "@/models/Presupuesto";
 import { Remito } from "@/models/Remito";
 import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { Reparacion } from "@/models/Reparacion";
 import {
   RemitosClient,
   type RemitoItem,
   type ClienteOption,
   type PresupuestoOption,
   type OrdenTrabajoOption,
+  type ReparacionOption,
 } from "./remitos-client";
 
 export default async function RemitosPage() {
   await requireModuleAccess("remitos");
   await connectDB();
 
-  const [items, clients, presupuestos, ordenes] = await Promise.all([
+  const [items, clients, presupuestos, ordenes, reparaciones] = await Promise.all([
     Remito.find({}).sort({ createdAt: -1 }).lean(),
     Client.find({}).sort({ nombre: 1 }).lean(),
     Presupuesto.find({}).sort({ createdAt: -1 }).lean(),
     OrdenTrabajo.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
+    Reparacion.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
   ]);
 
   const remitoItems: RemitoItem[] = items.map((item) => ({
@@ -31,6 +34,7 @@ export default async function RemitosPage() {
     razonSocial: item.razonSocial,
     numeroPresupuesto: item.numeroPresupuesto,
     numeroOrden: item.numeroOrden,
+    numeroReparacion: item.numeroReparacion,
     lineas: item.lineas.map((l) => ({
       codigo: l.codigo,
       descripcion: l.descripcion,
@@ -61,6 +65,12 @@ export default async function RemitosPage() {
     razonSocial: o.razonSocial,
   }));
 
+  const reparacionOptions: ReparacionOption[] = reparaciones.map((r) => ({
+    id: r._id.toString(),
+    numero: r.numero,
+    razonSocial: r.razonSocial,
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -76,6 +86,7 @@ export default async function RemitosPage() {
         clientes={clienteOptions}
         presupuestos={presupuestoOptions}
         ordenesTrabajo={ordenTrabajoOptions}
+        reparaciones={reparacionOptions}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Despacho } from "@/models/Despacho";
 import { Luminaria } from "@/models/Luminaria";
+import { Reparacion } from "@/models/Reparacion";
 import { LUMINARIA_ORIGENES } from "@/lib/luminaria-origen";
 
 function generarNumero(): Promise<string> {
@@ -35,6 +36,7 @@ const despachoSchema = z.object({
   razonSocial: z.string().min(1, "Falta el cliente."),
   presupuestoId: z.string().optional(),
   numeroPresupuesto: z.string().optional(),
+  reparacionId: z.string().optional(),
   observaciones: z.string().optional(),
   items: z.array(itemSchema).min(1, "Agregá al menos un ítem."),
 });
@@ -53,6 +55,7 @@ function parseDespachoForm(formData: FormData) {
     razonSocial: formData.get("razonSocial"),
     presupuestoId: formData.get("presupuestoId") || undefined,
     numeroPresupuesto: formData.get("numeroPresupuesto") || undefined,
+    reparacionId: formData.get("reparacionId") || undefined,
     observaciones: formData.get("observaciones") || undefined,
     items: itemsRaw,
   });
@@ -73,8 +76,18 @@ export async function createDespacho(formData: FormData) {
 
   try {
     await connectDB();
+
+    let numeroReparacion = "";
+    if (parsed.data.reparacionId) {
+      const reparacion = await Reparacion.findById(parsed.data.reparacionId);
+      if (!reparacion) {
+        return { ok: false, error: "La Reparación elegida ya no existe." };
+      }
+      numeroReparacion = reparacion.numero;
+    }
+
     const numero = await generarNumero();
-    await Despacho.create({ ...parsed.data, numero });
+    await Despacho.create({ ...parsed.data, numero, numeroReparacion });
   } catch (err) {
     console.error("createDespacho error:", err);
     const message = err instanceof Error ? err.message : String(err);

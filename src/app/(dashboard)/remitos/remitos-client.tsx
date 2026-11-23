@@ -43,6 +43,7 @@ export type RemitoItem = {
   razonSocial: string;
   numeroPresupuesto?: string;
   numeroOrden?: string;
+  numeroReparacion?: string;
   lineas: LineaRemitoItem[];
   notas?: string;
   estado: RemitoEstado;
@@ -68,6 +69,12 @@ export type OrdenTrabajoOption = {
   razonSocial: string;
 };
 
+export type ReparacionOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+};
+
 const LINEA_VACIA: LineaRemitoItem = { codigo: "", descripcion: "", cantidad: 1, unidad: "unidad" };
 
 // ---------- formulario de creación (contenido del Dialog) ----------
@@ -80,11 +87,13 @@ function RemitoForm({
   clientes,
   presupuestos,
   ordenesTrabajo,
+  reparaciones,
   onDone,
 }: {
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   ordenesTrabajo: OrdenTrabajoOption[];
+  reparaciones: ReparacionOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -94,6 +103,7 @@ function RemitoForm({
   const [presupuestoId, setPresupuestoId] = useState("");
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
   const [ordenTrabajoId, setOrdenTrabajoId] = useState("");
+  const [reparacionId, setReparacionId] = useState("");
   const [lineas, setLineas] = useState<LineaRemitoItem[]>([]);
 
   // Mismo respaldo que en Despachos: los presupuestos migrados desde
@@ -189,7 +199,7 @@ function RemitoForm({
         <input type="hidden" name="razonSocial" value={razonSocial} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="presupuestoSelect">Presupuesto (opcional)</Label>
           <Select
@@ -222,6 +232,22 @@ function RemitoForm({
             ))}
           </Select>
           <input type="hidden" name="ordenTrabajoId" value={ordenTrabajoId} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="reparacionSelect">Reparación (opcional)</Label>
+          <Select
+            id="reparacionSelect"
+            value={reparacionId}
+            onChange={(e) => setReparacionId(e.target.value)}
+          >
+            <option value="">Sin reparación</option>
+            {reparaciones.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.numero} — {r.razonSocial}
+              </option>
+            ))}
+          </Select>
+          <input type="hidden" name="reparacionId" value={reparacionId} />
         </div>
       </div>
 
@@ -311,11 +337,13 @@ export function RemitosClient({
   clientes,
   presupuestos,
   ordenesTrabajo,
+  reparaciones,
 }: {
   items: RemitoItem[];
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   ordenesTrabajo: OrdenTrabajoOption[];
+  reparaciones: ReparacionOption[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -414,7 +442,8 @@ export function RemitosClient({
               <TableCell className="max-w-[160px] text-xs text-muted-foreground">
                 {item.numeroPresupuesto && <p>Pres: {item.numeroPresupuesto}</p>}
                 {item.numeroOrden && <p>OT: {item.numeroOrden}</p>}
-                {!item.numeroPresupuesto && !item.numeroOrden && "—"}
+                {item.numeroReparacion && <p>Rep: {item.numeroReparacion}</p>}
+                {!item.numeroPresupuesto && !item.numeroOrden && !item.numeroReparacion && "—"}
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {item.lineas.length} item{item.lineas.length === 1 ? "" : "s"}
@@ -481,10 +510,11 @@ export function RemitosClient({
               </Badge>
             </div>
 
-            {(viewTarget.numeroPresupuesto || viewTarget.numeroOrden) && (
+            {(viewTarget.numeroPresupuesto || viewTarget.numeroOrden || viewTarget.numeroReparacion) && (
               <p className="text-xs text-muted-foreground">
                 {viewTarget.numeroPresupuesto && <>Presupuesto {viewTarget.numeroPresupuesto} </>}
-                {viewTarget.numeroOrden && <>— OT {viewTarget.numeroOrden}</>}
+                {viewTarget.numeroOrden && <>— OT {viewTarget.numeroOrden} </>}
+                {viewTarget.numeroReparacion && <>— Reparación {viewTarget.numeroReparacion}</>}
               </p>
             )}
 
@@ -531,6 +561,7 @@ export function RemitosClient({
           clientes={clientes}
           presupuestos={presupuestos}
           ordenesTrabajo={ordenesTrabajo}
+          reparaciones={reparaciones}
           onDone={() => setCreatingOpen(false)}
         />
       </Dialog>

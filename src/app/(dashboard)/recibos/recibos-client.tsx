@@ -53,6 +53,7 @@ export type ReciboItem = {
   razonSocial: string;
   numeroPresupuesto?: string;
   numeroOrden?: string;
+  numeroReparacion?: string;
   concepto: string;
   lineas: LineaReciboForm[];
   totalUsd: number;
@@ -78,6 +79,12 @@ export type PresupuestoOption = {
 };
 
 export type OrdenTrabajoOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+};
+
+export type ReparacionOption = {
   id: string;
   numero: string;
   razonSocial: string;
@@ -157,11 +164,13 @@ function ReciboForm({
   clientes,
   presupuestos,
   ordenesTrabajo,
+  reparaciones,
   onDone,
 }: {
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   ordenesTrabajo: OrdenTrabajoOption[];
+  reparaciones: ReparacionOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -171,6 +180,7 @@ function ReciboForm({
   const [presupuestoId, setPresupuestoId] = useState("");
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
   const [ordenTrabajoId, setOrdenTrabajoId] = useState("");
+  const [reparacionId, setReparacionId] = useState("");
   const [concepto, setConcepto] = useState("");
   const [lineas, setLineas] = useState<LineaReciboForm[]>([{ descripcion: "", montoUsd: 0 }]);
 
@@ -267,7 +277,7 @@ function ReciboForm({
         <input type="hidden" name="razonSocial" value={razonSocial} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="presupuestoSelect">Presupuesto (opcional)</Label>
           <Select id="presupuestoSelect" value={presupuestoId} onChange={(e) => seleccionarPresupuesto(e.target.value)}>
@@ -296,6 +306,22 @@ function ReciboForm({
             ))}
           </Select>
           <input type="hidden" name="ordenTrabajoId" value={ordenTrabajoId} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="reparacionSelect">Reparación (opcional)</Label>
+          <Select
+            id="reparacionSelect"
+            value={reparacionId}
+            onChange={(e) => setReparacionId(e.target.value)}
+          >
+            <option value="">Sin reparación</option>
+            {reparaciones.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.numero} — {r.razonSocial}
+              </option>
+            ))}
+          </Select>
+          <input type="hidden" name="reparacionId" value={reparacionId} />
         </div>
       </div>
 
@@ -336,11 +362,13 @@ export function RecibosClient({
   clientes,
   presupuestos,
   ordenesTrabajo,
+  reparaciones,
 }: {
   items: ReciboItem[];
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   ordenesTrabajo: OrdenTrabajoOption[];
+  reparaciones: ReparacionOption[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -501,7 +529,8 @@ export function RecibosClient({
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                 {item.numeroPresupuesto && <div>Pres: {item.numeroPresupuesto}</div>}
                 {item.numeroOrden && <div>OT: {item.numeroOrden}</div>}
-                {!item.numeroPresupuesto && !item.numeroOrden && "—"}
+                {item.numeroReparacion && <div>Rep: {item.numeroReparacion}</div>}
+                {!item.numeroPresupuesto && !item.numeroOrden && !item.numeroReparacion && "—"}
               </TableCell>
               <TableCell className="whitespace-nowrap text-right">{money(item.totalUsd)}</TableCell>
               <TableCell className="whitespace-nowrap text-right text-success">
@@ -565,10 +594,11 @@ export function RecibosClient({
                 <p className="text-muted-foreground">
                   {new Date(viewTarget.fechaISO).toLocaleDateString("es-AR")}
                 </p>
-                {(viewTarget.numeroPresupuesto || viewTarget.numeroOrden) && (
+                {(viewTarget.numeroPresupuesto || viewTarget.numeroOrden || viewTarget.numeroReparacion) && (
                   <p className="text-xs text-muted-foreground">
                     {viewTarget.numeroPresupuesto && <>Presupuesto {viewTarget.numeroPresupuesto} </>}
-                    {viewTarget.numeroOrden && <>— OT {viewTarget.numeroOrden}</>}
+                    {viewTarget.numeroOrden && <>— OT {viewTarget.numeroOrden} </>}
+                    {viewTarget.numeroReparacion && <>— Reparación {viewTarget.numeroReparacion}</>}
                   </p>
                 )}
               </div>
@@ -678,6 +708,7 @@ export function RecibosClient({
           clientes={clientes}
           presupuestos={presupuestos}
           ordenesTrabajo={ordenesTrabajo}
+          reparaciones={reparaciones}
           onDone={() => setCreatingOpen(false)}
         />
       </Dialog>

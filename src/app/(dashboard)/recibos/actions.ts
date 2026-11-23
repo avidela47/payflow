@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Recibo } from "@/models/Recibo";
 import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { Reparacion } from "@/models/Reparacion";
 import { FORMAS_PAGO } from "@/lib/recibo-estados";
 
 function generarNumero(): Promise<string> {
@@ -36,6 +37,7 @@ const reciboSchema = z.object({
   presupuestoId: z.string().optional(),
   numeroPresupuesto: z.string().optional(),
   ordenTrabajoId: z.string().optional(),
+  reparacionId: z.string().optional(),
   concepto: z.string().min(1, "Falta el concepto."),
   notas: z.string().optional(),
   lineas: z.array(lineaSchema).min(1, "Agregá al menos una línea de detalle."),
@@ -57,6 +59,7 @@ function parseReciboForm(formData: FormData) {
     presupuestoId: formData.get("presupuestoId") || undefined,
     numeroPresupuesto: formData.get("numeroPresupuesto") || undefined,
     ordenTrabajoId: formData.get("ordenTrabajoId") || undefined,
+    reparacionId: formData.get("reparacionId") || undefined,
     concepto: formData.get("concepto"),
     notas: formData.get("notas") || undefined,
     lineas: parseLineasJson(formData),
@@ -90,12 +93,22 @@ export async function createRecibo(formData: FormData) {
       numeroOrden = orden.numero;
     }
 
+    let numeroReparacion = "";
+    if (parsed.data.reparacionId) {
+      const reparacion = await Reparacion.findById(parsed.data.reparacionId);
+      if (!reparacion) {
+        return { ok: false, error: "La Reparación elegida ya no existe." };
+      }
+      numeroReparacion = reparacion.numero;
+    }
+
     const numero = await generarNumero();
     const totalUsd = round2(parsed.data.lineas.reduce((acc, l) => acc + l.montoUsd, 0));
     await Recibo.create({
       ...parsed.data,
       numero,
       numeroOrden,
+      numeroReparacion,
       totalUsd,
       totalPagadoUsd: 0,
       saldoUsd: totalUsd,

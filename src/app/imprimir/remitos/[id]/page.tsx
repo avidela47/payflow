@@ -60,10 +60,11 @@ export default async function ImprimirRemitoPage({ params }: { params: { id: str
 
       <section className="mt-6 text-sm">
         <p className="font-semibold">{remito.razonSocial}</p>
-        {(remito.numeroPresupuesto || remito.numeroOrden) && (
+        {(remito.numeroPresupuesto || remito.numeroOrden || remito.numeroReparacion) && (
           <p className="mt-1 text-xs text-gray-600">
             {remito.numeroPresupuesto && <>Presupuesto {remito.numeroPresupuesto} </>}
-            {remito.numeroOrden && <>— OT {remito.numeroOrden}</>}
+            {remito.numeroOrden && <>— OT {remito.numeroOrden} </>}
+            {remito.numeroReparacion && <>— Reparación {remito.numeroReparacion}</>}
           </p>
         )}
       </section>

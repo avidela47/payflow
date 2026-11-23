@@ -19,6 +19,20 @@ import { LUMINARIA_ORIGENES, type LuminariaOrigen } from "@/lib/luminaria-origen
 // original: como Fabricada/Nacional/Importada ya están unificadas en el
 // modelo Luminaria (Fase 2), cada ítem de despacho referencia
 // directamente ese mismo campo.
+//
+// reparacionId/numeroReparacion (2026-11-23): Despacho nunca tuvo un
+// vínculo a OrdenTrabajo tampoco — a diferencia de Remito/Recibo, el
+// vínculo real de Despacho con lo que se fabricó es implícito (los
+// códigos de Luminaria ya identifican el stock). Para Reparación se
+// agrega este campo igual para trazabilidad, pero las LÍNEAS de una
+// unidad reparada no son stock de Luminaria — nunca deben descontar
+// nada. Por eso una unidad reparada entra como ítem con
+// fueraDeCatalogo=true (mecanismo que ya existía para "se hizo en el
+// momento, no está en el catálogo"): confirmarDespacho/anularDespacho ya
+// las saltan por completo. Confirmado por Ariel con un caso real: manda
+// a reparar 5 unidades, 3 vuelven reparadas (fueraDeCatalogo) y 2 se
+// fabrican de nuevo (ítems de catálogo normales, posiblemente de una OT)
+// — todo sale junto en el mismo Despacho.
 export interface IItemDespacho {
   codigo: string;
   descripcion: string;
@@ -42,6 +56,8 @@ export interface IDespacho {
   razonSocial: string;
   presupuestoId?: mongoose.Types.ObjectId;
   numeroPresupuesto?: string;
+  reparacionId?: mongoose.Types.ObjectId;
+  numeroReparacion?: string;
   items: IItemDespacho[];
   observaciones?: string;
   estado: DespachoEstado;
@@ -68,6 +84,8 @@ const DespachoSchema = new Schema<IDespacho>(
     razonSocial: { type: String, required: true },
     presupuestoId: { type: Schema.Types.ObjectId, ref: "Presupuesto" },
     numeroPresupuesto: { type: String, default: "" },
+    reparacionId: { type: Schema.Types.ObjectId, ref: "Reparacion" },
+    numeroReparacion: { type: String, default: "" },
     items: { type: [ItemDespachoSchema], default: [] },
     observaciones: { type: String, default: "" },
     estado: { type: String, enum: DESPACHO_ESTADOS, default: "PENDIENTE" },

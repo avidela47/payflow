@@ -4,25 +4,28 @@ import { Client } from "@/models/Client";
 import { Presupuesto } from "@/models/Presupuesto";
 import { Luminaria } from "@/models/Luminaria";
 import { Despacho } from "@/models/Despacho";
+import { Reparacion } from "@/models/Reparacion";
 import {
   DespachosClient,
   type DespachoItem,
   type ClienteOption,
   type PresupuestoOption,
   type LuminariaOption,
+  type ReparacionOption,
 } from "./despachos-client";
 
 export default async function DespachosPage() {
   await requireModuleAccess("despachos");
   await connectDB();
 
-  const [items, clients, presupuestos, luminarias] = await Promise.all([
+  const [items, clients, presupuestos, luminarias, reparaciones] = await Promise.all([
     Despacho.find({}).sort({ createdAt: -1 }).lean(),
     Client.find({}).sort({ nombre: 1 }).lean(),
     // Solo presupuestos aprobados tiene sentido despachar, igual que el
     // original (que filtraba "estado === 'Aprobado'" en el combo).
     Presupuesto.find({ estado: "APROBADO" }).sort({ createdAt: -1 }).lean(),
     Luminaria.find({}).sort({ codigo: 1 }).lean(),
+    Reparacion.find({}).sort({ createdAt: -1 }).select("numero razonSocial lineas").lean(),
   ]);
 
   const despachoItems: DespachoItem[] = items.map((item) => ({
@@ -32,6 +35,7 @@ export default async function DespachosPage() {
     clientId: item.clientId?.toString(),
     razonSocial: item.razonSocial,
     numeroPresupuesto: item.numeroPresupuesto,
+    numeroReparacion: item.numeroReparacion,
     items: item.items.map((i) => ({
       codigo: i.codigo,
       descripcion: i.descripcion,
@@ -70,6 +74,13 @@ export default async function DespachosPage() {
     precio: l.precio,
   }));
 
+  const reparacionOptions: ReparacionOption[] = reparaciones.map((r) => ({
+    id: r._id.toString(),
+    numero: r.numero,
+    razonSocial: r.razonSocial,
+    lineas: r.lineas.map((l) => ({ codigoLuminaria: l.codigoLuminaria, descripcion: l.descripcion, cantidad: l.cantidad })),
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -85,6 +96,7 @@ export default async function DespachosPage() {
         clientes={clienteOptions}
         presupuestos={presupuestoOptions}
         luminarias={luminariaOptions}
+        reparaciones={reparacionOptions}
       />
     </div>
   );

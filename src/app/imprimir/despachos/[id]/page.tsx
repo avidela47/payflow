@@ -63,8 +63,11 @@ export default async function ImprimirDespachoPage({ params }: { params: { id: s
 
       <section className="mt-6 text-sm">
         <p className="font-semibold">{despacho.razonSocial}</p>
-        {despacho.numeroPresupuesto && (
-          <p className="mt-1 text-xs text-gray-600">Presupuesto: {despacho.numeroPresupuesto}</p>
+        {(despacho.numeroPresupuesto || despacho.numeroReparacion) && (
+          <p className="mt-1 text-xs text-gray-600">
+            {despacho.numeroPresupuesto && <>Presupuesto: {despacho.numeroPresupuesto} </>}
+            {despacho.numeroReparacion && <>— Reparación: {despacho.numeroReparacion}</>}
+          </p>
         )}
       </section>
 

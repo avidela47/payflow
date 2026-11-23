@@ -46,6 +46,7 @@ export type DespachoItem = {
   clientId?: string;
   razonSocial: string;
   numeroPresupuesto?: string;
+  numeroReparacion?: string;
   items: ItemDespachoForm[];
   observaciones?: string;
   estado: DespachoEstado;
@@ -73,6 +74,13 @@ export type LuminariaOption = {
   precio: number;
 };
 
+export type ReparacionOption = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+  lineas: { codigoLuminaria?: string; descripcion: string; cantidad: number }[];
+};
+
 // ---------- formulario de creación (contenido del Dialog) ----------
 //
 // Crear el despacho NO descuenta stock todavía — queda "Pendiente" hasta
@@ -83,11 +91,13 @@ function DespachoForm({
   clientes,
   presupuestos,
   luminarias,
+  reparaciones,
   onDone,
 }: {
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   luminarias: LuminariaOption[];
+  reparaciones: ReparacionOption[];
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -96,6 +106,7 @@ function DespachoForm({
   const [razonSocial, setRazonSocial] = useState("");
   const [presupuestoId, setPresupuestoId] = useState("");
   const [numeroPresupuesto, setNumeroPresupuesto] = useState("");
+  const [reparacionId, setReparacionId] = useState("");
   const [items, setItems] = useState<ItemDespachoForm[]>([]);
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
   const [manualAbierto, setManualAbierto] = useState(false);
@@ -147,6 +158,29 @@ function DespachoForm({
         })
       );
     }
+  }
+
+  // Reparación: a diferencia del presupuesto, NO reemplaza los ítems ya
+  // armados — los AGREGA. Ariel confirmó que un mismo despacho puede
+  // llevar unidades reparadas y unidades nuevas de una OT mezcladas (caso
+  // real: mandan 5 a reparar, 3 vuelven reparadas y 2 se fabrican de
+  // nuevo, todo sale junto). Las líneas de la Reparación entran como
+  // fueraDeCatalogo=true: no son stock de Luminaria, nunca deben
+  // descontar ni bloquear por falta de stock.
+  function seleccionarReparacion(id: string) {
+    setReparacionId(id);
+    const r = reparaciones.find((rep) => rep.id === id);
+    if (!r) return;
+    setItems((prev) => [
+      ...prev,
+      ...r.lineas.map((l) => ({
+        codigo: l.codigoLuminaria?.trim() ? l.codigoLuminaria.toUpperCase() : "REPARADA",
+        descripcion: l.descripcion,
+        origen: "FABRICADA" as LuminariaOrigen,
+        cantidad: l.cantidad,
+        fueraDeCatalogo: true,
+      })),
+    ]);
   }
 
   function actualizarItem(index: number, campo: "cantidad" | "origen", valor: string | number) {
@@ -262,6 +296,27 @@ function DespachoForm({
         </Select>
         <input type="hidden" name="presupuestoId" value={presupuestoId} />
         <input type="hidden" name="numeroPresupuesto" value={numeroPresupuesto} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="reparacionSelect">Agregar unidades de una Reparación (opcional)</Label>
+        <Select
+          id="reparacionSelect"
+          value={reparacionId}
+          onChange={(e) => seleccionarReparacion(e.target.value)}
+        >
+          <option value="">Sin reparación</option>
+          {reparaciones.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.numero} — {r.razonSocial}
+            </option>
+          ))}
+        </Select>
+        <input type="hidden" name="reparacionId" value={reparacionId} />
+        <p className="text-xs text-muted-foreground">
+          Agrega las líneas de la reparación elegida como ítems &quot;fuera de catálogo&quot; — no
+          descuentan stock de Luminaria. Podés combinarlas con ítems de catálogo (unidades nuevas).
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -427,11 +482,13 @@ export function DespachosClient({
   clientes,
   presupuestos,
   luminarias,
+  reparaciones,
 }: {
   items: DespachoItem[];
   clientes: ClienteOption[];
   presupuestos: PresupuestoOption[];
   luminarias: LuminariaOption[];
+  reparaciones: ReparacionOption[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -540,7 +597,9 @@ export function DespachosClient({
               </TableCell>
               <TableCell className="max-w-[200px] truncate">{item.razonSocial}</TableCell>
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                {item.numeroPresupuesto || "—"}
+                {item.numeroPresupuesto && <div>Pres: {item.numeroPresupuesto}</div>}
+                {item.numeroReparacion && <div>Rep: {item.numeroReparacion}</div>}
+                {!item.numeroPresupuesto && !item.numeroReparacion && "—"}
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {item.items.length} item{item.items.length === 1 ? "" : "s"}
@@ -597,8 +656,11 @@ export function DespachosClient({
                 <p className="text-muted-foreground">
                   {new Date(viewTarget.fechaISO).toLocaleDateString("es-AR")}
                 </p>
-                {viewTarget.numeroPresupuesto && (
-                  <p className="text-xs text-muted-foreground">Presupuesto: {viewTarget.numeroPresupuesto}</p>
+                {(viewTarget.numeroPresupuesto || viewTarget.numeroReparacion) && (
+                  <p className="text-xs text-muted-foreground">
+                    {viewTarget.numeroPresupuesto && <>Presupuesto: {viewTarget.numeroPresupuesto} </>}
+                    {viewTarget.numeroReparacion && <>— Reparación: {viewTarget.numeroReparacion}</>}
+                  </p>
                 )}
               </div>
               <Badge variant={despachoEstadoBadgeVariant(viewTarget.estado)}>
@@ -674,6 +736,7 @@ export function DespachosClient({
           clientes={clientes}
           presupuestos={presupuestos}
           luminarias={luminarias}
+          reparaciones={reparaciones}
           onDone={() => setCreatingOpen(false)}
         />
       </Dialog>

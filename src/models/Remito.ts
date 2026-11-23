@@ -11,6 +11,13 @@ import { REMITO_ESTADOS, type RemitoEstado } from "@/lib/remito-estados";
 // numeroOrden ahora es el snapshot de texto de una Orden de Trabajo real
 // (ref OrdenTrabajo vía ordenTrabajoId), conectado el 2026-11-23 — mismo
 // patrón que presupuestoId/numeroPresupuesto.
+//
+// numeroReparacion: mismo patrón, agregado el mismo día — Ariel confirmó
+// que Reparación sigue el mismo circuito que OT/Fabricar y termina en
+// Remito/Despacho. NO es excluyente con ordenTrabajoId: un mismo Remito
+// puede llevar unidades reparadas y unidades nuevas de una OT mezcladas
+// (ejemplo real de Ariel: "mandan a reparar 5, 3 tienen reparación y 2 se
+// las harán de nuevas" — todo sale junto).
 export interface ILineaRemito {
   codigo?: string;
   descripcion: string;
@@ -28,6 +35,8 @@ export interface IRemito {
   numeroPresupuesto?: string;
   ordenTrabajoId?: mongoose.Types.ObjectId;
   numeroOrden?: string;
+  reparacionId?: mongoose.Types.ObjectId;
+  numeroReparacion?: string;
   lineas: ILineaRemito[];
   notas?: string;
   estado: RemitoEstado;
@@ -54,6 +63,8 @@ const RemitoSchema = new Schema<IRemito>(
     numeroPresupuesto: { type: String, default: "" },
     ordenTrabajoId: { type: Schema.Types.ObjectId, ref: "OrdenTrabajo" },
     numeroOrden: { type: String, default: "" },
+    reparacionId: { type: Schema.Types.ObjectId, ref: "Reparacion" },
+    numeroReparacion: { type: String, default: "" },
     lineas: { type: [LineaRemitoSchema], default: [] },
     notas: { type: String, default: "" },
     estado: { type: String, enum: REMITO_ESTADOS, default: "BORRADOR" },

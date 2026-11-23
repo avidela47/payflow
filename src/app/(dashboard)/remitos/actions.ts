@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Remito } from "@/models/Remito";
 import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { Reparacion } from "@/models/Reparacion";
 import { REMITO_ESTADOS } from "@/lib/remito-estados";
 
 function generarNumero(): Promise<string> {
@@ -34,6 +35,7 @@ const remitoSchema = z.object({
   presupuestoId: z.string().optional(),
   numeroPresupuesto: z.string().optional(),
   ordenTrabajoId: z.string().optional(),
+  reparacionId: z.string().optional(),
   notas: z.string().optional(),
   lineas: z.array(lineaSchema).min(1, "Agregá al menos un ítem."),
 });
@@ -53,6 +55,7 @@ function parseRemitoForm(formData: FormData) {
     presupuestoId: formData.get("presupuestoId") || undefined,
     numeroPresupuesto: formData.get("numeroPresupuesto") || undefined,
     ordenTrabajoId: formData.get("ordenTrabajoId") || undefined,
+    reparacionId: formData.get("reparacionId") || undefined,
     notas: formData.get("notas") || undefined,
     lineas: lineasRaw,
   });
@@ -81,8 +84,17 @@ export async function createRemito(formData: FormData) {
       numeroOrden = orden.numero;
     }
 
+    let numeroReparacion = "";
+    if (parsed.data.reparacionId) {
+      const reparacion = await Reparacion.findById(parsed.data.reparacionId);
+      if (!reparacion) {
+        return { ok: false, error: "La Reparación elegida ya no existe." };
+      }
+      numeroReparacion = reparacion.numero;
+    }
+
     const numero = await generarNumero();
-    await Remito.create({ ...parsed.data, numero, numeroOrden });
+    await Remito.create({ ...parsed.data, numero, numeroOrden, numeroReparacion });
   } catch (err) {
     console.error("createRemito error:", err);
     const message = err instanceof Error ? err.message : String(err);

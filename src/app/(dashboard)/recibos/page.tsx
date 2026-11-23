@@ -4,24 +4,27 @@ import { Client } from "@/models/Client";
 import { Presupuesto } from "@/models/Presupuesto";
 import { Recibo } from "@/models/Recibo";
 import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { Reparacion } from "@/models/Reparacion";
 import {
   RecibosClient,
   type ReciboItem,
   type ClienteOption,
   type PresupuestoOption,
   type OrdenTrabajoOption,
+  type ReparacionOption,
 } from "./recibos-client";
 
 export default async function RecibosPage() {
   await requireModuleAccess("recibos");
   await connectDB();
 
-  const [items, clients, presupuestos, ordenes] = await Promise.all([
+  const [items, clients, presupuestos, ordenes, reparaciones] = await Promise.all([
     Recibo.find({}).sort({ createdAt: -1 }).lean(),
     Client.find({}).sort({ nombre: 1 }).lean(),
     // Solo presupuestos aprobados, igual criterio que Despachos.
     Presupuesto.find({ estado: "APROBADO" }).sort({ createdAt: -1 }).lean(),
     OrdenTrabajo.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
+    Reparacion.find({}).sort({ createdAt: -1 }).select("numero razonSocial").lean(),
   ]);
 
   const reciboItems: ReciboItem[] = items.map((item) => ({
@@ -32,6 +35,7 @@ export default async function RecibosPage() {
     razonSocial: item.razonSocial,
     numeroPresupuesto: item.numeroPresupuesto,
     numeroOrden: item.numeroOrden,
+    numeroReparacion: item.numeroReparacion,
     concepto: item.concepto,
     lineas: item.lineas.map((l) => ({ descripcion: l.descripcion, montoUsd: l.montoUsd })),
     totalUsd: item.totalUsd,
@@ -74,6 +78,12 @@ export default async function RecibosPage() {
     razonSocial: o.razonSocial,
   }));
 
+  const reparacionOptions: ReparacionOption[] = reparaciones.map((r) => ({
+    id: r._id.toString(),
+    numero: r.numero,
+    razonSocial: r.razonSocial,
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -88,6 +98,7 @@ export default async function RecibosPage() {
         clientes={clienteOptions}
         presupuestos={presupuestoOptions}
         ordenesTrabajo={ordenTrabajoOptions}
+        reparaciones={reparacionOptions}
       />
     </div>
   );

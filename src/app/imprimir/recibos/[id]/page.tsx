@@ -70,7 +70,10 @@ export default async function ImprimirReciboPage({ params }: { params: { id: str
           <p className="text-xs font-semibold text-gray-500">REFERENCIA</p>
           {recibo.numeroPresupuesto && <p className="text-xs">Presupuesto: {recibo.numeroPresupuesto}</p>}
           {recibo.numeroOrden && <p className="text-xs">Orden de trabajo: {recibo.numeroOrden}</p>}
-          {!recibo.numeroPresupuesto && !recibo.numeroOrden && <p className="text-xs text-gray-500">—</p>}
+          {recibo.numeroReparacion && <p className="text-xs">Reparación: {recibo.numeroReparacion}</p>}
+          {!recibo.numeroPresupuesto && !recibo.numeroOrden && !recibo.numeroReparacion && (
+            <p className="text-xs text-gray-500">—</p>
+          )}
         </div>
       </section>
 

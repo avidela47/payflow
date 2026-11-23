@@ -11,6 +11,11 @@ import { RECIBO_ESTADOS, FORMAS_PAGO, type ReciboEstado, type FormaPago } from "
 // (ref OrdenTrabajo vía ordenTrabajoId), conectado el 2026-11-23, igual
 // criterio que Remito.
 //
+// numeroReparacion: mismo patrón, agregado el mismo día — Ariel usa
+// Recibo "de vez en cuando" tanto para OT como para Reparación, nunca
+// obligatorio. No excluyente con ordenTrabajoId, mismo criterio que
+// Remito.
+//
 // A diferencia de Despacho/Remito, Recibo no mueve stock ni tiene un flujo
 // de aprobación — es simplemente un registro de cobro. No tiene "anular":
 // el original tampoco lo tiene, solo permite borrar (ver actions.ts para
@@ -40,6 +45,8 @@ export interface IRecibo {
   numeroPresupuesto?: string;
   ordenTrabajoId?: mongoose.Types.ObjectId;
   numeroOrden?: string;
+  reparacionId?: mongoose.Types.ObjectId;
+  numeroReparacion?: string;
   concepto: string;
   lineas: ILineaRecibo[];
   totalUsd: number;
@@ -81,6 +88,8 @@ const ReciboSchema = new Schema<IRecibo>(
     numeroPresupuesto: { type: String, default: "" },
     ordenTrabajoId: { type: Schema.Types.ObjectId, ref: "OrdenTrabajo" },
     numeroOrden: { type: String, default: "" },
+    reparacionId: { type: Schema.Types.ObjectId, ref: "Reparacion" },
+    numeroReparacion: { type: String, default: "" },
     concepto: { type: String, required: true },
     lineas: { type: [LineaReciboSchema], default: [] },
     totalUsd: { type: Number, required: true },
