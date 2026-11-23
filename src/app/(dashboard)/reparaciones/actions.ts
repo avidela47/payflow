@@ -81,6 +81,82 @@ export async function createReparacion(formData: FormData) {
   }
 
   revalidatePath("/reparaciones");
+  revalidatePath("/fabrica-proyectos");
+  return { ok: true };
+}
+
+export type ReparacionActiva = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+  lineas: { codigoLuminaria?: string; descripcion: string; cantidad: number }[];
+  estado: "PENDIENTE" | "EN_PROCESO";
+  tomadoPor?: string;
+  createdAtISO: string;
+};
+
+// Usado por la pantalla kiosco /fabrica-proyectos para el polling (ver
+// fabrica-proyectos-client.tsx) — mismo rol que listarProyectosActivos en
+// proyectos/actions.ts. Devuelve solo las NO terminadas (LISTA queda
+// afuera, ya no le interesa al taller en el día a día). Sin prioridad —
+// a diferencia de Proyecto, Ariel no pidió urgencias para Reparación.
+export async function listarReparacionesActivas(): Promise<ReparacionActiva[]> {
+  await connectDB();
+  const reparaciones = await Reparacion.find({ estado: { $ne: "LISTA" } })
+    .sort({ createdAt: 1 })
+    .lean();
+
+  return reparaciones.map((r) => ({
+    id: r._id.toString(),
+    numero: r.numero,
+    razonSocial: r.razonSocial,
+    lineas: r.lineas.map((l) => ({
+      codigoLuminaria: l.codigoLuminaria,
+      descripcion: l.descripcion,
+      cantidad: l.cantidad,
+    })),
+    estado: r.estado as "PENDIENTE" | "EN_PROCESO",
+    tomadoPor: r.tomadoPor,
+    createdAtISO: r.createdAt.toISOString(),
+  }));
+}
+
+// Tomar: acción de taller, pensada para la pantalla kiosco (igual que
+// tomarProyecto en proyectos/actions.ts) pero también disponible desde el
+// detalle de la Reparación (/reparaciones/[id]) para quien la gestiona
+// desde el escritorio. El operario se elige de Empleados activos, mismo
+// criterio que Proyecto.
+export async function tomarReparacion(id: string, operario: string) {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+  if (!operario) {
+    return { ok: false, error: "Elegí quién toma la reparación." };
+  }
+
+  try {
+    await connectDB();
+    const reparacion = await Reparacion.findById(id);
+    if (!reparacion) {
+      return { ok: false, error: "La reparación ya no existe." };
+    }
+    if (reparacion.estado !== "PENDIENTE") {
+      return { ok: false, error: "Esta reparación ya fue tomada." };
+    }
+
+    await Reparacion.findByIdAndUpdate(id, {
+      $set: { estado: "EN_PROCESO", tomadoPor: operario, fechaTomada: new Date() },
+    });
+  } catch (err) {
+    console.error("tomarReparacion error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo tomar: ${message}` };
+  }
+
+  revalidatePath("/reparaciones");
+  revalidatePath(`/reparaciones/${id}`);
+  revalidatePath("/fabrica-proyectos");
   return { ok: true };
 }
 
@@ -119,16 +195,23 @@ const componenteUsadoSchema = z.object({
   cantidad: z.coerce.number().positive(),
 });
 
-// Ejecutar: a diferencia de OrdenTrabajo, acá no hay chequeo de stock de
-// Luminaria ni generación de Proyecto de fábrica — la luminaria es del
-// cliente. Lo único real es el descuento de Componentes, elegido a mano
-// (confirmado por Ariel: no es por Receta, cada reparación puede gastar
-// cosas distintas aunque sea la misma luminaria). Sí o sí descuenta stock
-// real de Componente y deja registro en MovimientoComponente — a
-// diferencia de itemsDescontados en OrdenTrabajo (que es un snapshot
-// informativo, el descuento real pasa después al despachar), acá el
-// descuento ES real y ocurre en este mismo paso, porque no hay ningún
-// otro documento posterior (Despacho) que vuelva a tocar Componentes.
+// Ejecutar ("marcar lista"): a diferencia de OrdenTrabajo, acá no hay
+// chequeo de stock de Luminaria ni generación de Proyecto de fábrica — la
+// luminaria es del cliente. Lo único real es el descuento de Componentes,
+// elegido a mano (confirmado por Ariel: no es por Receta, cada reparación
+// puede gastar cosas distintas aunque sea la misma luminaria). Sí o sí
+// descuenta stock real de Componente y deja registro en
+// MovimientoComponente — a diferencia de itemsDescontados en
+// OrdenTrabajo (que es un snapshot informativo, el descuento real pasa
+// después al despachar), acá el descuento ES real y ocurre en este mismo
+// paso, porque no hay ningún otro documento posterior (Despacho) que
+// vuelva a tocar Componentes.
+//
+// Requiere que la reparación ya esté EN_PROCESO (tomada por alguien, ver
+// tomarReparacion) — igual secuencia que Proyecto (tomar → avance), para
+// que el taller siempre quede con un responsable asignado antes de
+// cerrarla. El operario que queda en MovimientoComponente es el mismo
+// que la tomó (reparacion.tomadoPor), no uno nuevo elegido en este paso.
 export async function ejecutarReparacion(id: string, componentesJson: string) {
   const session = await getSession();
   if (!session?.user) {
@@ -155,8 +238,11 @@ export async function ejecutarReparacion(id: string, componentesJson: string) {
     if (!reparacion) {
       return { ok: false, error: "La reparación ya no existe." };
     }
-    if (reparacion.ejecutada) {
+    if (reparacion.ejecutada || reparacion.estado === "LISTA") {
       return { ok: false, error: "Esta reparación ya fue ejecutada." };
+    }
+    if (reparacion.estado !== "EN_PROCESO") {
+      return { ok: false, error: "Primero hay que tomar la reparación." };
     }
 
     // 1. Validar stock de todos los componentes elegidos con datos recién
@@ -190,7 +276,7 @@ export async function ejecutarReparacion(id: string, componentesJson: string) {
     }
 
     // 2. Descontar cada componente y dejar registro del movimiento.
-    const operario = session.user.name || session.user.email || "";
+    const operario = reparacion.tomadoPor || session.user.name || session.user.email || "";
     const componentesDescontados = [];
     for (const linea of lineas) {
       const actualizado = await Componente.findByIdAndUpdate(
@@ -221,7 +307,7 @@ export async function ejecutarReparacion(id: string, componentesJson: string) {
       $set: {
         ejecutada: true,
         fechaEjecucion: new Date(),
-        estado: "EN_PROCESO",
+        estado: "LISTA",
         componentesDescontados,
       },
     });
@@ -233,5 +319,6 @@ export async function ejecutarReparacion(id: string, componentesJson: string) {
 
   revalidatePath("/reparaciones");
   revalidatePath(`/reparaciones/${id}`);
-  return { ok: true, mensaje: "Reparación ejecutada. Se descontó el stock de Componentes." };
+  revalidatePath("/fabrica-proyectos");
+  return { ok: true, mensaje: "Reparación marcada como lista. Se descontó el stock de Componentes." };
 }

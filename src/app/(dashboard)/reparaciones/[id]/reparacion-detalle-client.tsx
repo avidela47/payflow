@@ -23,7 +23,7 @@ import {
   reparacionEstadoBadgeVariant,
   type ReparacionEstado,
 } from "@/lib/reparacion-estados";
-import { ejecutarReparacion, deleteReparacion } from "../actions";
+import { tomarReparacion, ejecutarReparacion, deleteReparacion } from "../actions";
 
 export type ReparacionDetalle = {
   id: string;
@@ -35,6 +35,8 @@ export type ReparacionDetalle = {
   vendedor: string;
   lineas: { codigoLuminaria?: string; descripcion: string; cantidad: number }[];
   estado: ReparacionEstado;
+  tomadoPor?: string;
+  fechaTomadaISO?: string;
   ejecutada: boolean;
   fechaEjecucionISO?: string;
   componentesDescontados: { codigoComponente: string; descripcionComponente: string; cantidad: number }[];
@@ -48,16 +50,22 @@ export type ComponenteOption = {
   stockActual: number;
 };
 
+export type OperarioOption = { id: string; nombre: string };
+
 type ComponenteUsadoForm = { componenteId: string; cantidad: number };
 
 export function ReparacionDetalleClient({
   reparacion,
   componentes,
+  operarios,
 }: {
   reparacion: ReparacionDetalle;
   componentes: ComponenteOption[];
+  operarios: OperarioOption[];
 }) {
   const router = useRouter();
+  const [tomarOpen, setTomarOpen] = useState(false);
+  const [operarioSel, setOperarioSel] = useState("");
   const [ejecutarOpen, setEjecutarOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -73,6 +81,24 @@ export function ReparacionDetalleClient({
 
   function quitarUsado(index: number) {
     setUsados((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  async function handleTomar() {
+    if (!operarioSel) {
+      toast.error("Elegí quién toma la reparación.");
+      return;
+    }
+    setProcessing(true);
+    const result = await tomarReparacion(reparacion.id, operarioSel);
+    setProcessing(false);
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+    setTomarOpen(false);
+    toast.success("Reparación tomada.");
+    router.refresh();
   }
 
   async function handleEjecutar() {
@@ -109,8 +135,9 @@ export function ReparacionDetalleClient({
     router.push("/reparaciones");
   }
 
-  const puedeEjecutar = !reparacion.ejecutada;
-  const puedeBorrar = !reparacion.ejecutada && reparacion.estado === "PENDIENTE";
+  const puedeTomar = reparacion.estado === "PENDIENTE";
+  const puedeEjecutar = reparacion.estado === "EN_PROCESO";
+  const puedeBorrar = reparacion.estado === "PENDIENTE";
 
   return (
     <div className="flex flex-col gap-4">
@@ -142,6 +169,17 @@ export function ReparacionDetalleClient({
         </Badge>
       </div>
 
+      {reparacion.tomadoPor && (
+        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
+          <p className="text-muted-foreground">
+            Tomada por <span className="font-medium text-foreground">{reparacion.tomadoPor}</span>
+            {reparacion.fechaTomadaISO && (
+              <> el {new Date(reparacion.fechaTomadaISO).toLocaleDateString("es-AR")}</>
+            )}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-muted-foreground">Líneas (luminarias a reparar)</h2>
         <Table compact>
@@ -170,7 +208,7 @@ export function ReparacionDetalleClient({
             Componentes usados{" "}
             {reparacion.fechaEjecucionISO && (
               <span className="font-normal">
-                (ejecutada el {new Date(reparacion.fechaEjecucionISO).toLocaleDateString("es-AR")})
+                (lista el {new Date(reparacion.fechaEjecucionISO).toLocaleDateString("es-AR")})
               </span>
             )}
           </h2>
@@ -210,17 +248,44 @@ export function ReparacionDetalleClient({
             Borrar
           </Button>
         )}
+        {puedeTomar && (
+          <Button disabled={processing} onClick={() => setTomarOpen(true)}>
+            Tomar reparación
+          </Button>
+        )}
         {puedeEjecutar && (
           <Button disabled={processing} onClick={() => setEjecutarOpen(true)}>
-            Ejecutar reparación
+            Marcar lista
           </Button>
         )}
       </div>
 
+      <Dialog open={tomarOpen} onOpenChange={setTomarOpen} title="Tomar reparación" className="max-w-sm">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">Elegí quién se hace cargo de esta reparación.</p>
+          <Select value={operarioSel} onChange={(e) => setOperarioSel(e.target.value)}>
+            <option value="">Elegir operario...</option>
+            {operarios.map((op) => (
+              <option key={op.id} value={op.nombre}>
+                {op.nombre}
+              </option>
+            ))}
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setTomarOpen(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={processing} onClick={handleTomar}>
+              {processing ? "Procesando..." : "Confirmar"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
       <Dialog
         open={ejecutarOpen}
         onOpenChange={setEjecutarOpen}
-        title="Ejecutar reparación"
+        title="Marcar reparación como lista"
         className="max-w-lg"
       >
         <div className="flex flex-col gap-4">
@@ -278,7 +343,7 @@ export function ReparacionDetalleClient({
               Cancelar
             </Button>
             <Button disabled={processing} onClick={handleEjecutar}>
-              {processing ? "Procesando..." : "Confirmar ejecución"}
+              {processing ? "Procesando..." : "Confirmar"}
             </Button>
           </div>
         </div>

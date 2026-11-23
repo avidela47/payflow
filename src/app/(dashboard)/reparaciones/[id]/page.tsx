@@ -3,10 +3,12 @@ import { connectDB } from "@/lib/db";
 import { requireModuleAccess } from "@/lib/auth";
 import { Reparacion } from "@/models/Reparacion";
 import { Componente } from "@/models/Componente";
+import { Employee } from "@/models/Employee";
 import {
   ReparacionDetalleClient,
   type ReparacionDetalle,
   type ComponenteOption,
+  type OperarioOption,
 } from "./reparacion-detalle-client";
 
 export default async function ReparacionDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,9 +16,10 @@ export default async function ReparacionDetallePage({ params }: { params: Promis
   await connectDB();
 
   const { id } = await params;
-  const [reparacion, componentes] = await Promise.all([
+  const [reparacion, componentes, empleados] = await Promise.all([
     Reparacion.findById(id).lean(),
     Componente.find({}).sort({ codigo: 1 }).lean(),
+    Employee.find({ active: true }).sort({ nombre: 1 }).lean(),
   ]);
   if (!reparacion) notFound();
 
@@ -34,6 +37,8 @@ export default async function ReparacionDetallePage({ params }: { params: Promis
       cantidad: l.cantidad,
     })),
     estado: reparacion.estado,
+    tomadoPor: reparacion.tomadoPor,
+    fechaTomadaISO: reparacion.fechaTomada?.toISOString().slice(0, 10),
     ejecutada: reparacion.ejecutada,
     fechaEjecucionISO: reparacion.fechaEjecucion?.toISOString().slice(0, 10),
     componentesDescontados: reparacion.componentesDescontados.map((c) => ({
@@ -51,13 +56,18 @@ export default async function ReparacionDetallePage({ params }: { params: Promis
     stockActual: c.stockActual,
   }));
 
+  const operarioOptions: OperarioOption[] = empleados.map((e) => ({
+    id: e._id.toString(),
+    nombre: `${e.nombre} ${e.apellido}`.trim(),
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Reparación {detalle.numero}</h1>
         <p className="text-sm text-muted-foreground">{detalle.razonSocial}</p>
       </div>
-      <ReparacionDetalleClient reparacion={detalle} componentes={componenteOptions} />
+      <ReparacionDetalleClient reparacion={detalle} componentes={componenteOptions} operarios={operarioOptions} />
     </div>
   );
 }

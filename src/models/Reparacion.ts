@@ -25,9 +25,16 @@ import { REPARACION_ESTADOS, type ReparacionEstado } from "@/lib/reparacion-esta
 //   movimiento-componente-tipos.ts), mismo criterio que "SALIDA_PRODUCCION"
 //   para Fabricar: reservado para esta lógica, no elegible a mano desde
 //   el formulario de Movimientos de Componentes.
-// - "estado" en mayúsculas (PENDIENTE/EN_PROCESO) — mismo criterio que el
-//   resto de la fusión. Sin "EN_FABRICA": no aplica, no hay Proyecto de
-//   fábrica en este circuito.
+// - "estado" en mayúsculas (PENDIENTE/EN_PROCESO/LISTA) — mismo criterio
+//   que el resto de la fusión. Sin "EN_FABRICA": no aplica, no hay
+//   Proyecto de fábrica en este circuito.
+// - Ampliado el mismo día: Ariel pidió que el taller vea la reparación
+//   pendiente en la pantalla kiosco (/fabrica-proyectos), con la misma
+//   alerta que un Proyecto nuevo, y que quede registrado el proceso —
+//   "tomadoPor"/"fechaTomada" calcados de Proyecto (ver
+//   proyectos/actions.ts, tomarProyecto). El ciclo queda PENDIENTE
+//   (dispara alerta) → EN_PROCESO (tomada, trabajando) → LISTA
+//   (ejecutada, Componentes descontados).
 // - "clienteId"/"presupuestoId" son ObjectId reales con `ref`, mismo
 //   patrón que OrdenTrabajo/Despacho/Remito/Recibo.
 // - Numeración propia `REP-AAAA-NNNN` vía un segundo contador atómico
@@ -60,6 +67,8 @@ export interface IReparacion {
   lineas: ILineaReparacion[];
   estado: ReparacionEstado;
   notas?: string;
+  tomadoPor?: string;
+  fechaTomada?: Date;
   ejecutada: boolean;
   fechaEjecucion?: Date;
   componentesDescontados: IComponenteDescontadoReparacion[];
@@ -98,6 +107,8 @@ const ReparacionSchema = new Schema<IReparacion>(
     lineas: { type: [LineaReparacionSchema], default: [] },
     estado: { type: String, enum: REPARACION_ESTADOS, default: "PENDIENTE" },
     notas: { type: String, default: "" },
+    tomadoPor: { type: String, default: "" },
+    fechaTomada: { type: Date },
     ejecutada: { type: Boolean, default: false },
     fechaEjecucion: { type: Date },
     componentesDescontados: { type: [ComponenteDescontadoReparacionSchema], default: [] },
