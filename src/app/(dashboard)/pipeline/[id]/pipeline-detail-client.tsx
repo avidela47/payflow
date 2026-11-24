@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Send, Trash2 } from "lucide-react";
 import { collection, doc, onSnapshot, query, setDoc, deleteDoc, where } from "firebase/firestore";
 import { dbProyectos } from "@/lib/firebase-proyectos";
 import { TEAM, teamMemberById } from "@/lib/proyectos-team";
+import { notificarEstadoFinal, notificarManual } from "@/lib/proyectos-notify";
+import { useQuienSos, QuienSos } from "../quien-sos";
 import {
   TAREA_ESTADOS,
   tareaEstadoLabel,
@@ -187,10 +189,83 @@ function TareaCard({ tarea }: { tarea: TareaDoc }) {
   );
 }
 
+function NotificarForm({
+  proyecto,
+  quienSos,
+  onDone,
+}: {
+  proyecto: ProyectoDoc;
+  quienSos: string;
+  onDone: () => void;
+}) {
+  const [asunto, setAsunto] = useState(`Novedad en ${proyecto.name}`);
+  const [mensaje, setMensaje] = useState("");
+  const [otroMail, setOtroMail] = useState("");
+  const [incluirResumen, setIncluirResumen] = useState(true);
+  const [sending, setSending] = useState(false);
+
+  const destinatarios =
+    proyecto.members.length > 0
+      ? proyecto.members.map((id) => teamMemberById(id)?.name).filter(Boolean).join(", ")
+      : "todo el equipo (el proyecto no tiene miembros asignados)";
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!asunto.trim()) {
+      toast.error("Falta el asunto.");
+      return;
+    }
+    setSending(true);
+    const extra = otroMail
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
+    try {
+      notificarManual(proyecto, asunto.trim(), mensaje, quienSos, extra, incluirResumen);
+      toast.success("Notificación enviada.");
+      onDone();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <p className="text-xs text-muted-foreground">Para: {destinatarios}</p>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="otroMail">Otro mail (opcional, separados por coma)</Label>
+        <Input id="otroMail" value={otroMail} onChange={(e) => setOtroMail(e.target.value)} placeholder="nombre@empresa.com" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="asunto">Asunto</Label>
+        <Input id="asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="mensaje">Mensaje</Label>
+        <Textarea id="mensaje" rows={3} value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Qué querés avisar?" />
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={incluirResumen} onChange={(e) => setIncluirResumen(e.target.checked)} />
+        Incluir resumen del proyecto (fechas, equipo)
+      </label>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={sending}>
+          {sending ? "Enviando..." : "Enviar"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
   const [proyecto, setProyecto] = useState<ProyectoDoc | null | undefined>(undefined);
   const [tareas, setTareas] = useState<TareaDoc[]>([]);
   const [creandoOpen, setCreandoOpen] = useState(false);
+  const [notificarOpen, setNotificarOpen] = useState(false);
+  const { quienSos, elegir } = useQuienSos();
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -211,24 +286,31 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
   }, [proyectoId]);
 
   async function cambiarEstadoProyecto(estado: ProyectoEstado) {
-    if (!proyecto) return;
+    if (!proyecto || !quienSos) return;
+    const estadoAnterior = proyecto.status;
     try {
+      let fechaVenta = proyecto.fechaVenta;
       if (estado === "vendido") {
-        await setDoc(
-          doc(dbProyectos, "projects", proyecto.id),
-          { status: "vendido", fechaVenta: proyecto.fechaVenta ?? new Date().toISOString() },
-          { merge: true }
-        );
+        fechaVenta = proyecto.fechaVenta ?? new Date().toISOString();
+        await setDoc(doc(dbProyectos, "projects", proyecto.id), { status: "vendido", fechaVenta }, { merge: true });
       } else {
         await setDoc(doc(dbProyectos, "projects", proyecto.id), { status: estado }, { merge: true });
+      }
+      // Igual que en la lista: solo notifica si el estado efectivamente
+      // cambió a vendido/finalizado, no en cada edición dentro del mismo estado.
+      if (estado !== estadoAnterior && (estado === "vendido" || estado === "finalizado")) {
+        notificarEstadoFinal({ ...proyecto, fechaVenta }, estado, quienSos);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
     }
   }
 
-  if (proyecto === undefined) {
+  if (proyecto === undefined || quienSos === undefined) {
     return <p className="text-sm text-muted-foreground">Cargando proyecto…</p>;
+  }
+  if (!quienSos) {
+    return <QuienSos onElegir={elegir} />;
   }
   if (proyecto === null) {
     return (
@@ -258,10 +340,14 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={proyectoEstadoBadgeVariant(proyecto.status)}>{proyectoEstadoLabel(proyecto.status)}</Badge>
           <Badge variant={prioridadBadgeVariant(proyecto.priority)}>{prioridadLabel(proyecto.priority)}</Badge>
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => setNotificarOpen(true)}>
+            <Send className="h-3.5 w-3.5" />
+            Notificar
+          </Button>
           <Select
             value={proyecto.status}
             onChange={(e) => cambiarEstadoProyecto(e.target.value as ProyectoEstado)}
-            className="ml-auto h-8 w-40 text-xs"
+            className="h-8 w-40 text-xs"
           >
             <option value="activo">Activo</option>
             <option value="vendido">Vendido</option>
@@ -321,6 +407,10 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
 
       <Dialog open={creandoOpen} onOpenChange={setCreandoOpen} title="Nueva tarea" className="max-w-lg">
         <TareaForm proyectoId={proyecto.id} onDone={() => setCreandoOpen(false)} />
+      </Dialog>
+
+      <Dialog open={notificarOpen} onOpenChange={setNotificarOpen} title="Notificar" className="max-w-lg">
+        <NotificarForm proyecto={proyecto} quienSos={quienSos} onDone={() => setNotificarOpen(false)} />
       </Dialog>
     </div>
   );

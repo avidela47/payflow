@@ -15,7 +15,9 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { dbProyectos } from "@/lib/firebase-proyectos";
-import { TEAM, PROYECTO_COLORS, PROYECTOS_IDENTITY_KEY, type TeamMember } from "@/lib/proyectos-team";
+import { TEAM, PROYECTO_COLORS } from "@/lib/proyectos-team";
+import { notificarProyectoNuevo, notificarEstadoFinal } from "@/lib/proyectos-notify";
+import { useQuienSos, QuienSos } from "./quien-sos";
 import {
   PROYECTO_PRIORIDADES,
   prioridadLabel,
@@ -62,9 +64,11 @@ export type ProyectoDoc = {
 
 function ProyectoForm({
   clientes,
+  quienSos,
   onDone,
 }: {
   clientes: ClienteOption[];
+  quienSos: string;
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
@@ -104,6 +108,7 @@ function ProyectoForm({
         clienteNombre: cliente?.nombre,
       };
       await setDoc(ref, data);
+      notificarProyectoNuevo(data, quienSos);
       toast.success("Proyecto creado.");
       onDone();
     } catch (err) {
@@ -195,16 +200,21 @@ function miembrosNombres(ids: string[]): string {
     .join(", ");
 }
 
-async function cambiarEstado(p: ProyectoDoc, estado: ProyectoEstado) {
+async function cambiarEstado(p: ProyectoDoc, estado: ProyectoEstado, quienSos: string) {
   const ref = doc(dbProyectos, "projects", p.id);
+  const estadoAnterior = p.status;
+  let fechaVenta = p.fechaVenta;
   if (estado === "vendido") {
-    await setDoc(
-      ref,
-      { status: "vendido", fechaVenta: p.fechaVenta ?? new Date().toISOString() },
-      { merge: true }
-    );
+    fechaVenta = p.fechaVenta ?? new Date().toISOString();
+    await setDoc(ref, { status: "vendido", fechaVenta }, { merge: true });
   } else {
     await setDoc(ref, { status: estado }, { merge: true });
+  }
+  // Igual que el original: solo se notifica cuando el estado REALMENTE
+  // cambia a vendido/finalizado, no en cada edición mientras ya está en ese
+  // estado.
+  if (estado !== estadoAnterior && (estado === "vendido" || estado === "finalizado")) {
+    notificarEstadoFinal({ ...p, fechaVenta }, estado, quienSos);
   }
 }
 
@@ -228,9 +238,11 @@ function exportarExcel(filename: string, rows: (string | number)[][]) {
 
 function ProyectosTabla({
   items,
+  quienSos,
   onDelete,
 }: {
   items: ProyectoDoc[];
+  quienSos: string;
   onDelete: (id: string) => void;
 }) {
   if (items.length === 0) {
@@ -273,7 +285,11 @@ function ProyectosTabla({
             <TableCell>
               <Select
                 value={p.status}
-                onChange={(e) => cambiarEstado(p, e.target.value as ProyectoEstado).catch(() => toast.error("No se pudo cambiar el estado."))}
+                onChange={(e) =>
+                  cambiarEstado(p, e.target.value as ProyectoEstado, quienSos).catch(() =>
+                    toast.error("No se pudo cambiar el estado.")
+                  )
+                }
                 className="h-8 w-32 text-xs"
               >
                 <option value="activo">Activo</option>
@@ -308,43 +324,11 @@ function ProyectosTabla({
   );
 }
 
-function QuienSos({ onElegir }: { onElegir: (m: TeamMember) => void }) {
-  return (
-    <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card p-8">
-      <p className="text-sm font-medium">¿Quién sos?</p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {TEAM.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onElegir(m)}
-            className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-full border border-border bg-muted text-sm font-semibold hover:bg-primary/10 hover:text-primary"
-          >
-            {m.initials}
-          </button>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Define quién sos para asignarte tareas y notificaciones — no es tu login de PayFlow.
-      </p>
-    </div>
-  );
-}
-
 export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
   const [proyectos, setProyectos] = useState<ProyectoDoc[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [creandoOpen, setCreandoOpen] = useState(false);
-  const [quienSos, setQuienSos] = useState<string | null>(null);
-
-  useEffect(() => {
-    try {
-      setQuienSos(localStorage.getItem(PROYECTOS_IDENTITY_KEY));
-    } catch {
-      // localStorage puede fallar (modo privado) — simplemente se vuelve a
-      // preguntar cada vez, no es crítico.
-    }
-  }, []);
+  const { quienSos, elegir } = useQuienSos();
 
   useEffect(() => {
     const q = query(collection(dbProyectos, "projects"), where("section", "==", "pipeline"));
@@ -383,18 +367,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
   }
 
   if (!quienSos) {
-    return (
-      <QuienSos
-        onElegir={(m) => {
-          try {
-            localStorage.setItem(PROYECTOS_IDENTITY_KEY, m.id);
-          } catch {
-            // Ídem arriba.
-          }
-          setQuienSos(m.id);
-        }}
-      />
-    );
+    return <QuienSos onElegir={elegir} />;
   }
 
   if (proyectos === null) {
@@ -444,7 +417,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
         </div>
       </div>
 
-      <ProyectosTabla items={activos} onDelete={handleDelete} />
+      <ProyectosTabla items={activos} quienSos={quienSos} onDelete={handleDelete} />
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -466,7 +439,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
             Exportar Excel
           </Button>
         </div>
-        <ProyectosTabla items={finalizados} onDelete={handleDelete} />
+        <ProyectosTabla items={finalizados} quienSos={quienSos} onDelete={handleDelete} />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -493,11 +466,11 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
             Exportar Excel
           </Button>
         </div>
-        <ProyectosTabla items={vendidos} onDelete={handleDelete} />
+        <ProyectosTabla items={vendidos} quienSos={quienSos} onDelete={handleDelete} />
       </div>
 
       <Dialog open={creandoOpen} onOpenChange={setCreandoOpen} title="Nuevo proyecto" className="max-w-lg">
-        <ProyectoForm clientes={clientes} onDone={() => setCreandoOpen(false)} />
+        <ProyectoForm clientes={clientes} quienSos={quienSos} onDone={() => setCreandoOpen(false)} />
       </Dialog>
     </div>
   );
