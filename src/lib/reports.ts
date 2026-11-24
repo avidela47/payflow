@@ -5,7 +5,24 @@ import { Sale } from "@/models/Sale";
 import { Purchase, type PurchaseReceiptStatus } from "@/models/Purchase";
 import { Check, type CheckStatus, type CheckType, type CheckDirection } from "@/models/Check";
 import { Viatico } from "@/models/Viatico";
+import { Presupuesto } from "@/models/Presupuesto";
+import { Despacho } from "@/models/Despacho";
+import { Recibo } from "@/models/Recibo";
+import { OrdenTrabajo } from "@/models/OrdenTrabajo";
+import { Proyecto } from "@/models/Proyecto";
+import { Produccion } from "@/models/Produccion";
+import { Reparacion } from "@/models/Reparacion";
+import { Componente } from "@/models/Componente";
+import { Luminaria } from "@/models/Luminaria";
+import { MovimientoComponente } from "@/models/MovimientoComponente";
 import { formatPeriod } from "@/lib/utils";
+import type { PresupuestoEstado } from "@/lib/presupuesto-estados";
+import type { DespachoEstado } from "@/lib/despacho-estados";
+import type { OrdenTrabajoEstado } from "@/lib/orden-trabajo-estados";
+import type { ProyectoEstado } from "@/lib/proyecto-estados";
+import type { ReparacionEstado } from "@/lib/reparacion-estados";
+import type { LuminariaOrigen } from "@/lib/luminaria-origen";
+import type { MovimientoComponenteTipo } from "@/lib/movimiento-componente-tipos";
 // Import "silencioso": PayrollEntry.employee referencia el modelo
 // "Employee" por nombre, pero acá nunca importamos ese archivo aparte
 // (solo usamos el doc ya populado). Si nada más en el bundle de esta
@@ -13,7 +30,10 @@ import { formatPeriod } from "@/lib/utils";
 // registrado y populate("employee") explota con MissingSchemaError. Este
 // import fuerza el registro aunque no usemos el símbolo directamente.
 import "@/models/Employee";
-// Mismo motivo, para Sale.client → "Client".
+// Mismo motivo, para Sale.client → "Client". También cubre clientId en
+// Presupuesto/Despacho/Recibo/OrdenTrabajo/Reparacion (ninguno se
+// populatea acá — todos guardan razonSocial como snapshot propio — pero
+// Mongoose igual necesita el schema "Client" registrado en el bundle).
 import "@/models/Client";
 // Mismo motivo, para Purchase.provider → "Provider".
 import "@/models/Provider";
@@ -1096,5 +1116,548 @@ export async function getViaticosReport(periodISO: string): Promise<ViaticosRepo
     byPaymentMode,
     detail,
     viajes,
+  };
+}
+
+// ---------- Reporte de Comercial Planta ----------
+
+// Cubre los 3 módulos de "Comercial Planta" que todavía no tenían reporte
+// propio (Presupuesto/Despacho/Recibo — Remito queda afuera a propósito:
+// no mueve plata ni stock, es pura papelería de entrega, ver planificacion/
+// fusion-gestion-luminarias.md). Igual filosofía que Ventas/Compras: el
+// filtro por mes es sobre `fecha` de cada colección, y los montos en U$D
+// (moneda real de Presupuesto/Despacho/Recibo, a diferencia de Ventas/
+// Compras/Cheques que son en pesos) se muestran tal cual están guardados,
+// sin convertir.
+export type ComercialPlantaPresupuestoEstadoRow = {
+  estado: PresupuestoEstado;
+  count: number;
+  totalUsd: number;
+};
+
+export type ComercialPlantaDespachoEstadoRow = {
+  estado: DespachoEstado;
+  count: number;
+};
+
+export type ComercialPlantaDetailRow = {
+  id: string;
+  tipo: "Presupuesto" | "Despacho" | "Recibo";
+  numero: string;
+  razonSocial: string;
+  fechaISO: string;
+  estado: string;
+  montoUsd?: number;
+};
+
+export type ComercialPlantaReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  presupuestos: {
+    totalCount: number;
+    totalUsd: number;
+    byEstado: ComercialPlantaPresupuestoEstadoRow[];
+  };
+  despachos: {
+    totalCount: number;
+    montoUsd: number;
+    byEstado: ComercialPlantaDespachoEstadoRow[];
+  };
+  recibos: {
+    totalCount: number;
+    totalUsd: number;
+    totalCobradoUsd: number;
+    totalPendienteUsd: number;
+  };
+  detail: ComercialPlantaDetailRow[];
+};
+
+export async function getComercialPlantaReport(
+  periodISO: string
+): Promise<ComercialPlantaReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+  const rango = { fecha: { $gte: from, $lt: to } };
+
+  const [presupuestos, despachos, recibos] = await Promise.all([
+    Presupuesto.find(rango).sort({ fecha: 1 }).lean(),
+    Despacho.find(rango).sort({ fecha: 1 }).lean(),
+    Recibo.find(rango).sort({ fecha: 1 }).lean(),
+  ]);
+
+  const presupuestoEstadoMap = new Map<PresupuestoEstado, ComercialPlantaPresupuestoEstadoRow>();
+  let presupuestosTotalUsd = 0;
+  const despachoEstadoMap = new Map<DespachoEstado, ComercialPlantaDespachoEstadoRow>();
+  let despachosMontoUsd = 0;
+  let recibosTotalUsd = 0;
+  let recibosCobradoUsd = 0;
+  let recibosPendienteUsd = 0;
+  const detail: ComercialPlantaDetailRow[] = [];
+
+  for (const p of presupuestos) {
+    presupuestosTotalUsd += p.total;
+    const row = presupuestoEstadoMap.get(p.estado) ?? { estado: p.estado, count: 0, totalUsd: 0 };
+    row.count += 1;
+    row.totalUsd += p.total;
+    presupuestoEstadoMap.set(p.estado, row);
+    detail.push({
+      id: p._id.toString(),
+      tipo: "Presupuesto",
+      numero: p.numero,
+      razonSocial: p.razonSocial,
+      fechaISO: p.fecha.toISOString().slice(0, 10),
+      estado: p.estado,
+      montoUsd: p.total,
+    });
+  }
+
+  for (const d of despachos) {
+    // Mismo criterio que Despacho/page.tsx: los ítems "fuera de catálogo"
+    // (reparaciones) suelen no tener precioUnitario cargado — se suman
+    // igual, simplemente aportan 0 si no lo tienen.
+    const montoDespacho = d.items.reduce(
+      (acc, item) => acc + item.cantidad * (item.precioUnitario ?? 0),
+      0
+    );
+    despachosMontoUsd += montoDespacho;
+    const row = despachoEstadoMap.get(d.estado) ?? { estado: d.estado, count: 0 };
+    row.count += 1;
+    despachoEstadoMap.set(d.estado, row);
+    detail.push({
+      id: d._id.toString(),
+      tipo: "Despacho",
+      numero: d.numero,
+      razonSocial: d.razonSocial,
+      fechaISO: d.fecha.toISOString().slice(0, 10),
+      estado: d.estado,
+      montoUsd: montoDespacho || undefined,
+    });
+  }
+
+  for (const r of recibos) {
+    recibosTotalUsd += r.totalUsd;
+    recibosCobradoUsd += r.totalPagadoUsd;
+    recibosPendienteUsd += r.saldoUsd;
+    detail.push({
+      id: r._id.toString(),
+      tipo: "Recibo",
+      numero: r.numero,
+      razonSocial: r.razonSocial,
+      fechaISO: r.fecha.toISOString().slice(0, 10),
+      estado: r.estado,
+      montoUsd: r.totalUsd,
+    });
+  }
+
+  detail.sort((a, b) => a.fechaISO.localeCompare(b.fechaISO));
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    presupuestos: {
+      totalCount: presupuestos.length,
+      totalUsd: presupuestosTotalUsd,
+      byEstado: Array.from(presupuestoEstadoMap.values()),
+    },
+    despachos: {
+      totalCount: despachos.length,
+      montoUsd: despachosMontoUsd,
+      byEstado: Array.from(despachoEstadoMap.values()),
+    },
+    recibos: {
+      totalCount: recibos.length,
+      totalUsd: recibosTotalUsd,
+      totalCobradoUsd: recibosCobradoUsd,
+      totalPendienteUsd: recibosPendienteUsd,
+    },
+    detail,
+  };
+}
+
+// ---------- Reporte de Producción ----------
+
+// Cubre Órdenes de Trabajo, Proyectos de fábrica y Fabricar — los 3
+// módulos de "Producción" (ver planificacion/fusion-gestion-luminarias.md).
+// A diferencia de Comercial Planta, acá hay dos fechas relevantes por
+// colección (creación vs. ejecución/listo), así que "creadas en el
+// período" y "ejecutadas/listas en el período" son dos consultas
+// separadas — una OT creada en octubre pero ejecutada en noviembre cuenta
+// en ambos reportes de su mes correspondiente, no se fuerza a uno solo.
+export type ProduccionOTEstadoRow = {
+  estado: OrdenTrabajoEstado;
+  count: number;
+};
+
+export type ProduccionProyectoEstadoRow = {
+  estado: ProyectoEstado;
+  count: number;
+};
+
+export type ProduccionComponenteConsumidoRow = {
+  codigoComponente: string;
+  descripcionComponente: string;
+  cantidad: number;
+};
+
+export type ProduccionDetailRow = {
+  id: string;
+  tipo: "Orden de Trabajo" | "Proyecto" | "Fabricación";
+  numero: string;
+  descripcion: string;
+  fechaISO: string;
+  estado?: string;
+  cantidad?: number;
+};
+
+export type ProduccionReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  ordenesTrabajo: {
+    creadasCount: number;
+    ejecutadasCount: number;
+    byEstado: ProduccionOTEstadoRow[];
+  };
+  proyectos: {
+    creadosCount: number;
+    listosCount: number;
+    byEstado: ProduccionProyectoEstadoRow[];
+  };
+  fabricacion: {
+    totalTandas: number;
+    totalCantidadFabricada: number;
+    componentesConsumidos: ProduccionComponenteConsumidoRow[];
+  };
+  detail: ProduccionDetailRow[];
+};
+
+export async function getProduccionReport(periodISO: string): Promise<ProduccionReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const [
+    otsCreadas,
+    otsEjecutadas,
+    proyectosCreados,
+    proyectosListos,
+    producciones,
+  ] = await Promise.all([
+    OrdenTrabajo.find({ fecha: { $gte: from, $lt: to } }).sort({ fecha: 1 }).lean(),
+    OrdenTrabajo.find({ ejecutada: true, fechaEjecucion: { $gte: from, $lt: to } })
+      .sort({ fechaEjecucion: 1 })
+      .lean(),
+    Proyecto.find({ createdAt: { $gte: from, $lt: to } }).sort({ createdAt: 1 }).lean(),
+    Proyecto.find({ estado: "LISTO", fechaListo: { $gte: from, $lt: to } })
+      .sort({ fechaListo: 1 })
+      .lean(),
+    Produccion.find({ createdAt: { $gte: from, $lt: to } }).sort({ createdAt: 1 }).lean(),
+  ]);
+
+  const otEstadoMap = new Map<OrdenTrabajoEstado, ProduccionOTEstadoRow>();
+  for (const ot of otsCreadas) {
+    const row = otEstadoMap.get(ot.estado) ?? { estado: ot.estado, count: 0 };
+    row.count += 1;
+    otEstadoMap.set(ot.estado, row);
+  }
+
+  const proyectoEstadoMap = new Map<ProyectoEstado, ProduccionProyectoEstadoRow>();
+  for (const pr of proyectosCreados) {
+    const row = proyectoEstadoMap.get(pr.estado) ?? { estado: pr.estado, count: 0 };
+    row.count += 1;
+    proyectoEstadoMap.set(pr.estado, row);
+  }
+
+  let totalCantidadFabricada = 0;
+  const componenteMap = new Map<string, ProduccionComponenteConsumidoRow>();
+  for (const prod of producciones) {
+    totalCantidadFabricada += prod.cantidad;
+    for (const c of prod.componentesDescontados) {
+      const row = componenteMap.get(c.codigoComponente) ?? {
+        codigoComponente: c.codigoComponente,
+        descripcionComponente: c.descripcionComponente,
+        cantidad: 0,
+      };
+      row.cantidad += c.cantidad;
+      componenteMap.set(c.codigoComponente, row);
+    }
+  }
+  const componentesConsumidos = Array.from(componenteMap.values()).sort(
+    (a, b) => b.cantidad - a.cantidad
+  );
+
+  const detail: ProduccionDetailRow[] = [];
+  for (const ot of otsCreadas) {
+    detail.push({
+      id: ot._id.toString(),
+      tipo: "Orden de Trabajo",
+      numero: ot.numero,
+      descripcion: ot.razonSocial,
+      fechaISO: ot.fecha.toISOString().slice(0, 10),
+      estado: ot.estado,
+    });
+  }
+  for (const pr of proyectosCreados) {
+    detail.push({
+      id: pr._id.toString(),
+      tipo: "Proyecto",
+      numero: pr.numero,
+      descripcion: pr.nombre || pr.cliente,
+      fechaISO: pr.createdAt.toISOString().slice(0, 10),
+      estado: pr.estado,
+    });
+  }
+  for (const prod of producciones) {
+    detail.push({
+      id: prod._id.toString(),
+      tipo: "Fabricación",
+      numero: prod.numero,
+      descripcion: prod.nombreLuminaria,
+      fechaISO: prod.createdAt.toISOString().slice(0, 10),
+      cantidad: prod.cantidad,
+    });
+  }
+  detail.sort((a, b) => a.fechaISO.localeCompare(b.fechaISO));
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    ordenesTrabajo: {
+      creadasCount: otsCreadas.length,
+      ejecutadasCount: otsEjecutadas.length,
+      byEstado: Array.from(otEstadoMap.values()),
+    },
+    proyectos: {
+      creadosCount: proyectosCreados.length,
+      listosCount: proyectosListos.length,
+      byEstado: Array.from(proyectoEstadoMap.values()),
+    },
+    fabricacion: {
+      totalTandas: producciones.length,
+      totalCantidadFabricada,
+      componentesConsumidos,
+    },
+    detail,
+  };
+}
+
+// ---------- Reporte de Reparaciones ----------
+
+export type ReparacionesEstadoRow = {
+  estado: ReparacionEstado;
+  count: number;
+};
+
+export type ReparacionesComponenteRow = {
+  codigoComponente: string;
+  descripcionComponente: string;
+  cantidad: number;
+};
+
+export type ReparacionesDetailRow = {
+  id: string;
+  numero: string;
+  razonSocial: string;
+  fechaISO: string;
+  estado: ReparacionEstado;
+  tomadoPor?: string;
+  fechaEjecucionISO?: string;
+};
+
+export type ReparacionesReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  creadasCount: number;
+  ejecutadasCount: number;
+  byEstado: ReparacionesEstadoRow[];
+  componentesDescontados: ReparacionesComponenteRow[];
+  detail: ReparacionesDetailRow[];
+};
+
+export async function getReparacionesReport(periodISO: string): Promise<ReparacionesReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const [creadas, ejecutadas] = await Promise.all([
+    Reparacion.find({ fecha: { $gte: from, $lt: to } }).sort({ fecha: 1 }).lean(),
+    Reparacion.find({ ejecutada: true, fechaEjecucion: { $gte: from, $lt: to } })
+      .sort({ fechaEjecucion: 1 })
+      .lean(),
+  ]);
+
+  const estadoMap = new Map<ReparacionEstado, ReparacionesEstadoRow>();
+  const detail: ReparacionesDetailRow[] = [];
+  for (const rep of creadas) {
+    const row = estadoMap.get(rep.estado) ?? { estado: rep.estado, count: 0 };
+    row.count += 1;
+    estadoMap.set(rep.estado, row);
+    detail.push({
+      id: rep._id.toString(),
+      numero: rep.numero,
+      razonSocial: rep.razonSocial,
+      fechaISO: rep.fecha.toISOString().slice(0, 10),
+      estado: rep.estado,
+      tomadoPor: rep.tomadoPor || undefined,
+      fechaEjecucionISO: rep.fechaEjecucion
+        ? rep.fechaEjecucion.toISOString().slice(0, 10)
+        : undefined,
+    });
+  }
+
+  const componenteMap = new Map<string, ReparacionesComponenteRow>();
+  for (const rep of ejecutadas) {
+    for (const c of rep.componentesDescontados) {
+      const row = componenteMap.get(c.codigoComponente) ?? {
+        codigoComponente: c.codigoComponente,
+        descripcionComponente: c.descripcionComponente,
+        cantidad: 0,
+      };
+      row.cantidad += c.cantidad;
+      componenteMap.set(c.codigoComponente, row);
+    }
+  }
+  const componentesDescontados = Array.from(componenteMap.values()).sort(
+    (a, b) => b.cantidad - a.cantidad
+  );
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    creadasCount: creadas.length,
+    ejecutadasCount: ejecutadas.length,
+    byEstado: Array.from(estadoMap.values()),
+    componentesDescontados,
+    detail,
+  };
+}
+
+// ---------- Reporte de Stock ----------
+
+// A diferencia de los demás reportes, esta no es una foto congelada del
+// mes: el catálogo (cantidad de ítems, stock actual, valorización, bajo
+// mínimo) es siempre el estado EN VIVO — igual filosofía que el estado de
+// pago en Ventas/Compras ("se muestra el actual, no uno congelado al
+// cierre del período"). Lo único que de verdad se filtra por `periodISO`
+// es el detalle de Movimientos de Componentes del mes (lo único que tiene
+// una fecha real de "cuándo pasó"). El selector de período de la página
+// solo afecta esa tabla.
+export type StockComponenteBajoRow = {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  stockActual: number;
+  stockMinimo: number;
+  valorizacionUsd: number;
+};
+
+export type StockLuminariaBajoRow = {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  origen: LuminariaOrigen;
+  stockActual: number;
+  stockMinimo: number;
+  valorizacionUsd: number;
+};
+
+export type StockMovimientoRow = {
+  id: string;
+  fechaISO: string;
+  codigoComponente: string;
+  descripcionComponente: string;
+  tipo: MovimientoComponenteTipo;
+  cantidad: number;
+  stockResultante: number;
+  referencia?: string;
+};
+
+export type StockReportResult = {
+  periodISO: string;
+  periodLabel: string;
+  componentes: {
+    totalCount: number;
+    valorizacionTotalUsd: number;
+    bajoMinimo: StockComponenteBajoRow[];
+  };
+  luminarias: {
+    totalCount: number;
+    valorizacionTotalUsd: number;
+    bajoMinimo: StockLuminariaBajoRow[];
+  };
+  movimientos: StockMovimientoRow[];
+};
+
+export async function getStockReport(periodISO: string): Promise<StockReportResult> {
+  await connectDB();
+  const from = periodStringToDate(periodISO);
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+
+  const [componentes, luminarias, movimientos] = await Promise.all([
+    Componente.find({}).sort({ codigo: 1 }).lean(),
+    Luminaria.find({}).sort({ codigo: 1 }).lean(),
+    MovimientoComponente.find({ createdAt: { $gte: from, $lt: to } })
+      .sort({ createdAt: 1 })
+      .lean(),
+  ]);
+
+  let componentesValorizacion = 0;
+  const componentesBajoMinimo: StockComponenteBajoRow[] = [];
+  for (const c of componentes) {
+    componentesValorizacion += c.stockActual * c.precio;
+    if (c.stockActual <= c.stockMinimo) {
+      componentesBajoMinimo.push({
+        id: c._id.toString(),
+        codigo: c.codigo,
+        descripcion: c.descripcion,
+        stockActual: c.stockActual,
+        stockMinimo: c.stockMinimo,
+        valorizacionUsd: c.stockActual * c.precio,
+      });
+    }
+  }
+
+  let luminariasValorizacion = 0;
+  const luminariasBajoMinimo: StockLuminariaBajoRow[] = [];
+  for (const l of luminarias) {
+    luminariasValorizacion += l.stockActual * l.precio;
+    if (l.stockActual <= l.stockMinimo) {
+      luminariasBajoMinimo.push({
+        id: l._id.toString(),
+        codigo: l.codigo,
+        descripcion: l.descripcion,
+        origen: l.origen,
+        stockActual: l.stockActual,
+        stockMinimo: l.stockMinimo,
+        valorizacionUsd: l.stockActual * l.precio,
+      });
+    }
+  }
+
+  const movimientosRows: StockMovimientoRow[] = movimientos.map((m) => ({
+    id: m._id.toString(),
+    fechaISO: m.createdAt.toISOString().slice(0, 10),
+    codigoComponente: m.codigoComponente,
+    descripcionComponente: m.descripcionComponente,
+    tipo: m.tipo,
+    cantidad: m.cantidad,
+    stockResultante: m.stockResultante,
+    referencia: m.referencia || undefined,
+  }));
+
+  return {
+    periodISO,
+    periodLabel: formatPeriod(from),
+    componentes: {
+      totalCount: componentes.length,
+      valorizacionTotalUsd: componentesValorizacion,
+      bajoMinimo: componentesBajoMinimo,
+    },
+    luminarias: {
+      totalCount: luminarias.length,
+      valorizacionTotalUsd: luminariasValorizacion,
+      bajoMinimo: luminariasBajoMinimo,
+    },
+    movimientos: movimientosRows,
   };
 }

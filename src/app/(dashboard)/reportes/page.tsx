@@ -8,6 +8,10 @@ import {
   ArrowRight,
   FileBarChart,
   Plane,
+  Building2,
+  Factory,
+  Wrench,
+  Boxes,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireModuleAccess } from "@/lib/auth";
@@ -133,6 +137,74 @@ export default async function ReportesPage() {
                 <p className="font-semibold">Cheques</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Por mes de vencimiento: totales por estado y por tipo.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reportes/comercial-planta" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Comercial Planta</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: Presupuestos, Despachos y Recibos (U$D).
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reportes/produccion" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Factory className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Producción</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: Órdenes de Trabajo, Proyectos de fábrica y Fabricar.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reportes/reparaciones" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Wrench className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Reparaciones</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Por mes: cantidad por estado y Componentes descontados.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reportes/stock" className="group">
+          <Card className="h-full overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+            <CardContent className="flex items-start gap-4 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Boxes className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="font-semibold">Stock</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Componentes y Luminarias bajo mínimo, valorización y movimientos del mes.
                 </p>
               </div>
               <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
