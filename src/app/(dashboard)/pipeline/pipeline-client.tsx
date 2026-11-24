@@ -18,6 +18,7 @@ import { dbProyectos } from "@/lib/firebase-proyectos";
 import { TEAM, PROYECTO_COLORS } from "@/lib/proyectos-team";
 import { notificarProyectoNuevo, notificarEstadoFinal } from "@/lib/proyectos-notify";
 import { useQuienSos, QuienSos } from "./quien-sos";
+import { Cronograma } from "./cronograma";
 import {
   PROYECTO_PRIORIDADES,
   prioridadLabel,
@@ -328,6 +329,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
   const [proyectos, setProyectos] = useState<ProyectoDoc[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [creandoOpen, setCreandoOpen] = useState(false);
+  const [vista, setVista] = useState<"tablero" | "cronograma">("tablero");
   const { quienSos, elegir } = useQuienSos();
 
   useEffect(() => {
@@ -376,6 +378,15 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex gap-1.5">
+        <Button size="sm" variant={vista === "tablero" ? "default" : "outline"} onClick={() => setVista("tablero")}>
+          Tablero
+        </Button>
+        <Button size="sm" variant={vista === "cronograma" ? "default" : "outline"} onClick={() => setVista("cronograma")}>
+          Cronograma
+        </Button>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -387,29 +398,31 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
           />
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              exportarExcel(
-                "proyectos-detalle.xlsx",
-                [
-                  ["Proyecto", "Cliente", "Equipo", "Inicio", "Fin", "Prioridad", "Estado"],
-                  ...activos.map((p) => [
-                    p.name,
-                    p.clienteNombre || "",
-                    miembrosNombres(p.members),
-                    p.start || "",
-                    p.end || "",
-                    prioridadLabel(p.priority),
-                    proyectoEstadoLabel(p.status),
-                  ]),
-                ]
-              )
-            }
-          >
-            <Download className="h-4 w-4" />
-            Exportar detalle a Excel
-          </Button>
+          {vista === "tablero" && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportarExcel(
+                  "proyectos-detalle.xlsx",
+                  [
+                    ["Proyecto", "Cliente", "Equipo", "Inicio", "Fin", "Prioridad", "Estado"],
+                    ...activos.map((p) => [
+                      p.name,
+                      p.clienteNombre || "",
+                      miembrosNombres(p.members),
+                      p.start || "",
+                      p.end || "",
+                      prioridadLabel(p.priority),
+                      proyectoEstadoLabel(p.status),
+                    ]),
+                  ]
+                )
+              }
+            >
+              <Download className="h-4 w-4" />
+              Exportar detalle a Excel
+            </Button>
+          )}
           <Button onClick={() => setCreandoOpen(true)}>
             <Plus className="h-4 w-4" />
             Nuevo proyecto
@@ -417,57 +430,63 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
         </div>
       </div>
 
-      <ProyectosTabla items={activos} quienSos={quienSos} onDelete={handleDelete} />
+      {vista === "cronograma" ? (
+        <Cronograma proyectos={filtrados} />
+      ) : (
+        <>
+          <ProyectosTabla items={activos} quienSos={quienSos} onDelete={handleDelete} />
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Finalizados</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              exportarExcel(
-                "proyectos-finalizados.xlsx",
-                [
-                  ["Proyecto", "Cliente", "Equipo"],
-                  ...finalizados.map((p) => [p.name, p.clienteNombre || "", miembrosNombres(p.members)]),
-                ]
-              )
-            }
-          >
-            <Download className="h-4 w-4" />
-            Exportar Excel
-          </Button>
-        </div>
-        <ProyectosTabla items={finalizados} quienSos={quienSos} onDelete={handleDelete} />
-      </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-muted-foreground">Finalizados</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  exportarExcel(
+                    "proyectos-finalizados.xlsx",
+                    [
+                      ["Proyecto", "Cliente", "Equipo"],
+                      ...finalizados.map((p) => [p.name, p.clienteNombre || "", miembrosNombres(p.members)]),
+                    ]
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Exportar Excel
+              </Button>
+            </div>
+            <ProyectosTabla items={finalizados} quienSos={quienSos} onDelete={handleDelete} />
+          </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Vendidos</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              exportarExcel(
-                "proyectos-vendidos.xlsx",
-                [
-                  ["Proyecto", "Cliente", "Fecha de venta"],
-                  ...vendidos.map((p) => [
-                    p.name,
-                    p.clienteNombre || "",
-                    p.fechaVenta ? new Date(p.fechaVenta).toLocaleDateString("es-AR") : "",
-                  ]),
-                ]
-              )
-            }
-          >
-            <Download className="h-4 w-4" />
-            Exportar Excel
-          </Button>
-        </div>
-        <ProyectosTabla items={vendidos} quienSos={quienSos} onDelete={handleDelete} />
-      </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-muted-foreground">Vendidos</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  exportarExcel(
+                    "proyectos-vendidos.xlsx",
+                    [
+                      ["Proyecto", "Cliente", "Fecha de venta"],
+                      ...vendidos.map((p) => [
+                        p.name,
+                        p.clienteNombre || "",
+                        p.fechaVenta ? new Date(p.fechaVenta).toLocaleDateString("es-AR") : "",
+                      ]),
+                    ]
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Exportar Excel
+              </Button>
+            </div>
+            <ProyectosTabla items={vendidos} quienSos={quienSos} onDelete={handleDelete} />
+          </div>
+        </>
+      )}
 
       <Dialog open={creandoOpen} onOpenChange={setCreandoOpen} title="Nuevo proyecto" className="max-w-lg">
         <ProyectoForm clientes={clientes} quienSos={quienSos} onDone={() => setCreandoOpen(false)} />
