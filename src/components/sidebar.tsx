@@ -42,6 +42,7 @@ import {
   Radio,
   ClipboardCheck,
   Hammer,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -206,6 +207,18 @@ const navItems: NavItem[] = [
     icon: Radio,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "proyectos",
+    section: "PRODUCCIÓN",
+  },
+  // Fase 6 (2026-11-24): préstamo interno de herramientas/stock/otros —
+  // confirmado por Ariel que pertenece a Producción, no a Comercial (ver
+  // planificacion/fusion-gestion-luminarias.md). Ficha de control, no
+  // mueve stock de ningún catálogo (ver models/Vale.ts).
+  {
+    href: "/vales",
+    label: "Vales",
+    icon: FileSignature,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "vales",
     section: "PRODUCCIÓN",
   },
   // Primer módulo de la fusión con "Gestión de Luminarias" (ver
