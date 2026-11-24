@@ -84,7 +84,7 @@ type NavItem = {
 // COMERCIAL (contactos y el registro comercial de siempre, separado de
 // COMERCIAL PLANTA que es el circuito de documentos de planta), FINANZAS
 // (todo lo que mira la contadora: legajos, sueldos, gastos, cheques,
-// caja, viáticos — PayFlow nació para esto) y HERRAMIENTAS (utilidades
+// caja, viáticos — PayFlow nació para esto) y UTILIDADES (utilidades
 // personales: agenda, calendario, notas, vault). Orden de secciones de
 // arriba a abajo: accesos globales, administrativo (razón de ser
 // original de la app), planta (lo que se fue sumando con la fusión).
@@ -157,22 +157,22 @@ const navItems: NavItem[] = [
     moduleKey: "viaticos",
     section: "FINANZAS",
   },
-  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"], section: "HERRAMIENTAS" },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"], section: "HERRAMIENTAS" },
+  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"], section: "UTILIDADES" },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"], section: "UTILIDADES" },
   {
     href: "/vault",
     label: "Vault",
     icon: KeyRound,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "vault",
-    section: "HERRAMIENTAS",
+    section: "UTILIDADES",
   },
   {
     href: "/notas",
     label: "Notas",
     icon: StickyNote,
     roles: ["OWNER", "ACCOUNTANT"],
-    section: "HERRAMIENTAS",
+    section: "UTILIDADES",
     // Única excepción al acento único: post-it amarillo a propósito.
     special: "bg-yellow-100 text-yellow-700",
   },

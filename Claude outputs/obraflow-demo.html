@@ -1,0 +1,529 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>ObraFlow</title>
+<style>
+  /* Layout: fixed sidebar (collapses to top bar on phone) + content area with
+     stacked KPI row, chart, and a table per module, one module visible at a time */
+  :root {
+    --bg: #f3f1ec;
+    --surface: #ffffff;
+    --border: #e4ddd1;
+    --ink: #262220;
+    --ink-dim: #6b6358;
+    --accent: #e8720c;
+    --accent-ink: #ffffff;
+    --accent-soft: #fdeade;
+    --good: #2f7a4f;
+    --good-soft: #e3f3e8;
+    --warn: #b9780a;
+    --warn-soft: #fbead0;
+    --bad: #b23b3b;
+    --bad-soft: #f8e4e1;
+    --font-display: 'Space Grotesk', 'Arial Narrow', sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1815;
+      --surface: #262220;
+      --border: #39332c;
+      --ink: #f1ece3;
+      --ink-dim: #a89d8d;
+      --accent: #f0893a;
+      --accent-ink: #1b1815;
+      --accent-soft: #3a2a19;
+      --good: #4fae77;
+      --good-soft: #1d3326;
+      --warn: #d99a2b;
+      --warn-soft: #3a2d10;
+      --bad: #e07068;
+      --bad-soft: #3a2220;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1815;
+    --surface: #262220;
+    --border: #39332c;
+    --ink: #f1ece3;
+    --ink-dim: #a89d8d;
+    --accent: #f0893a;
+    --accent-ink: #1b1815;
+    --accent-soft: #3a2a19;
+    --good: #4fae77;
+    --good-soft: #1d3326;
+    --warn: #d99a2b;
+    --warn-soft: #3a2d10;
+    --bad: #e07068;
+    --bad-soft: #3a2220;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1, h2, h3, .display { font-family: var(--font-display); text-wrap: balance; }
+  table { font-variant-numeric: tabular-nums; }
+
+  .shell {
+    display: flex;
+    min-height: 100%;
+  }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    width: 232px;
+    flex: 0 0 232px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 10px 18px;
+  }
+  .brand .mark { color: var(--accent); font-size: 20px; }
+  .brand .name { font-family: var(--font-display); font-weight: 600; font-size: 18px; }
+  .nav-section {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    padding: 14px 10px 6px;
+  }
+  .nav-section:first-of-type { padding-top: 4px; }
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+  .nav-btn:hover { background: var(--bg); }
+  .nav-btn.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .nav-btn .ico { width: 18px; text-align: center; flex: none; }
+  .nav-btn:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Main content ---- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 24px max(24px, env(safe-area-inset-right, 0px)) 48px max(24px, env(safe-area-inset-left, 0px));
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .topbar h1 { font-size: 22px; margin: 0 0 4px; }
+  .topbar .sub { color: var(--ink-dim); font-size: 13px; }
+  .demo-badge {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .kpi .label { font-size: 11.5px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi .value { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin-top: 4px; }
+  .kpi .delta { font-size: 12px; margin-top: 4px; }
+  .kpi .delta.good { color: var(--good); }
+  .kpi .delta.warn { color: var(--warn); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+    min-width: 0;
+  }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; }
+  .panel-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .panel-row > .panel { flex: 1; min-width: 280px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13px; white-space: nowrap; }
+  th { color: var(--ink-dim); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+
+  .progress { background: var(--border); border-radius: 999px; height: 7px; width: 100px; overflow: hidden; }
+  .progress > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad  { background: var(--bad-soft); color: var(--bad); }
+  .pill.neutral { background: var(--bg); color: var(--ink-dim); }
+
+  .alert-list { display: flex; flex-direction: column; gap: 10px; }
+  .alert-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+  .alert-item .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
+  .alert-item .dot.warn { background: var(--warn); }
+  .alert-item .dot.bad { background: var(--bad); }
+
+  canvas#chart { width: 100%; height: 220px; display: block; }
+
+  /* ---- Phone layout ---- */
+  @media (max-width: 760px) {
+    .shell { flex-direction: column; }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: auto;
+      width: 100%;
+      flex: none;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 10px max(14px, env(safe-area-inset-left, 0px)) 10px max(14px, env(safe-area-inset-right, 0px));
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      z-index: 5;
+    }
+    .brand, .nav-section { display: none; }
+    .nav-btn { flex: none; white-space: nowrap; }
+    .main { padding: 18px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); }
+    .panel-row { flex-direction: column; }
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand"><span class="mark">▲</span><span class="name">ObraFlow</span></div>
+
+    <div class="nav-section">General</div>
+    <button class="nav-btn active" data-view="dashboard"><span class="ico">◧</span> Dashboard</button>
+
+    <div class="nav-section">Comercial</div>
+    <button class="nav-btn" data-view="obras"><span class="ico">🏗</span> Obras</button>
+    <button class="nav-btn" data-view="presupuestos"><span class="ico">📄</span> Presupuestos</button>
+
+    <div class="nav-section">Producción</div>
+    <button class="nav-btn" data-view="compras"><span class="ico">📦</span> Compras y Proveedores</button>
+    <button class="nav-btn" data-view="materiales"><span class="ico">🧱</span> Materiales y Stock</button>
+    <button class="nav-btn" data-view="personal"><span class="ico">👷</span> Personal de Obra</button>
+
+    <div class="nav-section">Finanzas</div>
+    <button class="nav-btn" data-view="cheques"><span class="ico">🏦</span> Cheques y Bancos</button>
+    <button class="nav-btn" data-view="facturacion"><span class="ico">🧾</span> Facturación (ARCA)</button>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="view-title">Dashboard</h1>
+        <div class="sub" id="view-sub">Resumen general de la operación</div>
+      </div>
+      <div class="demo-badge">Demo — datos de ejemplo</div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="v-dashboard">
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">Obras activas</div><div class="value">7</div><div class="delta good">+1 vs. mes anterior</div></div>
+        <div class="kpi"><div class="label">Facturado este mes</div><div class="value">$ 184,6 M</div><div class="delta good">+12% vs. octubre</div></div>
+        <div class="kpi"><div class="label">Avance promedio</div><div class="value">63%</div><div class="delta warn">2 obras atrasadas</div></div>
+        <div class="kpi"><div class="label">Cheques por vencer (7 días)</div><div class="value">$ 9,2 M</div><div class="delta warn">3 cheques</div></div>
+      </div>
+      <div class="panel-row">
+        <div class="panel" style="flex: 1.4;">
+          <h2>Facturación mensual (últimos 6 meses)</h2>
+          <canvas id="chart"></canvas>
+        </div>
+        <div class="panel">
+          <h2>Alertas</h2>
+          <div class="alert-list">
+            <div class="alert-item"><span class="dot bad"></span> Obra "Ampliación Hospital Municipal" con 18 días de atraso sobre el cronograma.</div>
+            <div class="alert-item"><span class="dot warn"></span> Stock de Hierro 8mm por debajo del mínimo (Depósito Central).</div>
+            <div class="alert-item"><span class="dot warn"></span> 3 cheques propios vencen dentro de los próximos 7 días.</div>
+            <div class="alert-item"><span class="dot warn"></span> Presupuesto "Nave Industrial Pilar" lleva 11 días sin respuesta del cliente.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OBRAS -->
+    <section class="view" id="v-obras">
+      <div class="panel">
+        <h2>Obras en curso</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Obra</th><th>Cliente</th><th>Avance</th><th>Presupuestado</th><th>Ejecutado</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td>Edificio Belgrano 450</td><td>Desarrollos del Sur SA</td><td><div class="progress"><span style="width:82%"></span></div></td><td>$ 312 M</td><td>$ 256 M</td><td><span class="pill good">En término</span></td></tr>
+              <tr><td>Barrio Cerrado Las Lomas — Etapa 2</td><td>Inversora Pilar SRL</td><td><div class="progress"><span style="width:45%"></span></div></td><td>$ 540 M</td><td>$ 243 M</td><td><span class="pill good">En término</span></td></tr>
+              <tr><td>Ampliación Hospital Municipal</td><td>Municipalidad (contrato directo)</td><td><div class="progress"><span style="width:38%"></span></div></td><td>$ 210 M</td><td>$ 198 M</td><td><span class="pill bad">Atrasada</span></td></tr>
+              <tr><td>Nave Industrial Pilar</td><td>Logística Oeste SA</td><td><div class="progress"><span style="width:12%"></span></div></td><td>$ 95 M</td><td>$ 14 M</td><td><span class="pill neutral">Inicio de obra</span></td></tr>
+              <tr><td>Casa Quinta — Fontana</td><td>Particular (R. Fontana)</td><td><div class="progress"><span style="width:95%"></span></div></td><td>$ 68 M</td><td>$ 64 M</td><td><span class="pill good">Terminación</span></td></tr>
+              <tr><td>Reforma Local Comercial — Av. Centenario</td><td>Comercial Centenario SRL</td><td><div class="progress"><span style="width:60%"></span></div></td><td>$ 41 M</td><td>$ 27 M</td><td><span class="pill warn">Seguimiento</span></td></tr>
+              <tr><td>Edificio Belgrano 450 — Cocheras</td><td>Desarrollos del Sur SA</td><td><div class="progress"><span style="width:70%"></span></div></td><td>$ 58 M</td><td>$ 39 M</td><td><span class="pill good">En término</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRESUPUESTOS -->
+    <section class="view" id="v-presupuestos">
+      <div class="panel">
+        <h2>Presupuestos y cotizaciones</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Obra / Motivo</th><th>Monto</th><th>Fecha</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td>Logística Oeste SA</td><td>Nave Industrial Pilar</td><td>$ 95.000.000</td><td>02/10/2026</td><td><span class="pill good">Aprobado</span></td></tr>
+              <tr><td>Constructora del Litoral SA</td><td>Playón deportivo municipal</td><td>$ 38.500.000</td><td>14/11/2026</td><td><span class="pill warn">Pendiente</span></td></tr>
+              <tr><td>Horizonte Agropecuaria SA</td><td>Galpón de acopio</td><td>$ 61.200.000</td><td>18/11/2026</td><td><span class="pill warn">Pendiente</span></td></tr>
+              <tr><td>Comercial Centenario SRL</td><td>Reforma local — fase 2</td><td>$ 22.000.000</td><td>20/09/2026</td><td><span class="pill bad">Rechazado</span></td></tr>
+              <tr><td>R. Fontana (particular)</td><td>Pileta y quincho</td><td>$ 14.800.000</td><td>22/11/2026</td><td><span class="pill warn">Pendiente</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPRAS -->
+    <section class="view" id="v-compras">
+      <div class="panel">
+        <h2>Proveedores</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Proveedor</th><th>Rubro</th><th>Última compra</th><th>Saldo a pagar</th></tr></thead>
+            <tbody>
+              <tr><td>Corralón San Martín SRL</td><td>Áridos y cemento</td><td>18/11/2026</td><td>$ 6.400.000</td></tr>
+              <tr><td>Aceros del Plata SA</td><td>Hierro y perfiles</td><td>15/11/2026</td><td>$ 11.900.000</td></tr>
+              <tr><td>Electro Instalaciones Norte</td><td>Materiales eléctricos</td><td>09/11/2026</td><td>$ 2.150.000</td></tr>
+              <tr><td>Hormigones Pilar SA</td><td>Hormigón elaborado</td><td>21/11/2026</td><td>$ 8.700.000</td></tr>
+              <tr><td>Sanitarios del Centro</td><td>Grifería y sanitarios</td><td>02/11/2026</td><td>$ 980.000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MATERIALES -->
+    <section class="view" id="v-materiales">
+      <div class="panel">
+        <h2>Stock de materiales (Depósito Central)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Material</th><th>Unidad</th><th>Stock actual</th><th>Stock mínimo</th><th>Obra destino</th></tr></thead>
+            <tbody>
+              <tr><td>Cemento Portland</td><td>Bolsa 50kg</td><td>420</td><td>150</td><td>Varias</td></tr>
+              <tr><td>Hierro 8mm</td><td>Barra 12m</td><td>38</td><td>80</td><td>Edificio Belgrano 450</td></tr>
+              <tr><td>Hierro 10mm</td><td>Barra 12m</td><td>96</td><td>60</td><td>Las Lomas — Etapa 2</td></tr>
+              <tr><td>Ladrillo hueco 18x18x33</td><td>Unidad</td><td>12.400</td><td>5.000</td><td>Las Lomas — Etapa 2</td></tr>
+              <tr><td>Arena gruesa</td><td>m³</td><td>64</td><td>30</td><td>Depósito</td></tr>
+              <tr><td>Membrana asfáltica</td><td>Rollo 10m</td><td>9</td><td>12</td><td>Hospital Municipal</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PERSONAL -->
+    <section class="view" id="v-personal">
+      <div class="panel">
+        <h2>Personal de obra</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>Categoría (UOCRA)</th><th>Obra asignada</th><th>Jornales del mes</th></tr></thead>
+            <tbody>
+              <tr><td>R. Acosta</td><td>Capataz</td><td>Edificio Belgrano 450</td><td>22</td></tr>
+              <tr><td>M. Benítez</td><td>Oficial Especializado</td><td>Las Lomas — Etapa 2</td><td>21</td></tr>
+              <tr><td>J. Cabrera</td><td>Medio Oficial</td><td>Hospital Municipal</td><td>19</td></tr>
+              <tr><td>D. Farías</td><td>Ayudante</td><td>Hospital Municipal</td><td>20</td></tr>
+              <tr><td>L. Gómez</td><td>Oficial Especializado</td><td>Nave Industrial Pilar</td><td>8</td></tr>
+              <tr><td>S. Herrera</td><td>Ayudante</td><td>Las Lomas — Etapa 2</td><td>21</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHEQUES -->
+    <section class="view" id="v-cheques">
+      <div class="panel">
+        <h2>Cheques y bancos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cheque N°</th><th>Banco</th><th>Monto</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td>00041582</td><td>Banco Galicia</td><td>$ 4.100.000</td><td>27/11/2026</td><td><span class="pill warn">En cartera</span></td></tr>
+              <tr><td>00041590</td><td>Banco Santander</td><td>$ 2.600.000</td><td>29/11/2026</td><td><span class="pill warn">En cartera</span></td></tr>
+              <tr><td>00041601</td><td>Banco Galicia</td><td>$ 2.500.000</td><td>30/11/2026</td><td><span class="pill warn">En cartera</span></td></tr>
+              <tr><td>00041530</td><td>BBVA</td><td>$ 6.900.000</td><td>14/11/2026</td><td><span class="pill good">Cobrado</span></td></tr>
+              <tr><td>00041548</td><td>Banco Galicia</td><td>$ 3.300.000</td><td>18/11/2026</td><td><span class="pill good">Depositado</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FACTURACION -->
+    <section class="view" id="v-facturacion">
+      <div class="panel">
+        <h2>Comprobantes (ARCA)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Comprobante</th><th>Tipo</th><th>Cliente</th><th>Monto</th><th>Fecha</th></tr></thead>
+            <tbody>
+              <tr><td>0001-00002841</td><td>Factura A</td><td>Desarrollos del Sur SA</td><td>$ 42.000.000</td><td>20/11/2026</td></tr>
+              <tr><td>0001-00002840</td><td>Remito</td><td>Inversora Pilar SRL</td><td>—</td><td>19/11/2026</td></tr>
+              <tr><td>0001-00002838</td><td>Factura A</td><td>Logística Oeste SA</td><td>$ 14.000.000</td><td>14/11/2026</td></tr>
+              <tr><td>0001-00002835</td><td>Factura B</td><td>R. Fontana (particular)</td><td>$ 9.800.000</td><td>10/11/2026</td></tr>
+              <tr><td>0001-00002831</td><td>Remito</td><td>Desarrollos del Sur SA</td><td>—</td><td>05/11/2026</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var buttons = document.querySelectorAll('.nav-btn');
+  var views = document.querySelectorAll('.view');
+  var titles = {
+    dashboard: ['Dashboard', 'Resumen general de la operación'],
+    obras: ['Obras', 'Obras en curso y su avance'],
+    presupuestos: ['Presupuestos', 'Cotizaciones enviadas a clientes'],
+    compras: ['Compras y Proveedores', 'Proveedores de materiales y servicios'],
+    materiales: ['Materiales y Stock', 'Inventario del depósito central'],
+    personal: ['Personal de Obra', 'Dotación asignada por obra'],
+    cheques: ['Cheques y Bancos', 'Cartera de cheques propios y de terceros'],
+    facturacion: ['Facturación (ARCA)', 'Comprobantes emitidos']
+  };
+
+  function show(name) {
+    buttons.forEach(function (b) { b.classList.toggle('active', b.dataset.view === name); });
+    views.forEach(function (v) { v.classList.toggle('active', v.id === 'v-' + name); });
+    var t = titles[name];
+    document.getElementById('view-title').textContent = t[0];
+    document.getElementById('view-sub').textContent = t[1];
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { show(b.dataset.view); });
+  });
+
+  function drawChart() {
+    var canvas = document.getElementById('chart');
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    var styles = getComputedStyle(document.documentElement);
+    var ink = styles.getPropertyValue('--ink-dim').trim();
+    var border = styles.getPropertyValue('--border').trim();
+    var accent = styles.getPropertyValue('--accent').trim();
+
+    var labels = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov'];
+    var values = [121, 134, 118, 152, 165, 184.6];
+    var w = rect.width, h = rect.height;
+    var padL = 36, padB = 24, padT = 10, padR = 8;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var max = 200;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = border;
+    ctx.fillStyle = ink;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.lineWidth = 1;
+
+    // grid + y labels
+    var steps = 4;
+    for (var i = 0; i <= steps; i++) {
+      var y = padT + plotH - (plotH * i / steps);
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(w - padR, y);
+      ctx.stroke();
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(max * i / steps), padL - 6, y + 3);
+    }
+
+    // bars
+    var n = values.length;
+    var gap = 14;
+    var barW = (plotW - gap * (n - 1)) / n;
+    ctx.textAlign = 'center';
+    for (i = 0; i < n; i++) {
+      var x = padL + i * (barW + gap);
+      var barH = (values[i] / max) * plotH;
+      var y2 = padT + plotH - barH;
+      ctx.fillStyle = i === n - 1 ? accent : border;
+      ctx.beginPath();
+      var r = 4;
+      ctx.moveTo(x, padT + plotH);
+      ctx.lineTo(x, y2 + r);
+      ctx.arcTo(x, y2, x + r, y2, r);
+      ctx.lineTo(x + barW - r, y2);
+      ctx.arcTo(x + barW, y2, x + barW, y2 + r, r);
+      ctx.lineTo(x + barW, padT + plotH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = ink;
+      ctx.fillText(labels[i], x + barW / 2, padT + plotH + 16);
+    }
+  }
+
+  drawChart();
+  window.addEventListener('resize', drawChart);
+})();
+</script>
