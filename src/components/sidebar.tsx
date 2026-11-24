@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
+  FolderKanban,
   Users,
   Building2,
   Wallet,
@@ -96,6 +97,20 @@ const navItems: NavItem[] = [
     icon: FileBarChart,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
+  },
+  // Pestaña "Proyectos" del ex proyectos-itelsa, portada a React dentro de
+  // PayFlow pero conectada EN VIVO a la misma Firestore real (ver
+  // src/lib/firebase-proyectos.ts) — no es un clon con datos propios, es la
+  // misma app de siempre con el chrome de PayFlow alrededor. Ruta interna
+  // "/pipeline" (no "/proyectos") a propósito: PayFlow ya tiene un modelo
+  // Proyecto para producción de fábrica en esa ruta — mismo criterio de
+  // evitar colisión de nombres que la versión anterior de este módulo.
+  {
+    href: "/pipeline",
+    label: "Proyectos",
+    icon: FolderKanban,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "pipeline",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
