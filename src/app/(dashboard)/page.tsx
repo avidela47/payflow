@@ -1009,6 +1009,12 @@ export default async function DashboardPage() {
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href="https://matriz-88.itelsasas.com/login" target="_blank" rel="noopener noreferrer">
+                Matriz 88
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
           </div>
         </div>
       </div>
