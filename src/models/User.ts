@@ -23,7 +23,6 @@ export const RESTRICTABLE_MODULES = [
   "fabricar",
   "movimientos-componentes",
   "proyectos",
-  "pipeline",
   "presupuestos",
   "ordenes",
   "reparaciones",

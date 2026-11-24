@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
-  FolderKanban,
   Users,
   Building2,
   Wallet,
@@ -97,13 +96,6 @@ const navItems: NavItem[] = [
     icon: FileBarChart,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
-  },
-  {
-    href: "/pipeline",
-    label: "Proyectos",
-    icon: FolderKanban,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "pipeline",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
