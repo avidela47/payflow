@@ -14,6 +14,9 @@ import { CalendarEvent } from "@/models/CalendarEvent";
 import { VaultEntry } from "@/models/Vault";
 import { Note } from "@/models/Note";
 import { PettyCashMovement } from "@/models/PettyCash";
+import { Reparacion } from "@/models/Reparacion";
+import { Vale } from "@/models/Vale";
+import { getComercialPlantaReport, getProduccionReport, getStockReport, currentPeriodString } from "@/lib/reports";
 import {
   Users,
   Building2,
@@ -37,6 +40,24 @@ import {
   ClipboardList,
   ChevronRight,
   ExternalLink,
+  CreditCard,
+  Plane,
+  FileText,
+  ClipboardCheck,
+  Hammer,
+  Send,
+  HandCoins,
+  Puzzle,
+  ListTree,
+  Factory,
+  ArrowLeftRight,
+  Radio,
+  FileSignature,
+  Lightbulb,
+  Wrench,
+  Package,
+  Boxes,
+  type LucideIcon,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, formatPeriod, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -64,6 +85,17 @@ function startOfToday() {
 // mejor que "Hola, Ariel Videla".
 function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
+// Presupuesto/Despacho/Recibo (y lo que alimenta a Stock) cotizan en U$D,
+// no en pesos — mismo hallazgo y mismo helper duplicado que en
+// src/lib/reports.ts y en las páginas de Componentes/Luminarias/Reportes.
+// El prefijo "U$D" lo pone quien llama, no esta función.
+function formatUsd(value: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 // Rediseño (v2): arriba, saludo + fecha, 4 tarjetas KPI con variación
@@ -209,6 +241,37 @@ export default async function DashboardPage() {
     ? pettyCashBalanceAgg[0].ingresos - pettyCashBalanceAgg[0].egresos
     : 0;
 
+  // Resumen de Planta (fusión con Gestión de Luminarias, 2026-11-24):
+  // reutiliza las mismas funciones de src/lib/reports.ts que ya alimentan
+  // /reportes/comercial-planta, /reportes/produccion y /reportes/stock —
+  // nada de lógica nueva de agregación, solo se toman los números del mes
+  // en curso para el resumen de acá. "Reparaciones en curso" y "Vales
+  // abiertos" sí son consultas puntuales nuevas porque son estado EN VIVO
+  // (no un corte del mes) — mismo criterio que Stock en el reporte
+  // original (getStockReport) y que "Compras en curso" más abajo en este
+  // mismo Dashboard.
+  const quinceDiasAtras = new Date(todayStart);
+  quinceDiasAtras.setDate(quinceDiasAtras.getDate() - 15);
+
+  const [
+    comercialPlantaReport,
+    produccionReport,
+    stockReport,
+    reparacionesEnCursoCount,
+    valesAbiertosCount,
+    valesAbiertosAntiguosCount,
+  ] = await Promise.all([
+    getComercialPlantaReport(currentPeriodString()),
+    getProduccionReport(currentPeriodString()),
+    getStockReport(currentPeriodString()),
+    Reparacion.countDocuments({ estado: { $in: ["PENDIENTE", "EN_PROCESO"] } }),
+    Vale.countDocuments({ estado: { $ne: "CERRADO" } }),
+    Vale.countDocuments({ estado: { $ne: "CERRADO" }, fechaSalida: { $lt: quinceDiasAtras } }),
+  ]);
+
+  const stockBajoMinimoCount =
+    stockReport.componentes.bajoMinimo.length + stockReport.luminarias.bajoMinimo.length;
+
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
   const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, p) => sum + p.amount, 0);
 
@@ -278,6 +341,23 @@ export default async function DashboardPage() {
       } este mes`,
       tone: "text-warning",
       moduleKey: "costos-fijos",
+    },
+    // Alertas de Planta (2026-11-24): mismo criterio que las de arriba,
+    // solo que el dato en vivo sale de Componentes/Luminarias (stock) y
+    // Vale en vez de Cheques/Ventas/Compras.
+    stockBajoMinimoCount > 0 && {
+      text: `${stockBajoMinimoCount} ítem${
+        stockBajoMinimoCount === 1 ? "" : "s"
+      } de stock bajo mínimo (Componentes/Luminarias)`,
+      tone: "text-warning",
+      moduleKey: "componentes",
+    },
+    valesAbiertosAntiguosCount > 0 && {
+      text: `${valesAbiertosAntiguosCount} vale${
+        valesAbiertosAntiguosCount === 1 ? "" : "s"
+      } abierto${valesAbiertosAntiguosCount === 1 ? "" : "s"} hace más de 15 días`,
+      tone: "text-warning",
+      moduleKey: "vales",
     },
   ]
     .filter((a): a is { text: string; tone: string; moduleKey: string | null } => Boolean(a))
@@ -442,6 +522,69 @@ export default async function DashboardPage() {
     },
   ].filter((kpi) => !kpi.moduleKey || !restrictedModules.includes(kpi.moduleKey as never));
 
+  // Resumen de Planta (fusión con Gestión de Luminarias): misma forma que
+  // "kpis" arriba, pero cada tarjeta linkea directo a su reporte/módulo —
+  // a diferencia de las administrativas (que son solo lectura), estas sí
+  // son clickeables porque cada una tiene un destino natural ya construido
+  // (los 4 reportes de planta de Fase 6, o el módulo mismo).
+  const plantaKpis = [
+    {
+      title: "Presupuestos (mes)",
+      icon: FileText,
+      value: String(comercialPlantaReport.presupuestos.totalCount),
+      caption: `U$D ${formatUsd(comercialPlantaReport.presupuestos.totalUsd)}`,
+      href: "/reportes/comercial-planta",
+      moduleKey: "presupuestos",
+    },
+    {
+      title: "Despachos (mes)",
+      icon: Send,
+      value: String(comercialPlantaReport.despachos.totalCount),
+      caption: `U$D ${formatUsd(comercialPlantaReport.despachos.montoUsd)}`,
+      href: "/reportes/comercial-planta",
+      moduleKey: "despachos",
+    },
+    {
+      title: "Reparaciones en curso",
+      icon: Hammer,
+      value: String(reparacionesEnCursoCount),
+      caption: "pendientes o en proceso",
+      href: "/reparaciones",
+      moduleKey: "reparaciones",
+    },
+    {
+      title: "Producción (mes)",
+      icon: Factory,
+      value: String(produccionReport.fabricacion.totalCantidadFabricada),
+      caption: `${produccionReport.ordenesTrabajo.ejecutadasCount} OT ejecutada${
+        produccionReport.ordenesTrabajo.ejecutadasCount === 1 ? "" : "s"
+      }`,
+      href: "/reportes/produccion",
+      moduleKey: "fabricar",
+    },
+    {
+      title: "Stock bajo mínimo",
+      icon: Boxes,
+      value: String(stockBajoMinimoCount),
+      caption: stockBajoMinimoCount > 0 ? "revisar reposición" : "todo en orden",
+      captionTone: stockBajoMinimoCount > 0 ? "text-warning" : undefined,
+      href: "/reportes/stock",
+      moduleKey: "componentes",
+    },
+    {
+      title: "Vales abiertos",
+      icon: FileSignature,
+      value: String(valesAbiertosCount),
+      caption:
+        valesAbiertosAntiguosCount > 0
+          ? `${valesAbiertosAntiguosCount} hace +15 días`
+          : "al día",
+      captionTone: valesAbiertosAntiguosCount > 0 ? "text-warning" : undefined,
+      href: "/vales",
+      moduleKey: "vales",
+    },
+  ].filter((kpi) => !restrictedModules.includes(kpi.moduleKey as never));
+
   // Accesos rápidos: van directo a la página del módulo. En Clientes el
   // formulario de alta vive en un diálogo (no se abre solo), así que ahí
   // queda un click más — el resto ya cae parado en el formulario.
@@ -469,143 +612,357 @@ export default async function DashboardPage() {
     },
   ].filter((action) => !action.moduleKey || !restrictedModules.includes(action.moduleKey as never));
 
-  const modules = [
+  // Grilla de módulos reorganizada por sección (2026-11-24, mismo pedido y
+  // mismo criterio de agrupación que el sidebar — ver sidebar.tsx): antes
+  // era una lista plana de 14 módulos administrativos; ahora se agrupa en
+  // las mismas 3 secciones administrativas (COMERCIAL/FINANZAS/
+  // HERRAMIENTAS) más las 3 secciones de Planta que sumó la fusión con
+  // Gestión de Luminarias. No todas las tarjetas de Planta tienen un
+  // "value" en vivo — solo las que ya teníamos calculadas para el resumen
+  // de arriba (reusadas acá, sin una sola consulta nueva); el resto son
+  // accesos directos simples (ícono + descripción), igual de útiles para
+  // navegar sin inflar esta página con más queries.
+  type ModuleCard = {
+    href: string;
+    title: string;
+    description: string;
+    value?: string;
+    caption?: string;
+    captionTone?: string;
+    icon: LucideIcon;
+    moduleKey: string | null;
+  };
+
+  const moduleSections: { section: string; items: ModuleCard[] }[] = [
     {
-      href: "/empleados",
-      title: "Empleados",
-      description: "Legajos y datos de pago",
-      value: String(activeEmployees),
-      caption: "activos",
-      icon: Users,
-      moduleKey: "empleados",
+      section: "Comercial",
+      items: [
+        {
+          href: "/clientes",
+          title: "Clientes",
+          description: "Cartera de clientes",
+          value: String(totalClients),
+          caption: totalClients === 1 ? "cliente" : "clientes",
+          icon: Building2,
+          moduleKey: null,
+        },
+        {
+          href: "/proveedores",
+          title: "Proveedores",
+          description: "Cartera de proveedores",
+          value: String(totalProviders),
+          caption: totalProviders === 1 ? "proveedor" : "proveedores",
+          icon: Truck,
+          moduleKey: null,
+        },
+        {
+          href: "/ventas",
+          title: "Ventas",
+          description: "Ventas por cliente y cobros",
+          value: formatCurrency(totalSalesThisMonth),
+          caption: "este mes",
+          icon: TrendingUp,
+          moduleKey: null,
+        },
+        {
+          href: "/compras",
+          title: "Compras",
+          description: "Compras por proveedor y pagos",
+          value: formatCurrency(totalPurchasesThisMonth),
+          caption: "este mes",
+          icon: ShoppingCart,
+          moduleKey: null,
+        },
+      ],
     },
     {
-      href: "/clientes",
-      title: "Clientes",
-      description: "Cartera de clientes",
-      value: String(totalClients),
-      caption: totalClients === 1 ? "cliente" : "clientes",
-      icon: Building2,
-      moduleKey: null,
+      section: "Finanzas",
+      items: [
+        {
+          href: "/empleados",
+          title: "Empleados",
+          description: "Legajos y datos de pago",
+          value: String(activeEmployees),
+          caption: "activos",
+          icon: Users,
+          moduleKey: "empleados",
+        },
+        {
+          href: "/sueldos",
+          title: "Sueldos",
+          description: "Liquidación mensual",
+          value: formatCurrency(totalPayroll),
+          caption: payrollPeriodLabel,
+          icon: Wallet,
+          moduleKey: "sueldos",
+        },
+        {
+          href: "/costos-fijos",
+          title: "Costos Fijos",
+          description: "Gastos recurrentes",
+          value: formatCurrency(totalPendingFixedCosts),
+          caption: "pendiente este mes",
+          icon: Receipt,
+          moduleKey: "costos-fijos",
+        },
+        {
+          href: "/pagos",
+          title: "Pagos",
+          description: "Pagos a proveedores y otros",
+          icon: CreditCard,
+          moduleKey: "pagos",
+        },
+        {
+          href: "/cheques",
+          title: "Cheques",
+          description: "Cartera de cheques",
+          value: String(activeChecks.length),
+          caption:
+            checksOverdue > 0
+              ? `${checksOverdue} vencido${checksOverdue === 1 ? "" : "s"}`
+              : checksDueSoon > 0
+                ? `${checksDueSoon} por vencer`
+                : "activos, todo en orden",
+          // Único lugar de la grilla donde el color dice algo (no decora): rojo
+          // si hay vencidos, ámbar si hay por vencer esta semana, gris si está
+          // todo en orden — mismo criterio que las alertas de arriba.
+          captionTone: checksOverdue > 0 ? "text-destructive" : checksDueSoon > 0 ? "text-warning" : undefined,
+          icon: Landmark,
+          moduleKey: "cheques",
+        },
+        {
+          href: "/caja-chica",
+          title: "Caja Chica",
+          description: "Efectivo para gastos corrientes",
+          value: formatCurrency(pettyCashBalance),
+          caption: "saldo actual",
+          icon: Banknote,
+          moduleKey: "caja-chica",
+        },
+        {
+          href: "/viaticos",
+          title: "Viajes",
+          description: "Viáticos y gastos de viaje",
+          icon: Plane,
+          moduleKey: "viaticos",
+        },
+      ],
     },
     {
-      href: "/proveedores",
-      title: "Proveedores",
-      description: "Cartera de proveedores",
-      value: String(totalProviders),
-      caption: totalProviders === 1 ? "proveedor" : "proveedores",
-      icon: Truck,
-      moduleKey: null,
+      section: "Herramientas",
+      items: [
+        {
+          href: "/agenda",
+          title: "Agenda",
+          description: "Recordatorios con aviso por mail",
+          value: String(pendingAgenda),
+          caption: "pendientes esta semana",
+          icon: CalendarClock,
+          moduleKey: null,
+        },
+        {
+          href: "/calendario",
+          title: "Calendario",
+          description: "Vista mes / semana / día",
+          value: String(weekEvents),
+          caption: "eventos esta semana",
+          icon: CalendarDays,
+          moduleKey: null,
+        },
+        {
+          href: "/reportes",
+          title: "Reportes",
+          description: "Todos los reportes, listos para imprimir",
+          value: "PDF",
+          caption: "reportes disponibles",
+          icon: FileBarChart,
+          moduleKey: "reportes",
+        },
+        {
+          href: "/vault",
+          title: "Vault",
+          description: "Credenciales cifradas",
+          value: String(vaultCount),
+          caption: vaultCount === 1 ? "credencial tuya" : "credenciales tuyas",
+          icon: KeyRound,
+          moduleKey: "vault",
+        },
+        {
+          href: "/notas",
+          title: "Notas",
+          description: "Tus notas privadas",
+          value: String(myNotesCount),
+          caption: myNotesCount === 1 ? "nota tuya" : "notas tuyas",
+          icon: StickyNote,
+          moduleKey: null,
+        },
+      ],
     },
     {
-      href: "/ventas",
-      title: "Ventas",
-      description: "Ventas por cliente y cobros",
-      value: formatCurrency(totalSalesThisMonth),
-      caption: "este mes",
-      icon: TrendingUp,
-      moduleKey: null,
+      section: "Comercial Planta",
+      items: [
+        {
+          href: "/presupuestos",
+          title: "Presupuestos",
+          description: "Cotizaciones a clientes de planta",
+          value: String(comercialPlantaReport.presupuestos.totalCount),
+          caption: "este mes",
+          icon: FileText,
+          moduleKey: "presupuestos",
+        },
+        {
+          href: "/ordenes",
+          title: "Órdenes de Trabajo",
+          description: "Circuito comercial de planta",
+          value: String(produccionReport.ordenesTrabajo.creadasCount),
+          caption: "creadas este mes",
+          icon: ClipboardCheck,
+          moduleKey: "ordenes",
+        },
+        {
+          href: "/reparaciones",
+          title: "Reparaciones",
+          description: "Luminarias del cliente a reparar",
+          value: String(reparacionesEnCursoCount),
+          caption: "en curso",
+          icon: Hammer,
+          moduleKey: "reparaciones",
+        },
+        {
+          href: "/remitos",
+          title: "Remitos",
+          description: "Documentos de traslado",
+          icon: ClipboardList,
+          moduleKey: "remitos",
+        },
+        {
+          href: "/despachos",
+          title: "Despachos",
+          description: "Entregas a cliente",
+          value: String(comercialPlantaReport.despachos.totalCount),
+          caption: "este mes",
+          icon: Send,
+          moduleKey: "despachos",
+        },
+        {
+          href: "/recibos",
+          title: "Recibos",
+          description: "Cobranzas de planta",
+          value: `U$D ${formatUsd(comercialPlantaReport.recibos.totalPendienteUsd)}`,
+          caption: "pendiente de cobro",
+          captionTone: comercialPlantaReport.recibos.totalPendienteUsd > 0 ? "text-warning" : undefined,
+          icon: HandCoins,
+          moduleKey: "recibos",
+        },
+      ],
     },
     {
-      href: "/compras",
-      title: "Compras",
-      description: "Compras por proveedor y pagos",
-      value: formatCurrency(totalPurchasesThisMonth),
-      caption: "este mes",
-      icon: ShoppingCart,
-      moduleKey: null,
+      section: "Producción",
+      items: [
+        {
+          href: "/componentes",
+          title: "Componentes",
+          description: "Insumos para fabricar luminarias",
+          value: String(stockReport.componentes.totalCount),
+          caption:
+            stockReport.componentes.bajoMinimo.length > 0
+              ? `${stockReport.componentes.bajoMinimo.length} bajo mínimo`
+              : "todo en orden",
+          captionTone: stockReport.componentes.bajoMinimo.length > 0 ? "text-warning" : undefined,
+          icon: Puzzle,
+          moduleKey: "componentes",
+        },
+        {
+          href: "/recetas",
+          title: "Recetas (BOM)",
+          description: "Qué componentes lleva cada luminaria",
+          icon: ListTree,
+          moduleKey: "recetas",
+        },
+        {
+          href: "/fabricar",
+          title: "Fabricar",
+          description: "Consume Componentes, genera stock",
+          value: String(produccionReport.fabricacion.totalTandas),
+          caption: "tandas este mes",
+          icon: Factory,
+          moduleKey: "fabricar",
+        },
+        {
+          href: "/movimientos-componentes",
+          title: "Movimientos",
+          description: "Historial de entradas y salidas",
+          icon: ArrowLeftRight,
+          moduleKey: "movimientos-componentes",
+        },
+        {
+          href: "/fabrica-proyectos",
+          title: "Proyectos Fábrica",
+          description: "Pantalla kiosco de taller",
+          value: String(produccionReport.proyectos.listosCount),
+          caption: "listos este mes",
+          icon: Radio,
+          moduleKey: "proyectos",
+        },
+        {
+          href: "/vales",
+          title: "Vales",
+          description: "Préstamo interno de herramientas/stock",
+          value: String(valesAbiertosCount),
+          caption: "abiertos",
+          captionTone: valesAbiertosAntiguosCount > 0 ? "text-warning" : undefined,
+          icon: FileSignature,
+          moduleKey: "vales",
+        },
+      ],
     },
     {
-      href: "/sueldos",
-      title: "Sueldos",
-      description: "Liquidación mensual",
-      value: formatCurrency(totalPayroll),
-      caption: payrollPeriodLabel,
-      icon: Wallet,
-      moduleKey: "sueldos",
+      section: "Stock",
+      items: [
+        {
+          href: "/sensores",
+          title: "Sensores y Fuentes",
+          description: "Stock y precio de consulta",
+          icon: Zap,
+          moduleKey: "sensores",
+        },
+        {
+          href: "/luminarias",
+          title: "Luminarias",
+          description: "Fabricada, Nacional e Importada",
+          value: String(stockReport.luminarias.totalCount),
+          caption:
+            stockReport.luminarias.bajoMinimo.length > 0
+              ? `${stockReport.luminarias.bajoMinimo.length} bajo mínimo`
+              : "todo en orden",
+          captionTone: stockReport.luminarias.bajoMinimo.length > 0 ? "text-warning" : undefined,
+          icon: Lightbulb,
+          moduleKey: "luminarias",
+        },
+        {
+          href: "/herramientas",
+          title: "Herramientas",
+          description: "Inventario de herramientas",
+          icon: Wrench,
+          moduleKey: "herramientas",
+        },
+        {
+          href: "/materiales",
+          title: "Materiales de Obra",
+          description: "Ledger de entradas/salidas/devoluciones",
+          icon: Package,
+          moduleKey: "materiales",
+        },
+      ],
     },
-    {
-      href: "/costos-fijos",
-      title: "Costos Fijos",
-      description: "Gastos recurrentes",
-      value: formatCurrency(totalPendingFixedCosts),
-      caption: "pendiente este mes",
-      icon: Receipt,
-      moduleKey: "costos-fijos",
-    },
-    {
-      href: "/cheques",
-      title: "Cheques",
-      description: "Cartera de cheques",
-      value: String(activeChecks.length),
-      caption:
-        checksOverdue > 0
-          ? `${checksOverdue} vencido${checksOverdue === 1 ? "" : "s"}`
-          : checksDueSoon > 0
-            ? `${checksDueSoon} por vencer`
-            : "activos, todo en orden",
-      // Único lugar de la grilla donde el color dice algo (no decora): rojo
-      // si hay vencidos, ámbar si hay por vencer esta semana, gris si está
-      // todo en orden — mismo criterio que las alertas de arriba.
-      captionTone: checksOverdue > 0 ? "text-destructive" : checksDueSoon > 0 ? "text-warning" : undefined,
-      icon: Landmark,
-      moduleKey: "cheques",
-    },
-    {
-      href: "/caja-chica",
-      title: "Caja Chica",
-      description: "Efectivo para gastos corrientes",
-      value: formatCurrency(pettyCashBalance),
-      caption: "saldo actual",
-      icon: Banknote,
-      moduleKey: "caja-chica",
-    },
-    {
-      href: "/agenda",
-      title: "Agenda",
-      description: "Recordatorios con aviso por mail",
-      value: String(pendingAgenda),
-      caption: "pendientes esta semana",
-      icon: CalendarClock,
-      moduleKey: null,
-    },
-    {
-      href: "/calendario",
-      title: "Calendario",
-      description: "Vista mes / semana / día",
-      value: String(weekEvents),
-      caption: "eventos esta semana",
-      icon: CalendarDays,
-      moduleKey: null,
-    },
-    {
-      href: "/reportes",
-      title: "Reportes",
-      description: "Sueldos y gastos, listos para imprimir",
-      value: "PDF",
-      caption: "reportes disponibles",
-      icon: FileBarChart,
-      moduleKey: "reportes",
-    },
-    {
-      href: "/vault",
-      title: "Vault",
-      description: "Credenciales cifradas",
-      value: String(vaultCount),
-      caption: vaultCount === 1 ? "credencial tuya" : "credenciales tuyas",
-      icon: KeyRound,
-      moduleKey: "vault",
-    },
-    {
-      href: "/notas",
-      title: "Notas",
-      description: "Tus notas privadas",
-      value: String(myNotesCount),
-      caption: myNotesCount === 1 ? "nota tuya" : "notas tuyas",
-      icon: StickyNote,
-      moduleKey: null,
-    },
-  ].filter((mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never));
+  ]
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (mod) => !mod.moduleKey || !restrictedModules.includes(mod.moduleKey as never)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const displayName = session?.user?.name ? firstName(session.user.name) : "";
   // No hay foto cargada para el usuario logueado (User no tiene ese campo,
@@ -656,39 +1013,81 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-2 font-semibold">Módulos</h2>
-        <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
-          {modules.map((mod) => {
-            const Icon = mod.icon;
-            return (
-              <Link
-                key={mod.href}
-                href={mod.href}
-                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/60"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Icon className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{mod.title}</span>
-                  <p className="truncate text-xs text-muted-foreground">{mod.description}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  {mod.href === "/sueldos" ? (
-                    <MaskedAmount value={mod.value} className="block text-sm font-semibold" />
-                  ) : (
-                    <span className="block text-sm font-semibold">{mod.value}</span>
-                  )}
-                  <span className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
-                    {mod.caption}
+      {plantaKpis.length > 0 && (
+        <div>
+          <h2 className="mb-2 flex items-center gap-2 font-semibold">
+            <Factory className="h-4 w-4 text-primary" />
+            Planta — resumen del mes
+          </h2>
+          <div className="grid grid-cols-1 divide-y divide-border rounded-xl border border-border bg-card shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
+            {plantaKpis.map((kpi) => {
+              const Icon = kpi.icon;
+              return (
+                <Link
+                  key={kpi.title}
+                  href={kpi.href}
+                  className="group flex flex-col gap-2 p-4 transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-primary" />
+                      {kpi.title}
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                  <p className="text-2xl font-semibold tracking-tight">{kpi.value}</p>
+                  <span className={cn("text-xs", kpi.captionTone ?? "text-muted-foreground")}>
+                    {kpi.caption}
                   </span>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      <div className="flex flex-col gap-5">
+        <h2 className="font-semibold">Módulos</h2>
+        {moduleSections.map((group) => (
+          <div key={group.section}>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {group.section}
+            </h3>
+            <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-card p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
+              {group.items.map((mod) => {
+                const Icon = mod.icon;
+                return (
+                  <Link
+                    key={mod.href}
+                    href={mod.href}
+                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/60"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{mod.title}</span>
+                      <p className="truncate text-xs text-muted-foreground">{mod.description}</p>
+                    </div>
+                    {mod.value !== undefined && (
+                      <div className="shrink-0 text-right">
+                        {mod.href === "/sueldos" ? (
+                          <MaskedAmount value={mod.value} className="block text-sm font-semibold" />
+                        ) : (
+                          <span className="block text-sm font-semibold">{mod.value}</span>
+                        )}
+                        <span className={cn("text-xs", mod.captionTone ?? "text-muted-foreground")}>
+                          {mod.caption}
+                        </span>
+                      </div>
+                    )}
+                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {alerts.length > 0 && (

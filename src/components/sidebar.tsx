@@ -72,63 +72,24 @@ type NavItem = {
   section?: string;
 };
 
+// Reorganización de los módulos originales de PayFlow por sección
+// (2026-11-24, a pedido de Ariel: "armalo por sección... hablo sobretodo
+// las que quedaron original de payflow, no las mudadas"). Hasta acá estos
+// ~17 ítems eran una lista plana sin agrupar, mientras que los módulos de
+// la fusión con Gestión de Luminarias ya tenían sus 3 secciones propias
+// (PRODUCCIÓN/STOCK/COMERCIAL PLANTA, ver abajo). Dashboard y Reportes
+// quedan sin sección a propósito — son accesos globales (inicio y, dentro
+// de Reportes, un único ítem de menú que cubre los 10 reportes), no
+// módulos de un área puntual. El resto se agrupa por para qué se usa:
+// COMERCIAL (contactos y el registro comercial de siempre, separado de
+// COMERCIAL PLANTA que es el circuito de documentos de planta), FINANZAS
+// (todo lo que mira la contadora: legajos, sueldos, gastos, cheques,
+// caja, viáticos — PayFlow nació para esto) y HERRAMIENTAS (utilidades
+// personales: agenda, calendario, notas, vault). Orden de secciones de
+// arriba a abajo: accesos globales, administrativo (razón de ser
+// original de la app), planta (lo que se fue sumando con la fusión).
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ACCOUNTANT"] },
-  {
-    href: "/empleados",
-    label: "Empleados",
-    icon: Users,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "empleados",
-  },
-  { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"] },
-  {
-    href: "/pagos",
-    label: "Pagos",
-    icon: CreditCard,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "pagos",
-  },
-  {
-    href: "/sueldos",
-    label: "Sueldos",
-    icon: Wallet,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "sueldos",
-  },
-  {
-    href: "/costos-fijos",
-    label: "Costos Fijos",
-    icon: Receipt,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "costos-fijos",
-  },
-  {
-    href: "/cheques",
-    label: "Cheques",
-    icon: Landmark,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "cheques",
-  },
-  {
-    href: "/caja-chica",
-    label: "Caja Chica",
-    icon: Banknote,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "caja-chica",
-  },
-  {
-    href: "/viaticos",
-    label: "Viajes",
-    icon: Plane,
-    roles: ["OWNER", "ACCOUNTANT"],
-    moduleKey: "viaticos",
-  },
-  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"] },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"] },
   {
     href: "/reportes",
     label: "Reportes",
@@ -136,18 +97,82 @@ const navItems: NavItem[] = [
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
   },
+  { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
+  { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
+  { href: "/ventas", label: "Ventas", icon: TrendingUp, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
+  { href: "/compras", label: "Compras", icon: ShoppingCart, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
+  {
+    href: "/empleados",
+    label: "Empleados",
+    icon: Users,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "empleados",
+    section: "FINANZAS",
+  },
+  {
+    href: "/sueldos",
+    label: "Sueldos",
+    icon: Wallet,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "sueldos",
+    section: "FINANZAS",
+  },
+  {
+    href: "/costos-fijos",
+    label: "Costos Fijos",
+    icon: Receipt,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "costos-fijos",
+    section: "FINANZAS",
+  },
+  {
+    href: "/pagos",
+    label: "Pagos",
+    icon: CreditCard,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "pagos",
+    section: "FINANZAS",
+  },
+  {
+    href: "/cheques",
+    label: "Cheques",
+    icon: Landmark,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "cheques",
+    section: "FINANZAS",
+  },
+  {
+    href: "/caja-chica",
+    label: "Caja Chica",
+    icon: Banknote,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "caja-chica",
+    section: "FINANZAS",
+  },
+  {
+    href: "/viaticos",
+    label: "Viajes",
+    icon: Plane,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "viaticos",
+    section: "FINANZAS",
+  },
+  { href: "/agenda", label: "Agenda", icon: CalendarClock, roles: ["OWNER", "ACCOUNTANT"], section: "HERRAMIENTAS" },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays, roles: ["OWNER", "ACCOUNTANT"], section: "HERRAMIENTAS" },
   {
     href: "/vault",
     label: "Vault",
     icon: KeyRound,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "vault",
+    section: "HERRAMIENTAS",
   },
   {
     href: "/notas",
     label: "Notas",
     icon: StickyNote,
     roles: ["OWNER", "ACCOUNTANT"],
+    section: "HERRAMIENTAS",
     // Única excepción al acento único: post-it amarillo a propósito.
     special: "bg-yellow-100 text-yellow-700",
   },
