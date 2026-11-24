@@ -11,6 +11,7 @@ import { teamMemberById } from "@/lib/proyectos-team";
 import { SPECS, specsOf, specsTxt, normTexto, type SpecKey, type SpecValues } from "@/lib/computos-specs";
 import { comprimirImagen } from "@/lib/computos-image";
 import { generarPdfComputo } from "@/lib/computos-pdf";
+import { PlanoEditor } from "./plano-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +68,8 @@ export type ComputoDoc = {
   elev?: "si" | "no" | "";
   elevEsp?: string;
   obs?: string;
+  plano?: { fileId: string; name: string; w: number; h: number; subido?: string };
+  marcas?: { u: string; x: number; y: number }[];
 };
 
 function hoy(): string {
@@ -593,7 +596,11 @@ function ComputoWorking({
   const [cantidad, setCantidad] = useState(1);
   const [cargandoNueva, setCargandoNueva] = useState<string | null>(null);
 
-  async function guardar(patch: Partial<ComputoDoc>) {
+  // Partial<ComputoDoc> no alcanza para el patch del plano: para borrarlo
+  // hace falta el sentinel deleteField() de Firestore (un merge con
+  // `undefined` directo lo rechaza), así que el tipo acepta cualquier
+  // Record para ese caso puntual.
+  async function guardar(patch: Partial<ComputoDoc> | Record<string, unknown>) {
     await setDoc(doc(dbProyectos, "computosGen", computo.id), { ...patch, ts: Date.now() }, { merge: true });
   }
 
@@ -742,6 +749,8 @@ function ComputoWorking({
       </div>
 
       <ItemsTable items={computo.items} luminarias={luminarias} onUpdate={actualizarItem} onDelete={borrarItem} />
+
+      <PlanoEditor computo={computo} onUpdate={guardar} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <AlcanceCard

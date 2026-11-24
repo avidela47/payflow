@@ -1,17 +1,24 @@
-// PDF de cierre del cómputo — Fase 2 del Generador de Cómputos. Portado de
-// cgPdf en /tmp/protectos-itelsa/index.html (líneas ~2524-2651): mismo
-// layout A4, mismas columnas y anchos, mismo formato de informe ITELSA
-// (jsPDF puro, sin plugin de tablas, igual que el original). jspdf se
-// importa dinámicamente (como xlsx en pipeline-client.tsx) para no sumar
-// peso al bundle inicial.
+// PDF de cierre del cómputo. Portado de cgPdf en
+// /tmp/protectos-itelsa/index.html (líneas ~2524-2680): mismo layout A4,
+// mismas columnas y anchos, mismo formato de informe ITELSA (jsPDF puro, sin
+// plugin de tablas, igual que el original). jspdf se importa dinámicamente
+// (como xlsx en pipeline-client.tsx) para no sumar peso al bundle inicial.
 //
-// Lo que NO entra todavía (Fase 3, acordado con Ariel): la hoja de plano
-// con las ubicaciones marcadas — el modelo de datos de esta fase no tiene
-// `plano`/`marcas` todavía. Cuando se agregue, esta función es el lugar
-// donde se suma esa página (ver el comentario al final).
+// Fase 3 agrega acá la hoja de plano (A4 horizontal) con los marcadores de
+// ubicación, cuando el cómputo tiene `plano`/`marcas` cargados — leyendo el
+// JPEG real desde la colección "gfiles" (ver plano-editor.tsx).
+import { doc, getDoc } from "firebase/firestore";
+import { dbProyectos } from "./firebase-proyectos";
 import { ITELSA_LOGO_DATA_URL } from "./itelsa-logo";
 import { teamMemberById } from "./proyectos-team";
+import { colorDeItem, hexToRgb } from "./computos-colors";
 import type { ComputoDoc, Luminaria } from "@/app/(dashboard)/computos/computos-client";
+
+async function cargarPlanoData(fileId: string): Promise<string | null> {
+  const snap = await getDoc(doc(dbProyectos, "gfiles", fileId));
+  if (!snap.exists()) return null;
+  return (snap.data() as { data: string }).data;
+}
 
 function fmtFecha(iso?: string): string {
   if (!iso) return "sin fecha";
@@ -304,9 +311,121 @@ export async function generarPdfComputo(c: ComputoDoc, luminarias: Luminaria[]):
     J.text(ol, M + 4, y + 10.5);
   }
 
-  // Fase 3 agrega acá la hoja de plano (A4 horizontal) con los marcadores,
-  // igual que el original — todavía no hay `c.plano`/`c.marcas` en el
-  // modelo de datos de esta fase.
+  // Plano con la ubicación de cada luminaria (hoja A4 horizontal), igual
+  // que el original: solo se agrega si el cómputo tiene un plano cargado.
+  if (c.plano && c.plano.fileId) {
+    const psrc = await cargarPlanoData(c.plano.fileId);
+    if (psrc) {
+      const PW = 297;
+      const PH = 210;
+      J.addPage("a4", "landscape");
+      if (logoSz) {
+        let plh = 10;
+        let plw = (plh * logoSz.w) / logoSz.h;
+        if (plw > 34) {
+          plw = 34;
+          plh = (plw * logoSz.h) / logoSz.w;
+        }
+        try {
+          J.addImage(ITELSA_LOGO_DATA_URL, "PNG", M, 9, plw, plh);
+        } catch {
+          // sin logo si falla, no rompemos el PDF
+        }
+      }
+      J.setFont("helvetica", "bold");
+      J.setFontSize(9);
+      J.setTextColor(...green);
+      J.text("UBICACIÓN DE LUMINARIAS", PW - M, 13, { align: "right" });
+      J.setFont("helvetica", "normal");
+      J.setFontSize(8.5);
+      J.setTextColor(...grey);
+      J.text(J.splitTextToSize(c.proyecto, 120)[0], PW - M, 18, { align: "right" });
+      J.setDrawColor(209, 213, 219);
+      J.setLineWidth(0.2);
+      J.line(M, 22, PW - M, 22);
+      J.setDrawColor(...green);
+      J.setLineWidth(0.6);
+      J.line(M, 22, M + 14, 22);
+
+      const legW = 64;
+      const ax = M;
+      const ay = 27;
+      const aw = PW - 2 * M - legW - 6;
+      const ah = PH - ay - 16;
+      const pw0 = c.plano.w || 1000;
+      const ph0 = c.plano.h || 700;
+      const sc = Math.min(aw / pw0, ah / ph0);
+      const iw2 = pw0 * sc;
+      const ih2 = ph0 * sc;
+      const ix = ax + (aw - iw2) / 2;
+      const iy = ay + (ah - ih2) / 2;
+      try {
+        J.addImage(psrc, "JPEG", ix, iy, iw2, ih2);
+      } catch {
+        // sin imagen de plano si falla la decodificación
+      }
+      J.setDrawColor(209, 213, 219);
+      J.setLineWidth(0.2);
+      J.rect(ix, iy, iw2, ih2);
+
+      const idxOf = new Map<string, number>();
+      c.items.forEach((it, i) => {
+        if (it.uid) idxOf.set(it.uid, i);
+      });
+      const mr = Math.max(1.3, Math.min(2.4, iw2 / 120));
+      (c.marcas || []).forEach((m) => {
+        const i2 = idxOf.get(m.u);
+        if (i2 === undefined) return;
+        const mx = ix + m.x * iw2;
+        const my = iy + m.y * ih2;
+        J.setFillColor(...hexToRgb(colorDeItem(i2)));
+        J.setDrawColor(255, 255, 255);
+        J.setLineWidth(0.35);
+        J.circle(mx, my, mr, "FD");
+        J.setFont("helvetica", "bold");
+        J.setFontSize(mr * 2.6);
+        J.setTextColor(255, 255, 255);
+        J.text(String(i2 + 1), mx, my + mr * 0.36, { align: "center" });
+      });
+
+      const lx = PW - M - legW;
+      let ly = ay;
+      J.setFont("helvetica", "bold");
+      J.setFontSize(7.5);
+      J.setTextColor(...green);
+      J.text("REFERENCIAS", lx, ly + 3);
+      ly += 7;
+      const rowH2 = c.items.length > 14 ? Math.max(5.2, (ah - 10) / c.items.length) : 9;
+      c.items.forEach((it, i) => {
+        if (ly > PH - 18) return;
+        const nUb = (c.marcas || []).filter((m) => m.u === it.uid).length;
+        J.setFillColor(...hexToRgb(colorDeItem(i)));
+        J.circle(lx + 2.4, ly + 1.2, 2.2, "F");
+        J.setFont("helvetica", "bold");
+        J.setFontSize(6.5);
+        J.setTextColor(255, 255, 255);
+        J.text(String(i + 1), lx + 2.4, ly + 2.1, { align: "center" });
+        J.setFont("helvetica", "bold");
+        J.setFontSize(7.5);
+        J.setTextColor(...ink);
+        J.text(J.splitTextToSize(it.codigo || it.nombre || "-", legW - 22)[0], lx + 6.5, ly + 1);
+        J.setFont("helvetica", "normal");
+        J.setFontSize(6.5);
+        J.setTextColor(...grey);
+        const sub2 = [it.potencia, it.angulo].filter(Boolean).join(" · ");
+        if (rowH2 >= 8 && sub2) J.text(J.splitTextToSize(sub2, legW - 22)[0], lx + 6.5, ly + 4.4);
+        J.setFont("helvetica", "bold");
+        J.setFontSize(7.5);
+        J.setTextColor(...green);
+        J.text(`${nUb} / ${it.cant}`, PW - M, ly + 1.5, { align: "right" });
+        ly += rowH2;
+      });
+      J.setFont("helvetica", "italic");
+      J.setFontSize(6.5);
+      J.setTextColor(...grey);
+      J.text(J.splitTextToSize("Ubicadas en plano / cantidad computada.", legW), lx, Math.min(ly + 3, PH - 14));
+    }
+  }
 
   const n = J.getNumberOfPages();
   for (let p = 1; p <= n; p++) {
