@@ -8,6 +8,7 @@ import { collection, doc, onSnapshot, query, setDoc, deleteDoc, where } from "fi
 import { dbProyectos } from "@/lib/firebase-proyectos";
 import { TEAM, teamMemberById } from "@/lib/proyectos-team";
 import { notificarEstadoFinal, notificarManual } from "@/lib/proyectos-notify";
+import { logActivity } from "@/lib/proyectos-activity";
 import { useQuienSos, QuienSos } from "../quien-sos";
 import {
   TAREA_ESTADOS,
@@ -48,7 +49,17 @@ const COLUMNAS: { estado: TareaEstado; titulo: string }[] = [
   { estado: "terminado", titulo: "Terminado" },
 ];
 
-function TareaForm({ proyectoId, onDone }: { proyectoId: string; onDone: () => void }) {
+function TareaForm({
+  proyectoId,
+  proyectoNombre,
+  quienSos,
+  onDone,
+}: {
+  proyectoId: string;
+  proyectoNombre: string;
+  quienSos: string;
+  onDone: () => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [desc, setDesc] = useState("");
@@ -76,6 +87,7 @@ function TareaForm({ proyectoId, onDone }: { proyectoId: string; onDone: () => v
         due: due || undefined,
       };
       await setDoc(ref, data);
+      logActivity(`agrego una tarea: ${data.title}`, proyectoNombre, quienSos);
       toast.success("Tarea creada.");
       onDone();
     } catch (err) {
@@ -134,7 +146,15 @@ function TareaForm({ proyectoId, onDone }: { proyectoId: string; onDone: () => v
   );
 }
 
-function TareaCard({ tarea }: { tarea: TareaDoc }) {
+function TareaCard({
+  tarea,
+  proyectoNombre,
+  quienSos,
+}: {
+  tarea: TareaDoc;
+  proyectoNombre: string;
+  quienSos: string;
+}) {
   const [busy, setBusy] = useState(false);
   const responsable = tarea.assignee ? teamMemberById(tarea.assignee)?.name : undefined;
 
@@ -142,6 +162,7 @@ function TareaCard({ tarea }: { tarea: TareaDoc }) {
     setBusy(true);
     try {
       await setDoc(doc(dbProyectos, "tasks", tarea.id), { status: estado }, { merge: true });
+      logActivity(`cambio tarea '${tarea.title}' a ${tareaEstadoLabel(estado as TareaEstado)}`, proyectoNombre, quienSos);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
     } finally {
@@ -222,6 +243,7 @@ function NotificarForm({
       .filter(Boolean);
     try {
       notificarManual(proyecto, asunto.trim(), mensaje, quienSos, extra, incluirResumen);
+      logActivity(`envio una notificacion a ${destinatarios}`, proyecto.name, quienSos);
       toast.success("Notificación enviada.");
       onDone();
     } finally {
@@ -300,6 +322,9 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
       // cambió a vendido/finalizado, no en cada edición dentro del mismo estado.
       if (estado !== estadoAnterior && (estado === "vendido" || estado === "finalizado")) {
         notificarEstadoFinal({ ...proyecto, fechaVenta }, estado, quienSos);
+      }
+      if (estado !== estadoAnterior) {
+        logActivity(`cambio el estado del proyecto a ${proyectoEstadoLabel(estado)}`, proyecto.name, quienSos);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
@@ -397,7 +422,7 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
               <div className="flex flex-col gap-2">
                 {items.length === 0 && <p className="text-xs text-muted-foreground">Sin tareas en esta columna.</p>}
                 {items.map((t) => (
-                  <TareaCard key={t.id} tarea={t} />
+                  <TareaCard key={t.id} tarea={t} proyectoNombre={proyecto.name} quienSos={quienSos} />
                 ))}
               </div>
             </div>
@@ -406,7 +431,12 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
       </div>
 
       <Dialog open={creandoOpen} onOpenChange={setCreandoOpen} title="Nueva tarea" className="max-w-lg">
-        <TareaForm proyectoId={proyecto.id} onDone={() => setCreandoOpen(false)} />
+        <TareaForm
+          proyectoId={proyecto.id}
+          proyectoNombre={proyecto.name}
+          quienSos={quienSos}
+          onDone={() => setCreandoOpen(false)}
+        />
       </Dialog>
 
       <Dialog open={notificarOpen} onOpenChange={setNotificarOpen} title="Notificar" className="max-w-lg">

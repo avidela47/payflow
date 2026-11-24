@@ -17,9 +17,11 @@ import {
 import { dbProyectos } from "@/lib/firebase-proyectos";
 import { TEAM, PROYECTO_COLORS } from "@/lib/proyectos-team";
 import { notificarProyectoNuevo, notificarEstadoFinal } from "@/lib/proyectos-notify";
+import { logActivity } from "@/lib/proyectos-activity";
 import { useQuienSos, QuienSos } from "./quien-sos";
 import { Cronograma } from "./cronograma";
 import { InfoUtil } from "./info-util";
+import { Notificaciones } from "./notificaciones";
 import {
   PROYECTO_PRIORIDADES,
   prioridadLabel,
@@ -111,6 +113,7 @@ function ProyectoForm({
       };
       await setDoc(ref, data);
       notificarProyectoNuevo(data, quienSos);
+      logActivity("creo el proyecto", data.name, quienSos);
       toast.success("Proyecto creado.");
       onDone();
     } catch (err) {
@@ -217,6 +220,9 @@ async function cambiarEstado(p: ProyectoDoc, estado: ProyectoEstado, quienSos: s
   // estado.
   if (estado !== estadoAnterior && (estado === "vendido" || estado === "finalizado")) {
     notificarEstadoFinal({ ...p, fechaVenta }, estado, quienSos);
+  }
+  if (estado !== estadoAnterior) {
+    logActivity(`cambio el estado del proyecto a ${proyectoEstadoLabel(estado)}`, p.name, quienSos);
   }
 }
 
@@ -379,16 +385,19 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1.5">
-        <Button size="sm" variant={vista === "tablero" ? "default" : "outline"} onClick={() => setVista("tablero")}>
-          Tablero
-        </Button>
-        <Button size="sm" variant={vista === "cronograma" ? "default" : "outline"} onClick={() => setVista("cronograma")}>
-          Cronograma
-        </Button>
-        <Button size="sm" variant={vista === "info" ? "default" : "outline"} onClick={() => setVista("info")}>
-          Info Útil
-        </Button>
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex gap-1.5">
+          <Button size="sm" variant={vista === "tablero" ? "default" : "outline"} onClick={() => setVista("tablero")}>
+            Tablero
+          </Button>
+          <Button size="sm" variant={vista === "cronograma" ? "default" : "outline"} onClick={() => setVista("cronograma")}>
+            Cronograma
+          </Button>
+          <Button size="sm" variant={vista === "info" ? "default" : "outline"} onClick={() => setVista("info")}>
+            Info Útil
+          </Button>
+        </div>
+        <Notificaciones nombresProyectos={proyectos.map((p) => p.name)} quienSos={quienSos} />
       </div>
 
       {vista !== "info" && (
