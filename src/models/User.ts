@@ -24,6 +24,7 @@ export const RESTRICTABLE_MODULES = [
   "movimientos-componentes",
   "proyectos",
   "pipeline",
+  "computos",
   "presupuestos",
   "ordenes",
   "reparaciones",

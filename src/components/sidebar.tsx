@@ -44,6 +44,7 @@ import {
   ClipboardCheck,
   Hammer,
   FileSignature,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,18 @@ const navItems: NavItem[] = [
     icon: FolderKanban,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "pipeline",
+  },
+  // Pestaña "Generador de computos" del ex proyectos-itelsa, misma lógica
+  // que Proyectos arriba: conectada en vivo a la misma Firestore real
+  // (colecciones "luminarias" y "computosGen"), portada por fases — esta es
+  // la Fase 1 (base de luminarias + armado del cómputo, sin PDF/plano/
+  // historial todavía).
+  {
+    href: "/computos",
+    label: "Generador de Cómputos",
+    icon: Calculator,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "computos",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
