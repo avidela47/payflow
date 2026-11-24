@@ -19,6 +19,7 @@ import { TEAM, PROYECTO_COLORS } from "@/lib/proyectos-team";
 import { notificarProyectoNuevo, notificarEstadoFinal } from "@/lib/proyectos-notify";
 import { useQuienSos, QuienSos } from "./quien-sos";
 import { Cronograma } from "./cronograma";
+import { InfoUtil } from "./info-util";
 import {
   PROYECTO_PRIORIDADES,
   prioridadLabel,
@@ -329,7 +330,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
   const [proyectos, setProyectos] = useState<ProyectoDoc[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [creandoOpen, setCreandoOpen] = useState(false);
-  const [vista, setVista] = useState<"tablero" | "cronograma">("tablero");
+  const [vista, setVista] = useState<"tablero" | "cronograma" | "info">("tablero");
   const { quienSos, elegir } = useQuienSos();
 
   useEffect(() => {
@@ -385,52 +386,59 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
         <Button size="sm" variant={vista === "cronograma" ? "default" : "outline"} onClick={() => setVista("cronograma")}>
           Cronograma
         </Button>
+        <Button size="sm" variant={vista === "info" ? "default" : "outline"} onClick={() => setVista("info")}>
+          Info Útil
+        </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre o cliente..."
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-2">
-          {vista === "tablero" && (
-            <Button
-              variant="outline"
-              onClick={() =>
-                exportarExcel(
-                  "proyectos-detalle.xlsx",
-                  [
-                    ["Proyecto", "Cliente", "Equipo", "Inicio", "Fin", "Prioridad", "Estado"],
-                    ...activos.map((p) => [
-                      p.name,
-                      p.clienteNombre || "",
-                      miembrosNombres(p.members),
-                      p.start || "",
-                      p.end || "",
-                      prioridadLabel(p.priority),
-                      proyectoEstadoLabel(p.status),
-                    ]),
-                  ]
-                )
-              }
-            >
-              <Download className="h-4 w-4" />
-              Exportar detalle a Excel
+      {vista !== "info" && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o cliente..."
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            {vista === "tablero" && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  exportarExcel(
+                    "proyectos-detalle.xlsx",
+                    [
+                      ["Proyecto", "Cliente", "Equipo", "Inicio", "Fin", "Prioridad", "Estado"],
+                      ...activos.map((p) => [
+                        p.name,
+                        p.clienteNombre || "",
+                        miembrosNombres(p.members),
+                        p.start || "",
+                        p.end || "",
+                        prioridadLabel(p.priority),
+                        proyectoEstadoLabel(p.status),
+                      ]),
+                    ]
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Exportar detalle a Excel
+              </Button>
+            )}
+            <Button onClick={() => setCreandoOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nuevo proyecto
             </Button>
-          )}
-          <Button onClick={() => setCreandoOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nuevo proyecto
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {vista === "cronograma" ? (
+      {vista === "info" ? (
+        <InfoUtil />
+      ) : vista === "cronograma" ? (
         <Cronograma proyectos={filtrados} />
       ) : (
         <>
