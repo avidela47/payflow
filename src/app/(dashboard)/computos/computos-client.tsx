@@ -10,6 +10,7 @@ import { useQuienSos, QuienSos } from "../pipeline/quien-sos";
 import { teamMemberById } from "@/lib/proyectos-team";
 import { SPECS, specsOf, specsTxt, normTexto, type SpecKey, type SpecValues } from "@/lib/computos-specs";
 import { comprimirImagen } from "@/lib/computos-image";
+import { generarPdfComputo } from "@/lib/computos-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -644,16 +645,27 @@ function ComputoWorking({
     void guardar({ items });
   }
 
+  const [cerrando, setCerrando] = useState(false);
+
   async function cerrar() {
     if (computo.items.length === 0) {
       toast.error("Agregá al menos una luminaria antes de cerrar el cómputo.");
       return;
     }
-    if (!confirm(`¿Cerrar el cómputo de "${computo.proyecto}"?`)) return;
-    await guardar({ estado: "cerrado", cerrado: hoy(), cerradoPor: quienSos });
-    logActivity("cerro un computo de luminarias", computo.proyecto, quienSos);
-    toast.success("Cómputo cerrado. El PDF de cierre llega en la próxima etapa.");
-    onSalir();
+    if (!confirm(`¿Cerrar el cómputo de "${computo.proyecto}" y descargar el PDF?`)) return;
+    setCerrando(true);
+    try {
+      const cerradoDoc: ComputoDoc = { ...computo, estado: "cerrado", cerrado: hoy(), cerradoPor: quienSos };
+      await guardar({ estado: "cerrado", cerrado: cerradoDoc.cerrado, cerradoPor: cerradoDoc.cerradoPor });
+      logActivity("cerro un computo de luminarias", computo.proyecto, quienSos);
+      await generarPdfComputo(cerradoDoc, luminarias);
+      toast.success("Cómputo cerrado y PDF descargado.");
+      onSalir();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo generar el PDF.");
+    } finally {
+      setCerrando(false);
+    }
   }
 
   return (
@@ -666,10 +678,12 @@ function ComputoWorking({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onSalir}>
+          <Button variant="outline" onClick={onSalir} disabled={cerrando}>
             Salir sin cerrar
           </Button>
-          <Button onClick={cerrar}>Cerrar cómputo</Button>
+          <Button onClick={cerrar} disabled={cerrando}>
+            {cerrando ? "Generando PDF..." : "Cerrar cómputo y descargar PDF"}
+          </Button>
         </div>
       </div>
 
