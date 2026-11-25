@@ -79,6 +79,13 @@ const USERS_TO_CREATE: UserToCreate[] = [
     role: "OWNER",
     fullAccess: true,
   },
+  {
+    name: "Florencia",
+    email: "florencia",
+    password: "Florencia2026$",
+    role: "OWNER",
+    fullAccess: true,
+  },
 ];
 
 function restrictedModulesFor(u: UserToCreate): RestrictableModule[] {
