@@ -172,7 +172,10 @@ function LuminariaForm({
       const data: Luminaria = {
         id: ref.id,
         nombre: nombre.trim(),
-        codigo: codigo.trim() || undefined,
+        // String vacío, no undefined — Firestore rechaza `undefined` en un
+        // setDoc sin merge (bug real: cargar una luminaria sin código tiraba
+        // error antes de este fix).
+        codigo: codigo.trim() || "",
         ...specsOf(specs),
         creado: luminaria?.creado ?? hoy(),
         by: luminaria?.by ?? quienSos,

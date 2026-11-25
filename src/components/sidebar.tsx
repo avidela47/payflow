@@ -35,6 +35,7 @@ import {
   ChevronRight,
   PencilRuler,
   HardHat,
+  Target,
   ClipboardList,
   Send,
   HandCoins,
@@ -100,6 +101,18 @@ const navItems: NavItem[] = [
     icon: FileBarChart,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "reportes",
+  },
+  // Weeklys — prioridades macro de la empresa y meets con líderes de área.
+  // Colección Firestore propia "weeklys", sin relación con "projects".
+  // Primera pestaña del tablero original (DEPTS), por eso va primera acá
+  // también dentro de PROYECTOS.
+  {
+    href: "/weeklys",
+    label: "Weeklys",
+    icon: Target,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "weeklys",
+    section: "PROYECTOS",
   },
   // Pestaña "Proyectos" del ex proyectos-itelsa, portada a React dentro de
   // PayFlow pero conectada EN VIVO a la misma Firestore real (ver

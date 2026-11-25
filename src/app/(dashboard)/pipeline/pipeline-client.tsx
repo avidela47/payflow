@@ -181,13 +181,16 @@ function ProyectoForm({
         name: nombre.trim(),
         color,
         members: miembros,
-        start: inicio || undefined,
-        end: fin || undefined,
+        // Strings vacíos, no undefined — Firestore rechaza `undefined` como
+        // valor de campo en un setDoc sin merge (bug real: crear un proyecto
+        // sin fechas o sin cliente tiraba error antes de este fix).
+        start: inicio || "",
+        end: fin || "",
         section,
         priority: prioridad,
         status: "activo",
-        clienteId: cliente?.id,
-        clienteNombre: cliente?.nombre,
+        clienteId: cliente?.id ?? "",
+        clienteNombre: cliente?.nombre ?? "",
       };
       await setDoc(ref, data);
       notificarProyectoNuevo(data, quienSos);

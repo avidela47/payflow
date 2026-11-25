@@ -36,7 +36,7 @@ function deptLabel(section: string): string {
   }
 }
 
-type EmailEvent = {
+export type EmailEvent = {
   asunto: string;
   titulo?: string;
   mensaje?: string;
@@ -56,7 +56,8 @@ function ahoraTexto(): string {
   return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} a las ${z(d.getHours())}:${z(d.getMinutes())}`;
 }
 
-function currentUserName(quienSosId: string): string {
+// Exportada: la reutiliza weeklys-notify.ts (misma identidad TEAM/"quién sos").
+export function currentUserName(quienSosId: string): string {
   return TEAM.find((m) => m.id === quienSosId)?.name ?? "";
 }
 
@@ -67,7 +68,12 @@ function nombresDeIds(ids: string[]): string {
     .join(", ");
 }
 
-async function sendEmailNotif(toEmail: string, ev: EmailEvent, quienSosId: string): Promise<void> {
+// "As": el texto de "quien" se recibe ya resuelto, en vez de un id de TEAM —
+// lo necesitan los avisos automáticos de Weeklys (alarmas/vencidas), que no
+// los dispara una persona puntual sino el tablero mismo ("Tablero ITELSA"
+// en el original). sendEmailNotif/sendToList (abajo) son el caso normal,
+// con una persona real detrás.
+async function sendEmailNotifAs(toEmail: string, ev: EmailEvent, quienTexto: string): Promise<void> {
   const detalleTxt = ev.detalle.join("\n");
   try {
     const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
@@ -83,7 +89,7 @@ async function sendEmailNotif(toEmail: string, ev: EmailEvent, quienSosId: strin
           titulo: ev.titulo || ev.asunto,
           mensaje: ev.mensaje || "",
           detalle: detalleTxt,
-          quien: currentUserName(quienSosId),
+          quien: quienTexto,
           fecha: ahoraTexto(),
           link_app: APP_URL,
           proyecto_nombre: ev.asunto,
@@ -98,15 +104,24 @@ async function sendEmailNotif(toEmail: string, ev: EmailEvent, quienSosId: strin
   }
 }
 
-function sendToList(list: string[], ev: EmailEvent, quienSosId: string): void {
+async function sendEmailNotif(toEmail: string, ev: EmailEvent, quienSosId: string): Promise<void> {
+  return sendEmailNotifAs(toEmail, ev, currentUserName(quienSosId));
+}
+
+// Exportada: la reutiliza weeklys-notify.ts para los avisos automáticos.
+export function sendToListAs(list: string[], ev: EmailEvent, quienTexto: string): void {
   const seen = new Set<string>();
   list.forEach((e) => {
     if (!e) return;
     const k = e.trim().toLowerCase();
     if (seen.has(k)) return;
     seen.add(k);
-    void sendEmailNotif(e.trim(), ev, quienSosId);
+    void sendEmailNotifAs(e.trim(), ev, quienTexto);
   });
+}
+
+function sendToList(list: string[], ev: EmailEvent, quienSosId: string): void {
+  sendToListAs(list, ev, currentUserName(quienSosId));
 }
 
 // Todo el equipo con email conocido, salvo quienSos y los ids en excludeIds.

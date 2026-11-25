@@ -90,11 +90,14 @@ function TareaForm({
         id: ref.id,
         projId: proyectoId,
         title: titulo.trim(),
-        desc: desc || undefined,
-        assignee: assignee || undefined,
+        // Strings vacíos, no undefined — Firestore rechaza `undefined` como
+        // valor de campo en un setDoc sin merge (bug real: crear una tarea
+        // sin descripción/asignado/fecha tiraba error antes de este fix).
+        desc: desc || "",
+        assignee: assignee || "",
         priority: prioridad,
         status: "pendiente",
-        due: due || undefined,
+        due: due || "",
       };
       await setDoc(ref, data);
       logActivity(`agrego una tarea: ${data.title}`, proyectoNombre, quienSos);
