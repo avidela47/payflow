@@ -92,12 +92,17 @@ function emptyPagoRow(formaPagoDefault?: SimPaymentMode): PagoRow {
 function totalItem(it: { neto: number; iva: number }): number {
   return (it.neto || 0) + (it.iva || 0);
 }
-function saldoItem(it: { neto: number; iva: number; pagos: { monto: number }[] }): number {
-  const pagado = it.pagos.reduce((s, p) => s + p.monto, 0);
+// Un e-cheq SIN emitir todavía no es plata efectivamente pagada — no debe
+// mover el estado a Parcial/Pagado hasta que se marque como emitido.
+function pagoCuentaComoPagado(p: { formaPago?: SimPaymentMode; emitido?: boolean }): boolean {
+  return !(p.formaPago === "ECHEQ" && !p.emitido);
+}
+function saldoItem(it: { neto: number; iva: number; pagos: { monto: number; formaPago?: SimPaymentMode; emitido?: boolean }[] }): number {
+  const pagado = it.pagos.filter(pagoCuentaComoPagado).reduce((s, p) => s + p.monto, 0);
   return totalItem(it) - pagado;
 }
-function pagadoItem(it: { pagos: { monto: number }[] }): number {
-  return it.pagos.reduce((s, p) => s + p.monto, 0);
+function pagadoItem(it: { pagos: { monto: number; formaPago?: SimPaymentMode; emitido?: boolean }[] }): number {
+  return it.pagos.filter(pagoCuentaComoPagado).reduce((s, p) => s + p.monto, 0);
 }
 
 export function SimuladorViajesButton() {
