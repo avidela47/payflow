@@ -218,11 +218,15 @@ export default async function ImprimirReporteVentasPage({
           <thead>
             <tr className="bg-gray-900 text-left text-white">
               <th className="p-2">Cliente</th>
-              <th className="p-2">Fecha</th>
+              <th className="p-2">Fecha venta</th>
               <th className="p-2">Forma de pago</th>
               <th className="p-2">Canal</th>
-              <th className="p-2">Estado</th>
+              <th className="p-2">Cobro esperado</th>
               <th className="p-2 text-right">Monto</th>
+              <th className="p-2">Remito</th>
+              <th className="p-2">Factura</th>
+              <th className="p-2">OC</th>
+              <th className="p-2">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -232,13 +236,17 @@ export default async function ImprimirReporteVentasPage({
                 <td className="p-2">{entry.saleDateISO}</td>
                 <td className="p-2">{entry.paymentMethod ?? "—"}</td>
                 <td className="p-2">{channelLabel(entry.channel)}</td>
-                <td className="p-2">{entry.collected ? "Cobrada" : "Pendiente"}</td>
+                <td className="p-2">{entry.expectedCollectionDateISO ?? "—"}</td>
                 <td className="p-2 text-right">{formatCurrency(entry.amount)}</td>
+                <td className="p-2">{entry.remitoNumber ?? "—"}</td>
+                <td className="p-2">{entry.invoiceNumber ?? "—"}</td>
+                <td className="p-2">{entry.purchaseOrderNumber ?? "—"}</td>
+                <td className="p-2">{entry.collected ? "Cobrada" : "Pendiente"}</td>
               </tr>
             ))}
             {report.detail.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-gray-500">
+                <td colSpan={10} className="p-4 text-center text-gray-500">
                   No hay ventas cargadas en este mes.
                 </td>
               </tr>

@@ -409,10 +409,13 @@ export type SalesReportDetailRow = {
   clientName: string;
   saleDateISO: string;
   paymentMethod?: string;
+  expectedCollectionDateISO?: string;
   amount: number;
   collected: boolean;
   collectedDateISO?: string;
+  remitoNumber?: string;
   invoiceNumber?: string;
+  purchaseOrderNumber?: string;
   channel: "OFICINA" | "MERCADO_LIBRE";
 };
 
@@ -509,12 +512,17 @@ export async function getSalesReport(periodISO: string): Promise<SalesReportResu
       clientName,
       saleDateISO: sale.saleDate.toISOString().slice(0, 10),
       paymentMethod: sale.paymentMethod,
+      expectedCollectionDateISO: sale.expectedCollectionDate
+        ? sale.expectedCollectionDate.toISOString().slice(0, 10)
+        : undefined,
       amount: sale.amount,
       collected: sale.collected,
       collectedDateISO: sale.collectedDate
         ? sale.collectedDate.toISOString().slice(0, 10)
         : undefined,
+      remitoNumber: sale.remitoNumber,
       invoiceNumber: sale.invoiceNumber,
+      purchaseOrderNumber: sale.purchaseOrderNumber,
       channel,
     });
   }

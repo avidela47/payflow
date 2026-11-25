@@ -259,17 +259,21 @@ export default async function ReporteVentasPage({
           <TableHeader>
             <TableRow>
               <TableHead>Cliente</TableHead>
-              <TableHead>Fecha</TableHead>
+              <TableHead>Fecha venta</TableHead>
               <TableHead>Forma de pago</TableHead>
               <TableHead>Canal</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Cobro esperado</TableHead>
               <TableHead className="text-right">Monto</TableHead>
+              <TableHead>Remito</TableHead>
+              <TableHead>Factura</TableHead>
+              <TableHead>OC</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {report.detail.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No hay ventas cargadas en este mes.
                 </TableCell>
               </TableRow>
@@ -280,12 +284,16 @@ export default async function ReporteVentasPage({
                 <TableCell>{entry.saleDateISO}</TableCell>
                 <TableCell>{entry.paymentMethod ?? "—"}</TableCell>
                 <TableCell>{channelLabel(entry.channel)}</TableCell>
+                <TableCell>{entry.expectedCollectionDateISO ?? "—"}</TableCell>
+                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
+                <TableCell>{entry.remitoNumber ?? "—"}</TableCell>
+                <TableCell>{entry.invoiceNumber ?? "—"}</TableCell>
+                <TableCell>{entry.purchaseOrderNumber ?? "—"}</TableCell>
                 <TableCell>
                   <Badge variant={entry.collected ? "success" : "default"}>
                     {entry.collected ? "Cobrada" : "Pendiente"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
