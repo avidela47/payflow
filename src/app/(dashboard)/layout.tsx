@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex flex-col md:h-screen md:flex-row">
+    <div className="flex flex-col lg:h-screen lg:flex-row">
       <Sidebar
         role={session.user.role}
         name={session.user.name ?? "Usuario"}

@@ -507,9 +507,9 @@ export function Sidebar({
 
   return (
     <>
-      {/* Barra superior: solo se ve en mobile/tablet (md:hidden). En
+      {/* Barra superior: solo se ve en mobile/tablet (lg:hidden). En
           desktop el logo/nombre van dentro del aside de siempre. */}
-      <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="PayFlow" className="h-7 w-auto" />
           <span className="font-semibold">{name}</span>
@@ -528,7 +528,7 @@ export function Sidebar({
           mobile/tablet. Tocarlo cierra el menú. */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -536,18 +536,18 @@ export function Sidebar({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background transition-transform duration-200",
-          "md:static md:z-auto md:h-screen md:w-56 md:translate-x-0",
+          "lg:static lg:z-auto lg:h-screen lg:w-56 lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header del menú en desktop (siempre visible) */}
-        <div className="hidden items-center gap-2 border-b border-border px-4 py-4 md:flex">
+        <div className="hidden items-center gap-2 border-b border-border px-4 py-4 lg:flex">
           <img src="/logo.png" alt="PayFlow" className="h-8 w-auto" />
           <span className="font-semibold">{name}</span>
         </div>
         {/* Header del menú en mobile/tablet (dentro del panel deslizante,
             con botón para cerrarlo) */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-4 md:hidden">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4 lg:hidden">
           <span className="font-semibold">{name}</span>
           <button
             type="button"
