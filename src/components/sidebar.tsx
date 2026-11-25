@@ -112,6 +112,7 @@ const navItems: NavItem[] = [
     icon: FolderKanban,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "pipeline",
+    section: "PROYECTOS",
   },
   // Pestaña "Generador de computos" del ex proyectos-itelsa, misma lógica
   // que Proyectos arriba: conectada en vivo a la misma Firestore real
@@ -124,6 +125,7 @@ const navItems: NavItem[] = [
     icon: Calculator,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "computos",
+    section: "PROYECTOS",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
   { href: "/proveedores", label: "Proveedores", icon: Truck, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
