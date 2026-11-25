@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, ClipboardList, X } from "lucide-react";
+import { Plus, Trash2, ClipboardList, X, Printer } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,6 +28,7 @@ import {
   type CondicionesFormInput,
 } from "./actions";
 import { SimuladorViajesButton } from "./simulador-viajes";
+import { condicionesViajePdf } from "@/lib/condiciones-viaje-pdf";
 import type {
   ViaticoHonorarioType,
   ViaticoPaymentMode,
@@ -91,6 +92,7 @@ export type ViaticoCondicionesItem = {
   tieneVale?: boolean;
   numeroVale?: string;
   formaPago?: ViaticoCondicionesPaymentMode;
+  montoEfectivo?: number;
 };
 
 export type ViaticoExtraItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
@@ -280,6 +282,7 @@ export function ViaticosClient({
   const [condTieneVale, setCondTieneVale] = useState(false);
   const [condNumeroVale, setCondNumeroVale] = useState("");
   const [condFormaPago, setCondFormaPago] = useState<ViaticoCondicionesPaymentMode | "">("");
+  const [condMontoEfectivo, setCondMontoEfectivo] = useState("");
   const [savingCondiciones, setSavingCondiciones] = useState(false);
 
   // Campos simples
@@ -395,7 +398,24 @@ export function ViaticosClient({
     setCondTieneVale(c?.tieneVale ?? false);
     setCondNumeroVale(c?.numeroVale ?? "");
     setCondFormaPago(c?.formaPago ?? "");
+    setCondMontoEfectivo(c?.montoEfectivo != null ? String(c.montoEfectivo) : "");
     setCondicionesTarget(v);
+  }
+
+  function imprimirCondiciones() {
+    if (!condicionesTarget) return;
+    void condicionesViajePdf({
+      nombreViaje: condicionesTarget.nombre,
+      fechaInicioISO: condicionesTarget.fechaInicioISO,
+      fechaFinISO: condicionesTarget.fechaFinISO,
+      empleadosNombres: condEmpleadosRows.map((r) => r.nombre.trim()).filter(Boolean),
+      viaticosPactados: condViaticosPactados.trim() || undefined,
+      llevanInsumos: condLlevanInsumos,
+      tieneVale: condTieneVale,
+      numeroVale: condTieneVale ? condNumeroVale.trim() || undefined : undefined,
+      formaPago: condFormaPago || undefined,
+      montoEfectivo: condFormaPago === "EFECTIVO" ? Number(condMontoEfectivo) || undefined : undefined,
+    });
   }
 
   async function handleSubmitCondiciones() {
@@ -407,6 +427,7 @@ export function ViaticosClient({
       tieneVale: condTieneVale,
       numeroVale: condTieneVale ? condNumeroVale.trim() || undefined : undefined,
       formaPago: condFormaPago || undefined,
+      montoEfectivo: condFormaPago === "EFECTIVO" ? Number(condMontoEfectivo) || undefined : undefined,
     };
     setSavingCondiciones(true);
     const result = await updateCondicionesViaje(condicionesTarget.id, input);
@@ -1423,6 +1444,9 @@ export function ViaticosClient({
                     <li>
                       Forma de pago viáticos:{" "}
                       {CONDICIONES_PAYMENT_MODE_OPTIONS.find((o) => o.value === detailTarget.condiciones!.formaPago)?.label}
+                      {detailTarget.condiciones.formaPago === "EFECTIVO" && detailTarget.condiciones.montoEfectivo
+                        ? ` — ${formatCurrency(detailTarget.condiciones.montoEfectivo)}`
+                        : ""}
                     </li>
                   )}
                 </ul>
@@ -1656,15 +1680,31 @@ export function ViaticosClient({
                   </option>
                 ))}
               </Select>
+              {condFormaPago === "EFECTIVO" && (
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={condMontoEfectivo}
+                  onChange={(e) => setCondMontoEfectivo(e.target.value)}
+                  placeholder="¿Cuánto se lleva en efectivo?"
+                />
+              )}
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button type="button" variant="outline" onClick={() => setCondicionesTarget(null)}>
-                Cancelar
+            <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={imprimirCondiciones}>
+                <Printer className="mr-1.5 h-3.5 w-3.5" />
+                Imprimir
               </Button>
-              <Button type="button" disabled={savingCondiciones} onClick={() => void handleSubmitCondiciones()}>
-                {savingCondiciones ? "Guardando..." : "Guardar"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setCondicionesTarget(null)}>
+                  Cancelar
+                </Button>
+                <Button type="button" disabled={savingCondiciones} onClick={() => void handleSubmitCondiciones()}>
+                  {savingCondiciones ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
             </div>
           </div>
         )}

@@ -57,6 +57,7 @@ export default async function ViaticosPage() {
           tieneVale: v.condiciones.tieneVale,
           numeroVale: v.condiciones.numeroVale,
           formaPago: v.condiciones.formaPago,
+          montoEfectivo: v.condiciones.montoEfectivo,
         }
       : undefined,
     hospedajeLugar: v.hospedaje?.lugar,

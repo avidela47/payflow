@@ -100,6 +100,7 @@ const condicionesSchema = z.object({
   tieneVale: z.boolean().optional(),
   numeroVale: z.string().optional(),
   formaPago: z.enum(VIATICO_CONDICIONES_PAYMENT_MODES).optional(),
+  montoEfectivo: z.coerce.number().nonnegative().optional(),
 });
 
 export type CondicionesFormInput = z.infer<typeof condicionesSchema>;
@@ -250,6 +251,7 @@ export async function updateCondicionesViaje(viaticoId: string, input: Condicion
           tieneVale: parsed.data.tieneVale,
           numeroVale: parsed.data.tieneVale ? parsed.data.numeroVale || undefined : undefined,
           formaPago: parsed.data.formaPago,
+          montoEfectivo: parsed.data.formaPago === "EFECTIVO" ? parsed.data.montoEfectivo : undefined,
         },
       },
     });

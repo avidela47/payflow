@@ -103,6 +103,9 @@ export interface IViaticoCondiciones {
   tieneVale?: boolean;
   numeroVale?: string; // solo tiene sentido si tieneVale === true
   formaPago?: ViaticoCondicionesPaymentMode;
+  // Monto que se lleva en efectivo — solo tiene sentido si formaPago ===
+  // "EFECTIVO" (2026-11-25, Ariel: faltaba "si es efectivo, cuánto").
+  montoEfectivo?: number;
 }
 
 // Tope diario de viático, ahora POR EMPLEADO (antes era un único monto
@@ -171,6 +174,7 @@ const ViaticoCondicionesSchema = new Schema<IViaticoCondiciones>(
     tieneVale: Boolean,
     numeroVale: String,
     formaPago: { type: String, enum: VIATICO_CONDICIONES_PAYMENT_MODES },
+    montoEfectivo: Number,
   },
   { _id: false }
 );
