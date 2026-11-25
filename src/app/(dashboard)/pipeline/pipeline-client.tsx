@@ -49,6 +49,18 @@ export type ClienteOption = { id: string; nombre: string };
 // que PayFlow todavía no edita. Tipar solo lo que usamos, y escribir SIEMPRE
 // con { merge: true }, evita que este módulo pise o borre datos de esas
 // otras pantallas al guardar.
+// Un "cómputo de luminarias aprobado" cargado a mano sobre el proyecto — es
+// una tablita de seguimiento (fecha/entregado/link de Dropbox/aprobado), NO
+// es el Generador de Cómputos (/computos, otra colección, "computosGen").
+// Port de buildComputosBlock (líneas 2894-2950 del original).
+export type ComputoAprobado = {
+  id: string;
+  fecha?: string;
+  entregado?: boolean;
+  link?: string;
+  aprobado?: boolean;
+};
+
 export type ProyectoDoc = {
   id: string;
   name: string;
@@ -63,16 +75,40 @@ export type ProyectoDoc = {
   fechaVenta?: string;
   clienteId?: string;
   clienteNombre?: string;
+  // Necesario del proyecto, Aspectos importantes y Cómputos aprobados — no
+  // se usan en esta lista, viven en el detalle (pipeline-detail-client.tsx),
+  // pero el tipo es compartido porque ambas pantallas leen el mismo doc.
+  necesario?: Record<string, boolean>;
+  aspectos?: string;
+  computos?: ComputoAprobado[];
   [key: string]: unknown;
 };
+
+// Las dos secciones que hoy arma PayFlow sobre esta misma colección
+// Firestore ("projects"), discriminadas por `section` — mismo patrón que el
+// original (DEPTS). "proyectos" es el valor interno histórico de
+// Arquitectura (se mantiene por compatibilidad con datos ya guardados).
+export type ProyectosSection = "pipeline" | "proyectos";
+
+function seccionLabel(section: ProyectosSection): string {
+  return section === "proyectos" ? "ARQUITECTURA" : "PROYECTOS";
+}
+
+// Ruta de la lista/detalle de cada sección — para armar links y el botón
+// "volver" sin repetir el mismo condicional en todos lados.
+export function seccionBasePath(section: string): string {
+  return section === "proyectos" ? "/arquitectura" : "/pipeline";
+}
 
 function ProyectoForm({
   clientes,
   quienSos,
+  section,
   onDone,
 }: {
   clientes: ClienteOption[];
   quienSos: string;
+  section: ProyectosSection;
   onDone: () => void;
 }) {
   const [saving, setSaving] = useState(false);
@@ -105,7 +141,7 @@ function ProyectoForm({
         members: miembros,
         start: inicio || undefined,
         end: fin || undefined,
-        section: "pipeline",
+        section,
         priority: prioridad,
         status: "activo",
         clienteId: cliente?.id,
@@ -222,7 +258,7 @@ async function cambiarEstado(p: ProyectoDoc, estado: ProyectoEstado, quienSos: s
     notificarEstadoFinal({ ...p, fechaVenta }, estado, quienSos);
   }
   if (estado !== estadoAnterior) {
-    logActivity(`cambio el estado del proyecto a ${proyectoEstadoLabel(estado)}`, p.name, quienSos);
+    logActivity(`cambio el estado del proyecto a ${proyectoEstadoLabel(estado, p.section === "proyectos")}`, p.name, quienSos);
   }
 }
 
@@ -247,12 +283,16 @@ function exportarExcel(filename: string, rows: (string | number)[][]) {
 function ProyectosTabla({
   items,
   quienSos,
+  section,
   onDelete,
 }: {
   items: ProyectoDoc[];
   quienSos: string;
+  section: ProyectosSection;
   onDelete: (id: string) => void;
 }) {
+  const isArq = section === "proyectos";
+  const base = seccionBasePath(section);
   if (items.length === 0) {
     return <p className="p-4 text-sm text-muted-foreground">Sin proyectos.</p>;
   }
@@ -275,7 +315,7 @@ function ProyectosTabla({
             <TableCell>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
-                <Link href={`/pipeline/${p.id}`} className="font-medium hover:underline">
+                <Link href={`${base}/${p.id}`} className="font-medium hover:underline">
                   {p.name}
                 </Link>
               </div>
@@ -301,14 +341,14 @@ function ProyectosTabla({
                 className="h-8 w-32 text-xs"
               >
                 <option value="activo">Activo</option>
-                <option value="vendido">Vendido</option>
-                <option value="finalizado">Finalizado</option>
+                {!isArq && <option value="vendido">Vendido</option>}
+                <option value="finalizado">{isArq ? "Terminado" : "Finalizado"}</option>
               </Select>
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1.5">
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/pipeline/${p.id}`}>Ver</Link>
+                  <Link href={`${base}/${p.id}`}>Ver</Link>
                 </Button>
                 <Button
                   size="sm"
@@ -332,7 +372,14 @@ function ProyectosTabla({
   );
 }
 
-export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
+export function PipelineClient({
+  clientes,
+  section = "pipeline",
+}: {
+  clientes: ClienteOption[];
+  section?: ProyectosSection;
+}) {
+  const isArq = section === "proyectos";
   const [proyectos, setProyectos] = useState<ProyectoDoc[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [creandoOpen, setCreandoOpen] = useState(false);
@@ -340,7 +387,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
   const { quienSos, elegir } = useQuienSos();
 
   useEffect(() => {
-    const q = query(collection(dbProyectos, "projects"), where("section", "==", "pipeline"));
+    const q = query(collection(dbProyectos, "projects"), where("section", "==", section));
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -348,11 +395,11 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
       },
       (err) => {
         console.error(err);
-        toast.error("No se pudo conectar con la base de Proyectos.");
+        toast.error(`No se pudo conectar con la base de ${seccionLabel(section)}.`);
       }
     );
     return () => unsub();
-  }, []);
+  }, [section]);
 
   const filtrados = useMemo(() => {
     if (!proyectos) return [];
@@ -427,7 +474,7 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
                         p.start || "",
                         p.end || "",
                         prioridadLabel(p.priority),
-                        proyectoEstadoLabel(p.status),
+                        proyectoEstadoLabel(p.status, isArq),
                       ]),
                     ]
                   )
@@ -446,16 +493,16 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
       )}
 
       {vista === "info" ? (
-        <InfoUtil />
+        <InfoUtil dept={section} />
       ) : vista === "cronograma" ? (
         <Cronograma proyectos={filtrados} />
       ) : (
         <>
-          <ProyectosTabla items={activos} quienSos={quienSos} onDelete={handleDelete} />
+          <ProyectosTabla items={activos} quienSos={quienSos} section={section} onDelete={handleDelete} />
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-muted-foreground">Finalizados</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">{isArq ? "Terminados" : "Finalizados"}</h2>
               <Button
                 size="sm"
                 variant="outline"
@@ -473,40 +520,47 @@ export function PipelineClient({ clientes }: { clientes: ClienteOption[] }) {
                 Exportar Excel
               </Button>
             </div>
-            <ProyectosTabla items={finalizados} quienSos={quienSos} onDelete={handleDelete} />
+            <ProyectosTabla items={finalizados} quienSos={quienSos} section={section} onDelete={handleDelete} />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-muted-foreground">Vendidos</h2>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  exportarExcel(
-                    "proyectos-vendidos.xlsx",
-                    [
-                      ["Proyecto", "Cliente", "Fecha de venta"],
-                      ...vendidos.map((p) => [
-                        p.name,
-                        p.clienteNombre || "",
-                        p.fechaVenta ? new Date(p.fechaVenta).toLocaleDateString("es-AR") : "",
-                      ]),
-                    ]
-                  )
-                }
-              >
-                <Download className="h-4 w-4" />
-                Exportar Excel
-              </Button>
+          {!isArq && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-muted-foreground">Vendidos</h2>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    exportarExcel(
+                      "proyectos-vendidos.xlsx",
+                      [
+                        ["Proyecto", "Cliente", "Fecha de venta"],
+                        ...vendidos.map((p) => [
+                          p.name,
+                          p.clienteNombre || "",
+                          p.fechaVenta ? new Date(p.fechaVenta).toLocaleDateString("es-AR") : "",
+                        ]),
+                      ]
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Exportar Excel
+                </Button>
+              </div>
+              <ProyectosTabla items={vendidos} quienSos={quienSos} section={section} onDelete={handleDelete} />
             </div>
-            <ProyectosTabla items={vendidos} quienSos={quienSos} onDelete={handleDelete} />
-          </div>
+          )}
         </>
       )}
 
-      <Dialog open={creandoOpen} onOpenChange={setCreandoOpen} title="Nuevo proyecto" className="max-w-lg">
-        <ProyectoForm clientes={clientes} quienSos={quienSos} onDone={() => setCreandoOpen(false)} />
+      <Dialog
+        open={creandoOpen}
+        onOpenChange={setCreandoOpen}
+        title={`Nuevo proyecto — ${seccionLabel(section)}`}
+        className="max-w-lg"
+      >
+        <ProyectoForm clientes={clientes} quienSos={quienSos} section={section} onDone={() => setCreandoOpen(false)} />
       </Dialog>
     </div>
   );

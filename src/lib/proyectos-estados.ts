@@ -14,14 +14,19 @@ export type ProyectoPrioridad = (typeof PROYECTO_PRIORIDADES)[number];
 export const TAREA_ESTADOS = ["pendiente", "en-curso", "terminado"] as const;
 export type TareaEstado = (typeof TAREA_ESTADOS)[number];
 
-export function proyectoEstadoLabel(estado: ProyectoEstado): string {
+// `arquitectura` cambia el label de "finalizado" a "Terminado" — mismo
+// texto que usa el original para esa sección (Arquitectura no vende nada,
+// "Finalizado" no es el término correcto ahí). Arquitectura tampoco usa el
+// estado "vendido" (se oculta esa opción en la UI), pero el tipo sigue
+// siendo el mismo enum — no hace falta una unión aparte.
+export function proyectoEstadoLabel(estado: ProyectoEstado, arquitectura = false): string {
   switch (estado) {
     case "activo":
       return "Activo";
     case "vendido":
       return "Vendido";
     case "finalizado":
-      return "Finalizado";
+      return arquitectura ? "Terminado" : "Finalizado";
   }
 }
 

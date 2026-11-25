@@ -42,7 +42,7 @@ function ahoraTexto(): string {
   return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} a las ${z(d.getHours())}:${z(d.getMinutes())}`;
 }
 
-function LinkForm({ onDone }: { onDone: () => void }) {
+function LinkForm({ dept, onDone }: { dept: string; onDone: () => void }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -58,7 +58,7 @@ function LinkForm({ onDone }: { onDone: () => void }) {
     setSaving(true);
     try {
       const ref = doc(collection(dbProyectos, "links"));
-      const data: LinkDoc = { id: ref.id, name: name.trim(), desc: desc.trim(), url: url.trim(), cat, dept: "pipeline" };
+      const data: LinkDoc = { id: ref.id, name: name.trim(), desc: desc.trim(), url: url.trim(), cat, dept };
       await setDoc(ref, data);
       toast.success("Link agregado.");
       onDone();
@@ -105,7 +105,7 @@ function LinkForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function NotaCompose() {
+function NotaCompose({ dept }: { dept: string }) {
   const [titulo, setTitulo] = useState("");
   const [texto, setTexto] = useState("");
   const [saving, setSaving] = useState(false);
@@ -121,7 +121,7 @@ function NotaCompose() {
         kind: "nota",
         name: titulo.trim(),
         text: txt,
-        dept: "pipeline",
+        dept,
         ts: Date.now(),
         fecha: ahoraTexto(),
       };
@@ -234,7 +234,8 @@ function NotaCard({ n }: { n: LinkDoc }) {
   );
 }
 
-export function InfoUtil() {
+export function InfoUtil({ dept = "pipeline" }: { dept?: string }) {
+  const deptLabel = dept === "proyectos" ? "Arquitectura" : "Proyectos";
   const [items, setItems] = useState<LinkDoc[] | null>(null);
   const [agregandoOpen, setAgregandoOpen] = useState(false);
 
@@ -256,7 +257,7 @@ export function InfoUtil() {
 
   // Igual que el original: un link/nota sin `dept` es global (se ve en
   // todas las pestañas), uno con `dept` solo en la suya.
-  const propios = items.filter((l) => !l.dept || l.dept === "pipeline");
+  const propios = items.filter((l) => !l.dept || l.dept === dept);
   const links = propios.filter((l) => l.kind !== "nota");
   const notas = propios.filter((l) => l.kind === "nota").sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
 
@@ -281,7 +282,7 @@ export function InfoUtil() {
           </Button>
         </div>
         {links.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Todavía no hay links en Proyectos.</p>
+          <p className="text-sm text-muted-foreground">Todavía no hay links en {deptLabel}.</p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {links.map((l) => (
@@ -323,10 +324,10 @@ export function InfoUtil() {
           <h2 className="text-sm font-semibold">Notas</h2>
           <p className="text-xs text-muted-foreground">Datos, contactos y apuntes del equipo</p>
         </div>
-        <NotaCompose />
+        <NotaCompose dept={dept} />
         <div className="flex flex-col gap-2">
           {notas.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Todavía no hay notas en Proyectos.</p>
+            <p className="text-xs text-muted-foreground">Todavía no hay notas en {deptLabel}.</p>
           ) : (
             notas.map((n) => <NotaCard key={n.id} n={n} />)
           )}
@@ -334,7 +335,7 @@ export function InfoUtil() {
       </div>
 
       <Dialog open={agregandoOpen} onOpenChange={setAgregandoOpen} title="Agregar a Info Útil" className="max-w-lg">
-        <LinkForm onDone={() => setAgregandoOpen(false)} />
+        <LinkForm dept={dept} onDone={() => setAgregandoOpen(false)} />
       </Dialog>
     </div>
   );

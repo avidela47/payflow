@@ -33,6 +33,7 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  PencilRuler,
   ClipboardList,
   Send,
   HandCoins,
@@ -125,6 +126,17 @@ const navItems: NavItem[] = [
     icon: Calculator,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "computos",
+    section: "PROYECTOS",
+  },
+  // Arquitectura — mismo motor que Proyectos (pipeline-client.tsx
+  // parametrizado por `section`), misma base Firestore real que
+  // proyectos-itelsa.itelsasas.com. Fase 1a de portar esa app completa.
+  {
+    href: "/arquitectura",
+    label: "Arquitectura",
+    icon: PencilRuler,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "arquitectura",
     section: "PROYECTOS",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },

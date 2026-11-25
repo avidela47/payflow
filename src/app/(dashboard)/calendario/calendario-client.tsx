@@ -308,15 +308,20 @@ function MonthView({
   const today = toDateKey(new Date());
 
   return (
-    <div className="flex flex-col rounded-lg border border-border overflow-hidden">
-      <div className="grid grid-cols-7 bg-muted text-xs font-medium text-muted-foreground">
-        {WEEKDAY_SHORT.map((label) => (
-          <div key={label} className="px-2 py-2 text-center">
-            {label}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
+    <div className="overflow-x-auto rounded-lg border border-border">
+      {/* min-w asegura que en celu/tablet angosto las 7 columnas no se
+          aplasten hasta ser ilegibles: en vez de eso, esta vista scrollea
+          horizontal (mismo criterio que las tablas de toda la app, que ya
+          scrollean adentro del componente <Table>). */}
+      <div className="min-w-[640px]">
+        <div className="grid grid-cols-7 bg-muted text-xs font-medium text-muted-foreground">
+          {WEEKDAY_SHORT.map((label) => (
+            <div key={label} className="px-2 py-2 text-center">
+              {label}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
         {days.map((day) => {
           const key = toDateKey(day);
           const inMonth = day.getMonth() === anchor.getMonth();
@@ -373,6 +378,7 @@ function MonthView({
             </button>
           );
         })}
+        </div>
       </div>
     </div>
   );
@@ -395,8 +401,15 @@ function TimeGridView({
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // En semana (7 días) esta grilla se aplasta en celu/tablet si no se le da
+  // un ancho mínimo — mismo criterio que la vista Mes: scroll horizontal en
+  // vez de columnas ilegibles. En día (1 columna) el min-width no molesta,
+  // nunca se activa el scroll.
+  const minWidthPx = 56 + days.length * 90;
+
   return (
-    <div className="flex flex-col rounded-lg border border-border overflow-hidden">
+    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="flex flex-col" style={{ minWidth: minWidthPx }}>
       {/* Encabezado con el día y los eventos de "todo el día" */}
       <div className="grid" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
         <div className="border-b border-r border-border" />
@@ -499,6 +512,7 @@ function TimeGridView({
           })}
         </div>
       </div>
+    </div>
     </div>
   );
 }

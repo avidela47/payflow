@@ -22,7 +22,8 @@ import {
   type ProyectoPrioridad,
   type TareaEstado,
 } from "@/lib/proyectos-estados";
-import type { ProyectoDoc } from "../pipeline-client";
+import { NECESARIOS } from "@/lib/proyectos-necesario";
+import { seccionBasePath, type ComputoAprobado, type ProyectoDoc } from "../pipeline-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
+import { ExternalLink } from "lucide-react";
 
 type TareaDoc = {
   id: string;
@@ -282,6 +284,192 @@ function NotificarForm({
   );
 }
 
+// "Necesario del proyecto" — checklist de insumos (DIALux, recuento de
+// luminarias, PDF/video de presentación). Port de líneas 4586-4605 del
+// original. Default "necesario" salvo que se haya destildado a mano.
+function NecesarioBlock({
+  proyecto,
+  isFin,
+  onUpdate,
+}: {
+  proyecto: ProyectoDoc;
+  isFin: boolean;
+  onUpdate: (patch: Partial<ProyectoDoc>) => Promise<void>;
+}) {
+  const necesario = proyecto.necesario ?? {};
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <h2 className="mb-3 text-sm font-semibold">Necesario del proyecto</h2>
+      <div className="flex flex-col gap-1.5">
+        {NECESARIOS.map((item) => {
+          const esNecesario = necesario[item.id] !== false;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              disabled={isFin}
+              onClick={() => onUpdate({ necesario: { ...necesario, [item.id]: !esNecesario } })}
+              className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                esNecesario ? "border-primary/40 bg-primary/5" : "border-border bg-muted/30 text-muted-foreground"
+              } ${isFin ? "cursor-default" : "hover:bg-muted"}`}
+            >
+              <span>{item.label}</span>
+              <Badge variant={esNecesario ? "primary" : "default"}>{esNecesario ? "Necesario" : "No necesario"}</Badge>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// "Aspectos importantes" — texto libre destacado. Port de buildAspectosBlock
+// (líneas 2953-2963). Mismo patrón "textarea + onBlur" que AlcanceCard en
+// Generador de Cómputos (computos-client.tsx) — guarda al perder el foco, no
+// en cada tecla.
+function AspectosBlock({
+  proyecto,
+  isFin,
+  onUpdate,
+}: {
+  proyecto: ProyectoDoc;
+  isFin: boolean;
+  onUpdate: (patch: Partial<ProyectoDoc>) => Promise<void>;
+}) {
+  return (
+    <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
+      <h2 className="mb-2 text-sm font-semibold">Aspectos importantes a tener en cuenta</h2>
+      <Textarea
+        key={proyecto.id}
+        rows={3}
+        defaultValue={proyecto.aspectos ?? ""}
+        placeholder="Lo que nadie del equipo puede pasar por alto en este proyecto..."
+        disabled={isFin}
+        onBlur={(e) => onUpdate({ aspectos: e.target.value })}
+      />
+    </div>
+  );
+}
+
+// "Cómputos de luminarias aprobados" — tabla de seguimiento manual (no es el
+// Generador de Cómputos de /computos). Port de buildComputosBlock (líneas
+// 2894-2950).
+function ComputosAprobadosBlock({
+  proyecto,
+  isFin,
+  quienSos,
+  onUpdate,
+}: {
+  proyecto: ProyectoDoc;
+  isFin: boolean;
+  quienSos: string;
+  onUpdate: (patch: Partial<ProyectoDoc>) => Promise<void>;
+}) {
+  const items = proyecto.computos ?? [];
+
+  function patch(updater: (arr: ComputoAprobado[]) => void) {
+    const next: ComputoAprobado[] = JSON.parse(JSON.stringify(items));
+    updater(next);
+    void onUpdate({ computos: next });
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <h2 className="mb-3 text-sm font-semibold">Cómputos de luminarias aprobados</h2>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Todavía no hay cómputos cargados.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map((cp, idx) => {
+            const last = idx === items.length - 1;
+            return (
+              <div
+                key={cp.id}
+                className={`flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm ${
+                  cp.aprobado ? "border-success/40 bg-success/5" : "border-border"
+                }`}
+              >
+                <span className="text-xs font-medium text-muted-foreground">
+                  #{idx + 1}
+                  {last ? " Vigente" : ""}
+                </span>
+                <Input
+                  type="date"
+                  value={cp.fecha ?? ""}
+                  disabled={isFin}
+                  onChange={(e) => patch((arr) => { arr[idx].fecha = e.target.value; })}
+                  className="h-8 w-36 text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant={cp.entregado ? "default" : "outline"}
+                  disabled={isFin}
+                  onClick={() => patch((arr) => { arr[idx].entregado = !arr[idx].entregado; })}
+                >
+                  {cp.entregado ? "Entregado" : "No entregado"}
+                </Button>
+                <div className="flex min-w-[200px] flex-1 items-center gap-1">
+                  <Input
+                    type="url"
+                    placeholder="https://www.dropbox.com/..."
+                    value={cp.link ?? ""}
+                    disabled={isFin}
+                    onChange={(e) => patch((arr) => { arr[idx].link = e.target.value; })}
+                    className="h-8 text-xs"
+                  />
+                  {cp.link && (
+                    <a href={cp.link} target="_blank" rel="noopener noreferrer" title="Abrir en Dropbox">
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant={cp.aprobado ? "default" : "outline"}
+                  disabled={isFin}
+                  onClick={() => patch((arr) => { arr[idx].aprobado = !arr[idx].aprobado; })}
+                >
+                  {cp.aprobado ? "Aprobado" : "No aprobado"}
+                </Button>
+                {!isFin && (
+                  <Button
+                    size="sm"
+                    variant="delete"
+                    className="h-8 w-8 p-0"
+                    title="Quitar cómputo"
+                    onClick={() => {
+                      if (confirm(`¿Quitar el cómputo ${idx + 1}?`)) patch((arr) => { arr.splice(idx, 1); });
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!isFin && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          onClick={() => {
+            const hoy = new Date().toISOString().slice(0, 10);
+            patch((arr) => {
+              arr.push({ id: `cmp_${Date.now()}`, fecha: hoy, entregado: false, link: "", aprobado: false });
+            });
+            logActivity("agrego un computo de luminarias", proyecto.name, quienSos);
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {items.length ? "Nuevo cómputo (cambio de proyecto)" : "Agregar cómputo"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
   const [proyecto, setProyecto] = useState<ProyectoDoc | null | undefined>(undefined);
   const [tareas, setTareas] = useState<TareaDoc[]>([]);
@@ -324,7 +512,11 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
         notificarEstadoFinal({ ...proyecto, fechaVenta }, estado, quienSos);
       }
       if (estado !== estadoAnterior) {
-        logActivity(`cambio el estado del proyecto a ${proyectoEstadoLabel(estado)}`, proyecto.name, quienSos);
+        logActivity(
+          `cambio el estado del proyecto a ${proyectoEstadoLabel(estado, proyecto.section === "proyectos")}`,
+          proyecto.name,
+          quienSos
+        );
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
@@ -348,12 +540,25 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
     );
   }
 
+  const isArq = proyecto.section === "proyectos";
+  const isGest = proyecto.section === "gestion";
+  const isFin = proyecto.status === "finalizado";
+  const basePath = seccionBasePath(proyecto.section);
+
+  async function patchProyecto(patch: Partial<ProyectoDoc>) {
+    try {
+      await setDoc(doc(dbProyectos, "projects", proyectoId), patch, { merge: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Link href="/pipeline" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link href={basePath} className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" />
-          Proyectos
+          {isArq ? "Arquitectura" : "Proyectos"}
         </Link>
         <div className="flex items-center gap-2">
           <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: proyecto.color }} />
@@ -363,7 +568,7 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
 
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={proyectoEstadoBadgeVariant(proyecto.status)}>{proyectoEstadoLabel(proyecto.status)}</Badge>
+          <Badge variant={proyectoEstadoBadgeVariant(proyecto.status)}>{proyectoEstadoLabel(proyecto.status, isArq)}</Badge>
           <Badge variant={prioridadBadgeVariant(proyecto.priority)}>{prioridadLabel(proyecto.priority)}</Badge>
           <Button size="sm" variant="outline" className="ml-auto" onClick={() => setNotificarOpen(true)}>
             <Send className="h-3.5 w-3.5" />
@@ -375,8 +580,8 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
             className="h-8 w-40 text-xs"
           >
             <option value="activo">Activo</option>
-            <option value="vendido">Vendido</option>
-            <option value="finalizado">Finalizado</option>
+            {!isArq && <option value="vendido">Vendido</option>}
+            <option value="finalizado">{isArq ? "Terminado" : "Finalizado"}</option>
           </Select>
         </div>
         <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
@@ -402,6 +607,16 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
           </div>
         </dl>
       </div>
+
+      {!isGest && (
+        <>
+          <NecesarioBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          <AspectosBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          {(proyecto.section === "pipeline" || isArq) && (
+            <ComputosAprobadosBlock proyecto={proyecto} isFin={isFin} quienSos={quienSos} onUpdate={patchProyecto} />
+          )}
+        </>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={() => setCreandoOpen(true)}>

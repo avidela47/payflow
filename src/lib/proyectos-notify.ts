@@ -20,6 +20,21 @@ import type { ProyectoDoc } from "@/app/(dashboard)/pipeline/pipeline-client";
 const APP_URL = "https://payflow.itelsasas.com/pipeline";
 const OBRA_NOTIFY_EMAIL = "liopalencia35@gmail.com";
 
+// Mismo `getDept(section).label` del original (DEPTS) — solo las 3 áreas que
+// hoy escriben en esta colección compartida desde PayFlow. "gestion" queda
+// listo para cuando se construya Gestión de Proyectos (1b).
+function deptLabel(section: string): string {
+  switch (section) {
+    case "proyectos":
+      return "ARQUITECTURA";
+    case "gestion":
+      return "GESTION DE PROYECTOS";
+    case "pipeline":
+    default:
+      return "PROYECTOS";
+  }
+}
+
 type EmailEvent = {
   asunto: string;
   titulo?: string;
@@ -111,7 +126,7 @@ function teamEmails(excludeIds: string[], quienSosId: string): string[] {
 function proyectoResumen(p: ProyectoDoc): string[] {
   const det = [
     `Proyecto: ${p.name}`,
-    `Area: PROYECTOS`,
+    `Area: ${deptLabel(p.section)}`,
     `Prioridad: ${p.priority || "media"}`,
     `Fecha de inicio: ${fmtFecha(p.start)}`,
     `Fecha de fin: ${fmtFecha(p.end)}`,
@@ -128,13 +143,14 @@ function proyectoResumen(p: ProyectoDoc): string[] {
 // Regla original: proyecto nuevo -> todo el equipo menos quien lo creó y
 // menos Flor ("t7", admin) — confirmado en el código (sendNewProjectNotification).
 export function notificarProyectoNuevo(p: ProyectoDoc, quienSosId: string): void {
+  const dept = deptLabel(p.section);
   sendToList(teamEmails(["t7"], quienSosId), {
     asunto: `Nuevo proyecto: ${p.name}`,
     titulo: "Se creó un proyecto nuevo",
-    mensaje: `${currentUserName(quienSosId)} creó el proyecto "${p.name}" en PROYECTOS, con prioridad ${p.priority || "media"}.`,
+    mensaje: `${currentUserName(quienSosId)} creó el proyecto "${p.name}" en ${dept}, con prioridad ${p.priority || "media"}.`,
     detalle: [
       `Proyecto: ${p.name}`,
-      `Area: PROYECTOS`,
+      `Area: ${dept}`,
       `Prioridad: ${p.priority || "media"}`,
       `Fecha de inicio: ${fmtFecha(p.start)}`,
       `Fecha de fin: ${fmtFecha(p.end)}`,
@@ -144,12 +160,14 @@ export function notificarProyectoNuevo(p: ProyectoDoc, quienSosId: string): void
 }
 
 // Regla original: vendido/finalizado -> todo el equipo menos quien hizo el
-// cambio (notifyEstadoFinal). Si pasa a vendido, además se avisa al email de
-// obra (OBRA_NOTIFY_EMAIL), igual que el original.
+// cambio (notifyEstadoFinal). "Terminado" en vez de "Finalizado" para
+// Arquitectura (section "proyectos"), igual texto que el original. Si pasa a
+// vendido, además se avisa al email de obra — pero solo para `pipeline`
+// (Arquitectura nunca pasa a vendido, el original tampoco lo permite ahí).
 export function notificarEstadoFinal(p: ProyectoDoc, status: "vendido" | "finalizado", quienSosId: string): void {
-  const lbl = status === "vendido" ? "vendido" : "finalizado";
+  const lbl = status === "vendido" ? "vendido" : p.section === "proyectos" ? "terminado" : "finalizado";
   const lista = teamEmails([], quienSosId);
-  if (status === "vendido") lista.push(OBRA_NOTIFY_EMAIL);
+  if (status === "vendido" && p.section === "pipeline") lista.push(OBRA_NOTIFY_EMAIL);
   sendToList(lista, {
     asunto: `Proyecto ${lbl}: ${p.name}`,
     titulo: `Un proyecto pasó a ${lbl}`,
