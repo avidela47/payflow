@@ -97,9 +97,9 @@ const USERS_TO_CREATE: UserToCreate[] = [
     allowedGroups: ["proyectos", "utilidades"],
   },
   {
-    name: "Melisa",
-    email: "melisa",
-    password: "melisa2026$",
+    name: "Melina",
+    email: "melina",
+    password: "melina2026$",
     role: "ACCOUNTANT",
     allowedGroups: ["proyectos", "utilidades"],
   },
