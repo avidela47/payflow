@@ -23,7 +23,15 @@ import {
   type TareaEstado,
 } from "@/lib/proyectos-estados";
 import { NECESARIOS } from "@/lib/proyectos-necesario";
-import { seccionBasePath, type ComputoAprobado, type ProyectoDoc } from "../pipeline-client";
+import { seccionBasePath, type ComputoAprobado, type ProyectoDoc, type EmpleadoOption } from "../pipeline-client";
+import {
+  SegurosBlock,
+  AlojamientoBlock,
+  ContactosObraBlock,
+  ChecklistObraBlock,
+  GanttFileBlock,
+  InformesBlock,
+} from "../gestion-blocks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -470,7 +478,13 @@ function ComputosAprobadosBlock({
   );
 }
 
-export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
+export function PipelineDetailClient({
+  proyectoId,
+  empleados = [],
+}: {
+  proyectoId: string;
+  empleados?: EmpleadoOption[];
+}) {
   const [proyecto, setProyecto] = useState<ProyectoDoc | null | undefined>(undefined);
   const [tareas, setTareas] = useState<TareaDoc[]>([]);
   const [creandoOpen, setCreandoOpen] = useState(false);
@@ -558,7 +572,7 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
       <div>
         <Link href={basePath} className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" />
-          {isArq ? "Arquitectura" : "Proyectos"}
+          {isArq ? "Arquitectura" : isGest ? "Gestión de Proyectos" : "Proyectos"}
         </Link>
         <div className="flex items-center gap-2">
           <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: proyecto.color }} />
@@ -615,6 +629,21 @@ export function PipelineDetailClient({ proyectoId }: { proyectoId: string }) {
           {(proyecto.section === "pipeline" || isArq) && (
             <ComputosAprobadosBlock proyecto={proyecto} isFin={isFin} quienSos={quienSos} onUpdate={patchProyecto} />
           )}
+        </>
+      )}
+      {isGest && (
+        <>
+          {/* "Aspectos importantes" también existe para Gestión — en el
+              original siempre se muestra, solo cambia de posición (acá va
+              primero, antes de los bloques propios de Gestión). Corrige un
+              bug de la Fase 1a: ahí quedó mal gateado bajo `!isGest`. */}
+          <AspectosBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          <SegurosBlock proyecto={proyecto} empleados={empleados} isFin={isFin} quienSos={quienSos} onUpdate={patchProyecto} />
+          <AlojamientoBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          <ContactosObraBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          <ChecklistObraBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
+          <GanttFileBlock proyecto={proyecto} isFin={isFin} quienSos={quienSos} onUpdate={patchProyecto} />
+          <InformesBlock proyecto={proyecto} isFin={isFin} onUpdate={patchProyecto} />
         </>
       )}
 

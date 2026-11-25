@@ -41,6 +41,15 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 
 export type ClienteOption = { id: string; nombre: string };
 
+// Para el checklist de Seguros de Gestión de Proyectos — viene de Employee
+// (Mongo), NO de una lista hardcodeada (a diferencia de TEAM/proyectos-team.ts,
+// que se mantiene fijo a propósito para la identidad de "quién sos" del
+// tablero). Acá es al revés: es gente real con DNI para pedir un seguro,
+// tiene que salir de Empleados. `nac` es opcional porque Employee no tenía
+// fecha de nacimiento — se agregó el campo (ver models/Employee.ts) pero
+// puede venir vacío en los que ya existían.
+export type EmpleadoOption = { id: string; nombre: string; apellido: string; dni?: string; nac?: string };
+
 // Forma MÍNIMA que PayFlow necesita de un documento de "projects" en
 // Firestore. A propósito es un tipo abierto ([key: string]: unknown): la
 // colección es compartida con otras pestañas del tablero original (Gestión
@@ -60,6 +69,27 @@ export type ComputoAprobado = {
   link?: string;
   aprobado?: boolean;
 };
+
+// ── Gestión de Proyectos (Fase 1b) — campos exclusivos de esa sección.
+// Port de buildGestionBlocks y los 6 bloques que arma (líneas 3415-3703 del
+// original: Seguros, Alojamiento, Contactos de obra, Checklist de obra,
+// Diagrama de Gantt, Informes enviados).
+export type SeguroOtro = { id: string; nombre: string; dni?: string; nac?: string };
+export type Seguros = {
+  empleados?: string[]; // ids de Employee (Mongo) tildados para este seguro
+  otros?: SeguroOtro[]; // gente que no está en Empleados (subcontratistas, etc.)
+  desde?: string;
+  hasta?: string;
+  datos?: string;
+  enviado?: boolean;
+  enviadoTxt?: string;
+  sacados?: boolean;
+};
+export type Alojamiento = { link?: string; desde?: string; hasta?: string; reservado?: boolean };
+export type ContactoObra = { id: string; nombre: string; apellido?: string; telefono?: string };
+export type ChecklistObraItem = { id: string; texto: string; necesario: boolean; realizado: boolean };
+export type GanttFile = { fileId: string; name: string; size: number; subido?: string };
+export type Informe = { id: string; nombre: string; fecha?: string };
 
 export type ProyectoDoc = {
   id: string;
@@ -81,23 +111,35 @@ export type ProyectoDoc = {
   necesario?: Record<string, boolean>;
   aspectos?: string;
   computos?: ComputoAprobado[];
+  // Exclusivos de Gestión de Proyectos (section "gestion").
+  seguros?: Seguros;
+  alojamiento?: Alojamiento;
+  contactosObra?: ContactoObra[];
+  checkObra?: ChecklistObraItem[];
+  ganttFile?: GanttFile;
+  ganttLink?: string;
+  informes?: Informe[];
   [key: string]: unknown;
 };
 
-// Las dos secciones que hoy arma PayFlow sobre esta misma colección
+// Las tres secciones que hoy arma PayFlow sobre esta misma colección
 // Firestore ("projects"), discriminadas por `section` — mismo patrón que el
 // original (DEPTS). "proyectos" es el valor interno histórico de
 // Arquitectura (se mantiene por compatibilidad con datos ya guardados).
-export type ProyectosSection = "pipeline" | "proyectos";
+export type ProyectosSection = "pipeline" | "proyectos" | "gestion";
 
 function seccionLabel(section: ProyectosSection): string {
-  return section === "proyectos" ? "ARQUITECTURA" : "PROYECTOS";
+  if (section === "proyectos") return "ARQUITECTURA";
+  if (section === "gestion") return "GESTION DE PROYECTOS";
+  return "PROYECTOS";
 }
 
 // Ruta de la lista/detalle de cada sección — para armar links y el botón
 // "volver" sin repetir el mismo condicional en todos lados.
 export function seccionBasePath(section: string): string {
-  return section === "proyectos" ? "/arquitectura" : "/pipeline";
+  if (section === "proyectos") return "/arquitectura";
+  if (section === "gestion") return "/gestion-de-proyectos";
+  return "/pipeline";
 }
 
 function ProyectoForm({

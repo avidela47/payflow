@@ -19,6 +19,7 @@ import type { ProyectoDoc } from "@/app/(dashboard)/pipeline/pipeline-client";
 
 const APP_URL = "https://payflow.itelsasas.com/pipeline";
 const OBRA_NOTIFY_EMAIL = "liopalencia35@gmail.com";
+const ADMIN_EMAIL = "admin@itelsasas.com";
 
 // Mismo `getDept(section).label` del original (DEPTS) — solo las 3 áreas que
 // hoy escriben en esta colección compartida desde PayFlow. "gestion" queda
@@ -173,6 +174,35 @@ export function notificarEstadoFinal(p: ProyectoDoc, status: "vendido" | "finali
     titulo: `Un proyecto pasó a ${lbl}`,
     mensaje: `${currentUserName(quienSosId)} marcó el proyecto "${p.name}" como ${lbl}.`,
     detalle: proyectoResumen(p),
+  }, quienSosId);
+}
+
+// Botón "Enviar a administración" del bloque Seguros (Gestión de Proyectos).
+// Port de sendSegurosEmail (líneas 3527-3542 del original) — ahí `personas`
+// salía de EMPLEADOS (hardcodeado); acá ya viene resuelta desde Empleados
+// real + "otros" (ver SegurosBlock en gestion-blocks.tsx), por eso se recibe
+// como parámetro en vez de volver a buscarla acá.
+export function notificarSeguros(
+  p: ProyectoDoc,
+  personas: { nombre: string; dni?: string; nac?: string }[],
+  quienSosId: string
+): void {
+  const seguros = p.seguros as { desde?: string; hasta?: string; datos?: string } | undefined;
+  const det = [
+    `Obra: ${p.name}`,
+    `Cobertura: del ${fmtFecha(seguros?.desde || p.start)} al ${fmtFecha(seguros?.hasta || p.end)}`,
+    "",
+    "Personal a asegurar:",
+    ...personas.map((x) => `- ${x.nombre} | DNI ${x.dni || "sin cargar"} | Nac. ${fmtFecha(x.nac)}`),
+  ];
+  if (seguros?.datos?.trim()) {
+    det.push("", "Tipo de seguro y datos extra:", seguros.datos.trim());
+  }
+  sendEmailNotif(ADMIN_EMAIL, {
+    asunto: `Solicitud de seguros: ${p.name}`,
+    titulo: "Solicitud de seguros para obra",
+    mensaje: `${currentUserName(quienSosId)} pide sacar seguros para ${personas.length} persona(s) en la obra "${p.name}".`,
+    detalle: det,
   }, quienSosId);
 }
 

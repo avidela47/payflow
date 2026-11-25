@@ -235,7 +235,7 @@ function NotaCard({ n }: { n: LinkDoc }) {
 }
 
 export function InfoUtil({ dept = "pipeline" }: { dept?: string }) {
-  const deptLabel = dept === "proyectos" ? "Arquitectura" : "Proyectos";
+  const deptLabel = dept === "proyectos" ? "Arquitectura" : dept === "gestion" ? "Gestión de Proyectos" : "Proyectos";
   const [items, setItems] = useState<LinkDoc[] | null>(null);
   const [agregandoOpen, setAgregandoOpen] = useState(false);
 

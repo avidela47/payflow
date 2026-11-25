@@ -12,6 +12,7 @@ export interface IEmployee {
   nombre: string;
   apellido: string;
   dni?: string;
+  fechaNacimiento?: Date; // para el checklist de Seguros de Gestión de Proyectos (pipeline-client.tsx) — opcional, puede faltar en empleados ya cargados
   direccion?: string;
   telefono?: string;
   email?: string;
@@ -38,6 +39,7 @@ const EmployeeSchema = new Schema<IEmployee>({
   nombre: { type: String, required: true },
   apellido: { type: String, required: true },
   dni: String,
+  fechaNacimiento: Date,
   direccion: String,
   telefono: String,
   email: String,

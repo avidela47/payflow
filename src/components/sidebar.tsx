@@ -34,6 +34,7 @@ import {
   ChevronDown,
   ChevronRight,
   PencilRuler,
+  HardHat,
   ClipboardList,
   Send,
   HandCoins,
@@ -137,6 +138,18 @@ const navItems: NavItem[] = [
     icon: PencilRuler,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "arquitectura",
+    section: "PROYECTOS",
+  },
+  // Gestión de Proyectos — Fase 1b. Mismo motor que Proyectos/Arquitectura,
+  // pero el detalle agrega 6 bloques propios de seguimiento de obra (seguros,
+  // alojamiento, contactos, checklist, Gantt, informes) en vez de
+  // Necesario/Cómputos aprobados.
+  {
+    href: "/gestion-de-proyectos",
+    label: "Gestión de Proyectos",
+    icon: HardHat,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "gestion-de-proyectos",
     section: "PROYECTOS",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
