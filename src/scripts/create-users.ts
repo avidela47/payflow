@@ -86,6 +86,23 @@ const USERS_TO_CREATE: UserToCreate[] = [
     role: "OWNER",
     fullAccess: true,
   },
+  {
+    name: "Francisco",
+    email: "francisco",
+    password: "Francisco2026$",
+    role: "ACCOUNTANT",
+    // Pedido de Ariel: solo Dashboard (siempre visible, no hace falta
+    // listarlo), Proyectos y Utilidades (acá, Vault — Agenda/Calendario/
+    // Notas no tienen moduleKey y ya se ven siempre).
+    allowedGroups: ["proyectos", "utilidades"],
+  },
+  {
+    name: "Melisa",
+    email: "melisa",
+    password: "melisa2026$",
+    role: "ACCOUNTANT",
+    allowedGroups: ["proyectos", "utilidades"],
+  },
 ];
 
 function restrictedModulesFor(u: UserToCreate): RestrictableModule[] {
