@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getViaticosReport, currentPeriodString } from "@/lib/reports";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -29,7 +29,8 @@ export default async function ReporteViaticosPage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["viaticos"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getViaticosReport(periodISO);

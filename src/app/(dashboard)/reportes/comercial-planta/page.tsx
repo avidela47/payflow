@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { getComercialPlantaReport, currentPeriodString } from "@/lib/reports";
 import { presupuestoEstadoLabel, presupuestoEstadoBadgeVariant } from "@/lib/presupuesto-estados";
 import { despachoEstadoLabel, despachoEstadoBadgeVariant } from "@/lib/despacho-estados";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 // Mismo criterio que Componentes/Luminarias/Presupuestos/Despachos/
 // Recibos: estos 3 módulos cotizan en U$D, no en pesos — por eso acá se
@@ -33,7 +33,8 @@ export default async function ReporteComercialPlantaPage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["presupuestos", "despachos", "recibos"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getComercialPlantaReport(periodISO);

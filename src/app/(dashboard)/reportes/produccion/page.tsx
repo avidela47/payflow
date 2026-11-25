@@ -16,14 +16,15 @@ import { Label } from "@/components/ui/label";
 import { getProduccionReport, currentPeriodString } from "@/lib/reports";
 import { ordenTrabajoEstadoLabel, ordenTrabajoEstadoBadgeVariant } from "@/lib/orden-trabajo-estados";
 import { proyectoEstadoLabel, proyectoEstadoBadgeVariant } from "@/lib/proyecto-estados";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 export default async function ReporteProduccionPage({
   searchParams,
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["ordenes", "proyectos", "fabricar"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getProduccionReport(periodISO);

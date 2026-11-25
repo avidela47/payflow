@@ -110,6 +110,27 @@ const USERS_TO_CREATE: UserToCreate[] = [
     role: "ACCOUNTANT",
     allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
   },
+  {
+    name: "Cristian",
+    email: "cristian",
+    password: "Cristian2026$",
+    role: "ACCOUNTANT",
+    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+  },
+  {
+    name: "Fabio",
+    email: "fabio",
+    password: "Fabio2026$",
+    role: "ACCOUNTANT",
+    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+  },
+  {
+    name: "Pajarito",
+    email: "pajarito",
+    password: "Pajarito2026$",
+    role: "ACCOUNTANT",
+    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+  },
 ];
 
 function restrictedModulesFor(u: UserToCreate): RestrictableModule[] {

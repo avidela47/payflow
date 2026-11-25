@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatPeriod } from "@/lib/utils";
 import { getFixedCostReport, currentPeriodString, periodStringToDate } from "@/lib/reports";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(
@@ -28,7 +28,8 @@ export default async function ReporteGastosPage({
 }: {
   searchParams: { from?: string; to?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["costos-fijos"]);
 
   const current = currentPeriodString();
   const fromISO = searchParams.from || current;

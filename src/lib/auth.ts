@@ -80,3 +80,22 @@ export async function requireModuleAccess(moduleKey: RestrictableModule) {
 
   return session;
 }
+
+// Mismo mecanismo que requireModuleAccess, pensado para un reporte puntual
+// dentro de /reportes/*: ya se pasó el check de acceso a "reportes" en sí
+// (quien llama hace requireModuleAccess("reportes") antes), pero ese
+// reporte puede exponer datos de uno o varios módulos puntuales que este
+// usuario sí tiene restringidos (ver REPORT_CARDS en reportes/page.tsx,
+// 2026-11-25, pedido de Ariel: "reportes de acuerdo a sus módulos"). Si
+// falta acceso a CUALQUIERA de los módulos listados, vuelve al listado de
+// Reportes en vez de al Dashboard — ya pasó el gate de "reportes", solo le
+// falta éste en particular.
+export async function requireReportModules(
+  session: Awaited<ReturnType<typeof getSession>>,
+  moduleKeys: RestrictableModule[]
+) {
+  const restricted = session?.user?.restrictedModules ?? [];
+  if (moduleKeys.some((k) => restricted.includes(k))) {
+    redirect("/reportes");
+  }
+}

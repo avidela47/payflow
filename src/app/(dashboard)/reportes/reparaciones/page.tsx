@@ -15,14 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getReparacionesReport, currentPeriodString } from "@/lib/reports";
 import { reparacionEstadoLabel, reparacionEstadoBadgeVariant } from "@/lib/reparacion-estados";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 export default async function ReporteReparacionesPage({
   searchParams,
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["reparaciones"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getReparacionesReport(periodISO);

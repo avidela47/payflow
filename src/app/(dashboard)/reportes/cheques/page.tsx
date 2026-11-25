@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getCheckReport, currentPeriodString } from "@/lib/reports";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 import type { CheckStatus, CheckType, CheckDirection } from "@/models/Check";
 
 const DIRECTION_LABELS: Record<CheckDirection, string> = {
@@ -76,7 +76,8 @@ export default async function ReporteChequesPage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["cheques"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getCheckReport(periodISO);

@@ -19,7 +19,7 @@ import {
   movimientoComponenteTipoLabel,
   movimientoComponenteTipoBadgeVariant,
 } from "@/lib/movimiento-componente-tipos";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 // Mismo criterio que Componentes/Luminarias: cotizan en U$D, no en pesos.
 function formatUsd(value: number): string {
@@ -34,7 +34,8 @@ export default async function ReporteStockPage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["componentes", "luminarias"]);
 
   // El catálogo (stock, valorización, bajo mínimo) es siempre el estado EN
   // VIVO, no una foto del mes elegido — ver comentario en lib/reports.ts,

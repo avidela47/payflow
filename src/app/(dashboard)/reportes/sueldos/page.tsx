@@ -14,14 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getPayrollReport, currentPeriodString } from "@/lib/reports";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 export default async function ReporteSueldosPage({
   searchParams,
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["sueldos"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getPayrollReport(periodISO);
