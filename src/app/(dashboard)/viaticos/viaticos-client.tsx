@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { createViatico, updateViatico, deleteViatico, type ViaticoFormInput } from "./actions";
+import { SimuladorViajesButton } from "./simulador-viajes";
 import type { ViaticoHonorarioType, ViaticoPaymentMode, ViaticoEmployeePaymentMode } from "@/models/Viatico";
 
 export type EmployeeOption = { id: string; nombre: string; apellido: string; area?: string };
@@ -450,10 +451,13 @@ export function ViaticosClient({
         <p className="text-sm text-muted-foreground">
           {viaticos.length === 0 ? "Todavía no hay viajes cargados." : `${viaticos.length} viaje(s) cargado(s).`}
         </p>
-        <Button type="button" onClick={openCreate}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Nuevo viaje
-        </Button>
+        <div className="flex items-center gap-2">
+          <SimuladorViajesButton />
+          <Button type="button" onClick={openCreate}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Nuevo viaje
+          </Button>
+        </div>
       </div>
 
       <Table compact>
