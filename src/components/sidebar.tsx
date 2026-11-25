@@ -36,6 +36,7 @@ import {
   PencilRuler,
   HardHat,
   Target,
+  Lock,
   ClipboardList,
   Send,
   HandCoins,
@@ -151,6 +152,17 @@ const navItems: NavItem[] = [
     icon: PencilRuler,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "arquitectura",
+    section: "PROYECTOS",
+  },
+  // Accesos — caja fuerte COMPARTIDA del equipo (un PIN para todos), a
+  // propósito separada del Vault de PayFlow (icono distinto a propósito:
+  // KeyRound ya es Vault, acá va Lock para no confundirlos en el menú).
+  {
+    href: "/accesos",
+    label: "Accesos",
+    icon: Lock,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "accesos",
     section: "PROYECTOS",
   },
   // Gestión de Proyectos — Fase 1b. Mismo motor que Proyectos/Arquitectura,
