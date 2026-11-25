@@ -28,6 +28,7 @@ export const RESTRICTABLE_MODULES = [
   "gestion-de-proyectos",
   "weeklys",
   "accesos",
+  "computo-privado",
   "computos",
   "presupuestos",
   "ordenes",

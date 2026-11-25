@@ -49,6 +49,7 @@ import {
   Hammer,
   FileSignature,
   Calculator,
+  BadgeDollarSign,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,19 @@ const navItems: NavItem[] = [
     icon: HardHat,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "gestion-de-proyectos",
+    section: "PROYECTOS",
+  },
+  // Cómputo Privado — toma un cómputo CERRADO de Generador de Cómputos y arma
+  // una planilla valorizada (con precios). PIN propio, distinto al de Accesos
+  // (ver computo-privado-crypto.ts) — ícono también distinto a propósito
+  // (BadgeDollarSign: ni Lock de Accesos ni Calculator de Generador de
+  // Cómputos, para no confundirlas en el menú).
+  {
+    href: "/computo-privado",
+    label: "Cómputo Privado",
+    icon: BadgeDollarSign,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "computo-privado",
     section: "PROYECTOS",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
