@@ -73,7 +73,10 @@ function nombresDeIds(ids: string[]): string {
 // los dispara una persona puntual sino el tablero mismo ("Tablero ITELSA"
 // en el original). sendEmailNotif/sendToList (abajo) son el caso normal,
 // con una persona real detrás.
-async function sendEmailNotifAs(toEmail: string, ev: EmailEvent, quienTexto: string): Promise<void> {
+// Exportada: la reutiliza marketing-notify.ts para el aviso automático de
+// un recordatorio vencido (un solo destinatario, igual que sendToListAs
+// pero sin lista).
+export async function sendEmailNotifAs(toEmail: string, ev: EmailEvent, quienTexto: string): Promise<void> {
   const detalleTxt = ev.detalle.join("\n");
   try {
     const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {

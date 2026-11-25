@@ -30,6 +30,7 @@ export const RESTRICTABLE_MODULES = [
   "accesos",
   "computo-privado",
   "computos",
+  "marketing",
   "presupuestos",
   "ordenes",
   "reparaciones",

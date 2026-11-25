@@ -50,6 +50,7 @@ import {
   FileSignature,
   Calculator,
   BadgeDollarSign,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -189,6 +190,19 @@ const navItems: NavItem[] = [
     icon: BadgeDollarSign,
     roles: ["OWNER", "ACCOUNTANT"],
     moduleKey: "computo-privado",
+    section: "PROYECTOS",
+  },
+  // Marketing & Task — recortado a lo que de verdad se usaba en el original
+  // (2026-11-25, Ariel): Tareas generales + calendario de contenidos +
+  // Recordatorios. Sin el importador de "plan de redes" (datos de un solo
+  // mes hardcodeados) ni "Proyectos de marketing" (nunca conectado a
+  // ninguna pantalla en la app vieja).
+  {
+    href: "/marketing",
+    label: "Marketing & Task",
+    icon: Megaphone,
+    roles: ["OWNER", "ACCOUNTANT"],
+    moduleKey: "marketing",
     section: "PROYECTOS",
   },
   { href: "/clientes", label: "Clientes", icon: Building2, roles: ["OWNER", "ACCOUNTANT"], section: "COMERCIAL" },
