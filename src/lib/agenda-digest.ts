@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { AgendaEntry } from "@/models/AgendaEntry";
+import { CalendarEvent } from "@/models/CalendarEvent";
 import { Check } from "@/models/Check";
 import { FixedCostEntry } from "@/models/FixedCost";
 import { sendMail } from "@/lib/mail";
@@ -12,6 +12,23 @@ function todayInArgentina(): Date {
   const now = new Date();
   const shifted = new Date(now.getTime() - ARGENTINA_OFFSET_HOURS * 60 * 60 * 1000);
   return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
+}
+
+// A diferencia de todayInArgentina() (que da una fecha "pelada", sin hora,
+// solo para comparar/mostrar el día — mismo truco que usaba AgendaEntry.date),
+// acá necesitamos el instante UTC real de la medianoche en Argentina, porque
+// CalendarEvent.startsAt SÍ guarda hora real (ver buildDateTime en
+// calendario/actions.ts, que sly suma 3hs para convertir de hora Argentina a
+// UTC). Sin este ajuste, un evento cargado a las 23hs Argentina quedaría
+// fuera del rango de "hoy".
+function todayArgentinaRange(): { start: Date; end: Date } {
+  const now = new Date();
+  const shifted = new Date(now.getTime() - ARGENTINA_OFFSET_HOURS * 60 * 60 * 1000);
+  const start = new Date(
+    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate(), ARGENTINA_OFFSET_HOURS, 0, 0)
+  );
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
 }
 
 function formatDate(date: Date) {
@@ -32,21 +49,25 @@ function escapeHtml(str: string) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Arma y manda el mail del día: recordatorios cargados a mano + cheques
+// Arma y manda el mail del día: eventos del Calendario de hoy + cheques
 // activos que vencen hoy + costos fijos pendientes que vencen hoy. Se usa
-// tanto desde el cron de Vercel como desde el botón "Enviar ahora" (para
-// poder probarlo en desarrollo, donde el cron no corre).
+// tanto desde el cron como desde el botón "Enviar ahora" (para poder
+// probarlo en desarrollo, donde el cron no corre).
+// 2026-11-25, pedido de Ariel: antes "los recordatorios" salían de Agenda
+// (AgendaEntry) — ahora salen del Calendario (CalendarEvent) en su lugar.
+// Agenda sigue existiendo como lista aparte, pero ya no dispara mails.
 export async function runAgendaDigest() {
   await connectDB();
   const today = todayInArgentina();
+  const { start: todayStart, end: todayEnd } = todayArgentinaRange();
 
-  const [agendaItems, checks, fixedCosts] = await Promise.all([
-    AgendaEntry.find({ date: today, sent: false }).lean(),
+  const [calendarItems, checks, fixedCosts] = await Promise.all([
+    CalendarEvent.find({ startsAt: { $gte: todayStart, $lt: todayEnd }, sent: { $ne: true } }).lean(),
     Check.find({ status: "ACTIVO", paymentDate: today }).lean(),
     FixedCostEntry.find({ paid: false, dueDate: today }).populate("category").lean(),
   ]);
 
-  const totalItems = agendaItems.length + checks.length + fixedCosts.length;
+  const totalItems = calendarItems.length + checks.length + fixedCosts.length;
   if (totalItems === 0) {
     return { sent: false, count: 0 };
   }
@@ -58,9 +79,9 @@ export async function runAgendaDigest() {
 
   const lines: string[] = [];
 
-  if (agendaItems.length > 0) {
-    lines.push("Recordatorios:");
-    for (const item of agendaItems) {
+  if (calendarItems.length > 0) {
+    lines.push("Calendario de hoy:");
+    for (const item of calendarItems) {
       lines.push(`- ${item.title}${item.notes ? ` — ${item.notes}` : ""}`);
     }
   }
@@ -100,9 +121,9 @@ export async function runAgendaDigest() {
     html,
   });
 
-  if (agendaItems.length > 0) {
-    await AgendaEntry.updateMany(
-      { _id: { $in: agendaItems.map((item) => item._id) } },
+  if (calendarItems.length > 0) {
+    await CalendarEvent.updateMany(
+      { _id: { $in: calendarItems.map((item) => item._id) } },
       { sent: true, sentAt: new Date() }
     );
   }

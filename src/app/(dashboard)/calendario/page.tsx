@@ -42,7 +42,8 @@ export default async function CalendarioPage() {
       <div>
         <h1 className="text-2xl font-semibold">Calendario</h1>
         <p className="text-sm text-muted-foreground">
-          Vista mes / semana / día — solo visual, no manda mail (para avisos por mail usá Agenda).
+          Vista mes / semana / día — lo que cargues acá para hoy manda el mail de aviso a las 8am
+          (más los vencimientos de Cheques y Costos Fijos de ese mismo día).
         </p>
       </div>
 

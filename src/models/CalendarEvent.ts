@@ -4,9 +4,13 @@ import { NOTE_COLORS, type NoteColor } from "@/lib/note-colors";
 // Calendario tipo Google Calendar, privado por usuario (cada uno ve y
 // administra solo sus propios eventos — mismo criterio que Notas, ver
 // Note.ts; antes era compartido entre OWNER y ACCOUNTANT, dejó de serlo).
-// No manda mail, es puramente visual (a diferencia de Agenda, que sí manda
-// el digest de las 8am). Reusa la misma paleta de 6 colores que Notas
-// (@/lib/note-colors) para no duplicar el lookup.
+// Reusa la misma paleta de 6 colores que Notas (@/lib/note-colors) para no
+// duplicar el lookup.
+// 2026-11-25, pedido de Ariel: el digest de las 8am dejó de tomar sus
+// fechas de Agenda (ver AgendaEntry) y ahora las toma de acá — por eso
+// suma `sent`/`sentAt`, mismo mecanismo que tenía AgendaEntry, para que un
+// evento ya avisado no se vuelva a mandar si el cron corre más de una vez
+// el mismo día (ver src/lib/agenda-digest.ts).
 export interface ICalendarEvent {
   _id: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
@@ -16,6 +20,8 @@ export interface ICalendarEvent {
   endsAt: Date;
   allDay: boolean;
   color: NoteColor;
+  sent: boolean;
+  sentAt?: Date;
   createdAt: Date;
 }
 
@@ -28,6 +34,8 @@ const CalendarEventSchema = new Schema<ICalendarEvent>(
     endsAt: { type: Date, required: true },
     allDay: { type: Boolean, default: false },
     color: { type: String, enum: NOTE_COLORS, default: "blue" },
+    sent: { type: Boolean, default: false },
+    sentAt: Date,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

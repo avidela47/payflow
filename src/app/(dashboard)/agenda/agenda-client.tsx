@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,8 +92,9 @@ export function AgendaClient({
           <div>
             <span className="text-sm font-medium">Nuevo recordatorio</span>
             <p className="text-xs text-muted-foreground">
-              El mail del día también suma solo, automáticamente, los cheques y costos fijos que
-              venzan esa fecha — no hace falta cargarlos acá de nuevo.
+              Lista privada tuya, sin aviso por mail — el mail del día ahora sale de lo que cargues
+              en el Calendario (cheques y costos fijos que venzan ese día se suman solos ahí, no
+              hace falta cargarlos acá).
             </p>
           </div>
           {role === "OWNER" && (
@@ -139,14 +139,13 @@ export function AgendaClient({
             <TableHead>Título</TableHead>
             <TableHead>Fecha</TableHead>
             <TableHead>Notas</TableHead>
-            <TableHead>Estado</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {entries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={4} className="text-center text-muted-foreground">
                 Todavía no hay recordatorios cargados.
               </TableCell>
             </TableRow>
@@ -156,11 +155,6 @@ export function AgendaClient({
               <TableCell className="font-medium">{entry.title}</TableCell>
               <TableCell>{entry.dateLabel}</TableCell>
               <TableCell>{entry.notes ?? "—"}</TableCell>
-              <TableCell>
-                <Badge variant={entry.sent ? "success" : "default"}>
-                  {entry.sent ? "Avisado" : "Pendiente"}
-                </Badge>
-              </TableCell>
               <TableCell className="text-right">
                 <Button
                   size="sm"

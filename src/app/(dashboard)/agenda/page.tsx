@@ -17,9 +17,11 @@ export default async function AgendaPage() {
   const session = await getSession();
   await connectDB();
 
-  // Privado por usuario (ver AgendaEntry.ts) — el mail de las 8am sigue
-  // combinando los recordatorios de todos, pero acá en pantalla cada uno
-  // ve y administra solo los suyos.
+  // Privado por usuario (ver AgendaEntry.ts). 2026-11-25, pedido de Ariel:
+  // el mail de las 8am dejó de tomar sus fechas de acá — ahora las toma del
+  // Calendario (ver CalendarEvent.ts y lib/agenda-digest.ts). Esto sigue
+  // siendo una lista de recordatorios privada, simplemente ya no dispara
+  // ningún mail por sí sola.
   const entries = session?.user
     ? await AgendaEntry.find({ user: session.user.id }).sort({ date: -1 }).limit(200).lean()
     : [];
@@ -38,8 +40,7 @@ export default async function AgendaPage() {
       <div>
         <h1 className="text-2xl font-semibold">Agenda</h1>
         <p className="text-sm text-muted-foreground">
-          Recordatorios con aviso por mail el día agendado — más los vencimientos de Cheques y
-          Costos Fijos de ese mismo día.
+          Recordatorios privados — el aviso por mail del día ahora sale del Calendario, no de acá.
         </p>
       </div>
 
