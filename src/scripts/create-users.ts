@@ -47,7 +47,11 @@ type UserToCreate = {
   email: string; // se usa como "usuario" de login, no hace falta que sea un email real (ver seed.ts: "ariel", "admin")
   password: string;
   role: Role;
-  allowedGroups: (keyof typeof ACCESS_GROUPS)[];
+  // true = mismo nivel que Ariel (OWNER, sin ningún módulo restringido) —
+  // ignora allowedGroups. 2026-11-25: Candelaria y Rubén piden esto
+  // explícitamente ("mismo nivel de Ariel").
+  fullAccess?: true;
+  allowedGroups?: (keyof typeof ACCESS_GROUPS)[];
 };
 
 // Acá se suman los usuarios a crear/actualizar. Correr `npm run create-users`
@@ -61,10 +65,25 @@ const USERS_TO_CREATE: UserToCreate[] = [
     role: "ACCOUNTANT",
     allowedGroups: ["proyectos", "comercial", "utilidades"],
   },
+  {
+    name: "Candelaria",
+    email: "candelaria",
+    password: "Candelaria2026$",
+    role: "OWNER",
+    fullAccess: true,
+  },
+  {
+    name: "Ruben",
+    email: "ruben",
+    password: "Ruben2026$",
+    role: "OWNER",
+    fullAccess: true,
+  },
 ];
 
-function restrictedModulesFor(allowedGroups: (keyof typeof ACCESS_GROUPS)[]): RestrictableModule[] {
-  const allowedSet = new Set(allowedGroups.flatMap((g) => ACCESS_GROUPS[g] ?? []));
+function restrictedModulesFor(u: UserToCreate): RestrictableModule[] {
+  if (u.fullAccess) return [];
+  const allowedSet = new Set((u.allowedGroups ?? []).flatMap((g) => ACCESS_GROUPS[g] ?? []));
   return RESTRICTABLE_MODULES.filter((m) => !allowedSet.has(m));
 }
 
@@ -73,7 +92,7 @@ async function main() {
 
   for (const u of USERS_TO_CREATE) {
     const passwordHash = await bcrypt.hash(u.password, 10);
-    const restrictedModules = restrictedModulesFor(u.allowedGroups);
+    const restrictedModules = restrictedModulesFor(u);
 
     await User.findOneAndUpdate(
       { email: u.email },
@@ -89,7 +108,7 @@ async function main() {
     );
 
     console.log(
-      `Usuario "${u.name}" (${u.email}) listo. Acceso: ${u.allowedGroups.join(", ") || "ninguno"}. Bloqueado: ${restrictedModules.join(", ") || "nada"}.`
+      `Usuario "${u.name}" (${u.email}) listo. Acceso: ${u.fullAccess ? "TOTAL (como Ariel)" : (u.allowedGroups ?? []).join(", ") || "ninguno"}. Bloqueado: ${restrictedModules.join(", ") || "nada"}.`
     );
   }
 
