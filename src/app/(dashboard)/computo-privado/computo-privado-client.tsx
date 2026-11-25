@@ -39,7 +39,8 @@ import {
 } from "@/lib/computo-privado";
 import { czUnlock, czDescifrarTexto, czCifrarTexto } from "@/lib/computo-privado-crypto";
 import { czPdf } from "@/lib/computo-privado-pdf";
-import { Lock, BadgeDollarSign, ArrowLeft, RefreshCw, Download, Trash2, Plus, X, AlertTriangle } from "lucide-react";
+import { czExcel } from "@/lib/computo-privado-excel";
+import { Lock, BadgeDollarSign, ArrowLeft, RefreshCw, Download, Trash2, Plus, X, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -391,6 +392,9 @@ export function ComputoPrivadoClient() {
                 <Button variant="outline" onClick={() => void czPdf(sheet)}>
                   <Download className="h-4 w-4" /> Descargar PDF
                 </Button>
+                <Button variant="outline" onClick={() => void czExcel(sheet)}>
+                  <FileSpreadsheet className="h-4 w-4" /> Descargar Excel
+                </Button>
               </>
             )}
             <Button variant="outline" onClick={bloquear}>
@@ -455,6 +459,9 @@ export function ComputoPrivadoClient() {
                     </Button>
                     <Button variant="outline" onClick={() => void czPdf(z)}>
                       <Download className="h-3.5 w-3.5" /> PDF
+                    </Button>
+                    <Button variant="outline" onClick={() => void czExcel(z)}>
+                      <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
                     </Button>
                     <Button variant="delete" onClick={() => void eliminar(z)}>
                       <Trash2 className="h-3.5 w-3.5" />
