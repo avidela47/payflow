@@ -50,13 +50,29 @@ export type PaymentListItem = {
   retentionOther: number;
   totalPaid: number;
   invoiceNumbers: string[];
-  checksSummary: { bank: string; checkNumber: string; amount: number; paymentDateISO: string }[];
+  checksSummary: {
+    type: "FISICO" | "ELECTRONICO" | "EFECTIVO" | "TRANSFERENCIA";
+    bank: string;
+    checkNumber: string;
+    amount: number;
+    paymentDateISO: string;
+  }[];
   voucherNumber?: string;
   paymentOrderNumber?: string;
 };
 
 type PendingPurchase = { id: string; invoiceNumber: string; purchaseDate: string; amount: number };
-type CheckRow = { type: "FISICO" | "ELECTRONICO"; bank: string; checkNumber: string; paymentDate: string; amount: string };
+type CheckRow = {
+  type: "FISICO" | "ELECTRONICO" | "EFECTIVO" | "TRANSFERENCIA";
+  bank: string;
+  checkNumber: string;
+  paymentDate: string;
+  amount: string;
+};
+
+function isCheckType(type: CheckRow["type"]) {
+  return type === "FISICO" || type === "ELECTRONICO";
+}
 
 function todayStr() {
   const d = new Date();
@@ -198,7 +214,7 @@ function PaymentForm({
   const totalRetentions = (Number(withheldAmount) || 0) + (Number(retentionIIBB) || 0) + (Number(retentionOther) || 0);
   const totalToPay = (Number(grossAmount) || 0) - totalRetentions;
   const totalChecks = checks.reduce((acc, row) => acc + (Number(row.amount) || 0), 0);
-  const checksMismatch = checks.some((r) => r.checkNumber) && Math.abs(totalChecks - totalToPay) > 1;
+  const checksMismatch = checks.some((r) => r.amount) && Math.abs(totalChecks - totalToPay) > 1;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -206,9 +222,13 @@ function PaymentForm({
       toast.error("Elegí al menos una compra a saldar.");
       return;
     }
-    const validChecks = checks.filter((c) => c.checkNumber && c.paymentDate && c.amount);
+    const validChecks = checks.filter((c) => {
+      if (!c.paymentDate || !c.amount) return false;
+      if (isCheckType(c.type) && !c.checkNumber) return false;
+      return true;
+    });
     if (validChecks.length === 0) {
-      toast.error("Agregá al menos un cheque con número, fecha e importe.");
+      toast.error("Agregá al menos una forma de pago con fecha e importe (y número, si es cheque).");
       return;
     }
 
@@ -452,10 +472,10 @@ function PaymentForm({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label>Cheques del pago</Label>
+          <Label>Forma de pago</Label>
           <Button type="button" variant="outline" size="sm" onClick={addCheckRow}>
             <Plus className="h-4 w-4" />
-            Agregar cheque
+            Agregar pago
           </Button>
         </div>
         <div className="flex flex-col gap-2">
@@ -463,21 +483,31 @@ function PaymentForm({
             <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border p-2 sm:grid-cols-6">
               <Select
                 value={row.type}
-                onChange={(e) => updateCheckRow(i, { type: e.target.value as CheckRow["type"] })}
+                onChange={(e) => {
+                  const type = e.target.value as CheckRow["type"];
+                  updateCheckRow(
+                    i,
+                    isCheckType(type) ? { type } : { type, bank: "", checkNumber: "" }
+                  );
+                }}
                 className="sm:col-span-1"
               >
-                <option value="FISICO">Físico</option>
+                <option value="FISICO">Cheque físico</option>
                 <option value="ELECTRONICO">E-cheq</option>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
               </Select>
               <Input
-                placeholder="Banco"
+                placeholder={isCheckType(row.type) ? "Banco" : "No aplica"}
                 value={row.bank}
+                disabled={!isCheckType(row.type)}
                 onChange={(e) => updateCheckRow(i, { bank: e.target.value })}
                 className="sm:col-span-1"
               />
               <Input
-                placeholder="Número"
+                placeholder={isCheckType(row.type) ? "Número" : "No aplica"}
                 value={row.checkNumber}
+                disabled={!isCheckType(row.type)}
                 onChange={(e) => updateCheckRow(i, { checkNumber: e.target.value })}
                 className="sm:col-span-1"
               />

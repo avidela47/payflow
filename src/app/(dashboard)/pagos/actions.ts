@@ -129,7 +129,7 @@ const paymentSchema = z.object({
   voucherNumber: z.string().optional(),
   paymentOrderNumber: z.string().optional(),
   notes: z.string().optional(),
-  checkType: z.array(z.enum(["FISICO", "ELECTRONICO"])).default([]),
+  checkType: z.array(z.enum(["FISICO", "ELECTRONICO", "EFECTIVO", "TRANSFERENCIA"])).default([]),
   checkBank: z.array(z.string()).default([]),
   checkNumber: z.array(z.string()).default([]),
   checkPaymentDate: z.array(z.string()).default([]),
@@ -185,10 +185,17 @@ export async function createPayment(formData: FormData) {
     data.checkPaymentDate.length !== checksCount ||
     data.checkAmount.length !== checksCount
   ) {
-    return { ok: false, error: "Los datos de los cheques quedaron desalineados. Recargá el formulario." };
+    return { ok: false, error: "Los datos de los pagos quedaron desalineados. Recargá el formulario." };
   }
   if (checksCount === 0) {
-    return { ok: false, error: "Agregá al menos un cheque para cubrir el pago." };
+    return { ok: false, error: "Agregá al menos una forma de pago para cubrir el pago." };
+  }
+  // Cheque físico y E-cheq generan un Check real (ver más abajo), que exige
+  // número de cheque — Efectivo y Transferencia no tienen ese dato.
+  for (let i = 0; i < checksCount; i++) {
+    if ((data.checkType[i] === "FISICO" || data.checkType[i] === "ELECTRONICO") && !data.checkNumber[i]) {
+      return { ok: false, error: "Todo cheque físico o E-cheq necesita número." };
+    }
   }
 
   try {
@@ -217,21 +224,43 @@ export async function createPayment(formData: FormData) {
 
     const paymentDate = new Date(`${data.paymentDate}T00:00:00Z`);
 
-    const checkDocs = await Check.insertMany(
-      data.checkNumber.map((checkNumber, i) => ({
-        type: data.checkType[i],
-        direction: "EMITIDO" as const,
-        issueDate: paymentDate,
-        paymentDate: new Date(`${data.checkPaymentDate[i]}T00:00:00Z`),
-        checkNumber,
-        issuerName: provider.nombre,
-        issuerCuit: provider.cuit,
-        issuingBank: data.checkBank[i] || undefined,
-        amount: Number(data.checkAmount[i]),
-        status: "ACTIVO" as const,
-        requestedBy: session.user.name,
-      }))
-    );
+    // Solo Físico/E-cheq generan un Check real (así el módulo Cheques los ve
+    // y los puede marcar cobrados/endosados, etc.) — Efectivo y
+    // Transferencia quedan como datos embebidos directo en el Payment.
+    const checkRowIndexes: number[] = [];
+    data.checkType.forEach((t, i) => {
+      if (t === "FISICO" || t === "ELECTRONICO") checkRowIndexes.push(i);
+    });
+
+    const checkDocs = checkRowIndexes.length
+      ? await Check.insertMany(
+          checkRowIndexes.map((i) => ({
+            type: data.checkType[i] as "FISICO" | "ELECTRONICO",
+            direction: "EMITIDO" as const,
+            issueDate: paymentDate,
+            paymentDate: new Date(`${data.checkPaymentDate[i]}T00:00:00Z`),
+            checkNumber: data.checkNumber[i],
+            issuerName: provider.nombre,
+            issuerCuit: provider.cuit,
+            issuingBank: data.checkBank[i] || undefined,
+            amount: Number(data.checkAmount[i]),
+            status: "ACTIVO" as const,
+            requestedBy: session.user.name,
+          }))
+        )
+      : [];
+    // Mapea cada índice de fila que generó Check a su documento recién
+    // creado — insertMany devuelve los docs en el mismo orden que se pidió.
+    const checkDocByIndex = new Map(checkRowIndexes.map((i, pos) => [i, checkDocs[pos]]));
+
+    const checks = data.checkType.map((type, i) => ({
+      type,
+      check: checkDocByIndex.get(i)?._id,
+      amount: Number(data.checkAmount[i]),
+      paymentDate: new Date(`${data.checkPaymentDate[i]}T00:00:00Z`),
+      bank: data.checkBank[i] || undefined,
+      checkNumber: data.checkNumber[i] || undefined,
+    }));
 
     await Payment.create({
       provider: data.providerId,
@@ -251,7 +280,7 @@ export async function createPayment(formData: FormData) {
       retentionOther: data.retentionOther,
       voucherNumber: data.voucherNumber,
       paymentOrderNumber: data.paymentOrderNumber,
-      checks: checkDocs.map((c) => ({ check: c._id })),
+      checks,
       notes: data.notes,
     });
 
@@ -291,7 +320,8 @@ export async function deletePayment(paymentId: string) {
       { _id: { $in: payment.purchases.map((p) => p.purchase) } },
       { $set: { paid: false }, $unset: { paidDate: "" } }
     );
-    await Check.deleteMany({ _id: { $in: payment.checks.map((c) => c.check) } });
+    const checkIds = payment.checks.map((c) => c.check).filter((id): id is NonNullable<typeof id> => Boolean(id));
+    await Check.deleteMany({ _id: { $in: checkIds } });
     await Payment.findByIdAndDelete(paymentId);
   } catch (err) {
     console.error("deletePayment error:", err);

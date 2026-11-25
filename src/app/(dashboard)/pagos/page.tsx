@@ -43,20 +43,26 @@ export default async function PagosPage() {
     const invoiceNumbers = (pay.purchases ?? [])
       .map((line) => (line.purchase as unknown as { invoiceNumber?: string } | null)?.invoiceNumber)
       .filter((n): n is string => Boolean(n));
-    const checksSummary = (pay.checks ?? [])
-      .map((line) => line.check as unknown as {
+    // Pagos guardados antes del 2026-11-25 (Efectivo/Transferencia) no
+    // tenían type/amount/bank/checkNumber propios en la línea — todo era
+    // cheque y esos datos vivían solo en el Check poblado; de ahí el
+    // fallback línea por línea.
+    const checksSummary = (pay.checks ?? []).map((line) => {
+      const checkDoc = line.check as unknown as {
         issuingBank?: string;
         checkNumber?: string;
         amount?: number;
         paymentDate?: Date;
-      } | null)
-      .filter((c): c is NonNullable<typeof c> => Boolean(c))
-      .map((c) => ({
-        bank: c.issuingBank ?? "",
-        checkNumber: c.checkNumber ?? "",
-        amount: c.amount ?? 0,
-        paymentDateISO: c.paymentDate ? c.paymentDate.toISOString() : "",
-      }));
+      } | null;
+      const paymentDate = line.paymentDate ?? checkDoc?.paymentDate;
+      return {
+        type: line.type ?? "FISICO",
+        bank: line.bank ?? checkDoc?.issuingBank ?? "",
+        checkNumber: line.checkNumber ?? checkDoc?.checkNumber ?? "",
+        amount: line.amount ?? checkDoc?.amount ?? 0,
+        paymentDateISO: paymentDate ? new Date(paymentDate).toISOString() : "",
+      };
+    });
 
     const totalRetenciones =
       (pay.retentionGanancias?.withheldAmount ?? 0) + pay.retentionIIBB + pay.retentionOther;

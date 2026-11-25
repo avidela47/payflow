@@ -11,8 +11,25 @@ export interface IPaymentPurchaseLine {
   amount: number;
 }
 
+// Antes esto era siempre un cheque real. 2026-11-25, pedido de Ariel: el
+// desplegable de "Forma de pago" del modal de Pagos suma Efectivo y
+// Transferencia — esas dos no generan un Check (no tiene sentido un cheque
+// sin número de cheque, y además ensuciaría el conteo del módulo Cheques).
+// Por eso cada línea ahora guarda type/amount/paymentDate/bank/checkNumber
+// directamente, y `check` queda opcional (solo está para FISICO/ELECTRONICO,
+// que sí crean un Check real referenciado desde acá).
+export const PAYMENT_LINE_TYPES = ["FISICO", "ELECTRONICO", "EFECTIVO", "TRANSFERENCIA"] as const;
+export type PaymentLineType = (typeof PAYMENT_LINE_TYPES)[number];
+
 export interface IPaymentCheckLine {
-  check: mongoose.Types.ObjectId;
+  // Ausente en pagos guardados antes de este cambio (todas las líneas eran
+  // cheque) — ver pagos/page.tsx, que ahí cae al Check poblado.
+  type?: PaymentLineType;
+  check?: mongoose.Types.ObjectId;
+  amount?: number;
+  paymentDate?: Date;
+  bank?: string;
+  checkNumber?: string;
 }
 
 export interface IPayment {
@@ -71,7 +88,12 @@ const PaymentSchema = new Schema<IPayment>(
     paymentOrderNumber: String,
     checks: [
       {
-        check: { type: Schema.Types.ObjectId, ref: "Check", required: true },
+        type: { type: String, enum: PAYMENT_LINE_TYPES },
+        check: { type: Schema.Types.ObjectId, ref: "Check" },
+        amount: Number,
+        paymentDate: Date,
+        bank: String,
+        checkNumber: String,
         _id: false,
       },
     ],
