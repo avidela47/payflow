@@ -5,6 +5,11 @@ export type Role = "OWNER" | "ACCOUNTANT";
 // Claves de módulo, calcadas de los href del sidebar (sin la barra inicial).
 // Se usan para restringir el acceso de un usuario puntual a módulos
 // concretos, aparte del control por rol (ver lib/auth.ts).
+// "viaticos" faltaba acá (bug encontrado 2026-11-25 al crear el primer
+// usuario con permisos acotados): sidebar.tsx ya le pone moduleKey
+// "viaticos" a Viajes, pero como no estaba en este enum nunca se podía
+// restringir — quedaba visible para cualquier usuario sin importar su
+// restrictedModules.
 export const RESTRICTABLE_MODULES = [
   "empleados",
   "sueldos",
@@ -31,6 +36,7 @@ export const RESTRICTABLE_MODULES = [
   "computo-privado",
   "computos",
   "marketing",
+  "viaticos",
   "presupuestos",
   "ordenes",
   "reparaciones",

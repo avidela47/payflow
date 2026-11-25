@@ -9,7 +9,8 @@
     "lint": "next lint",
     "seed": "tsx src/scripts/seed.ts",
     "fix-indexes": "tsx src/scripts/fix-indexes.ts",
-    "check-indexes": "tsx src/scripts/check-indexes.ts"
+    "check-indexes": "tsx src/scripts/check-indexes.ts",
+    "create-users": "tsx src/scripts/create-users.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
