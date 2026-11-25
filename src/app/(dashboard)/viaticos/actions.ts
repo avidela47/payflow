@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { writeFile, mkdir, unlink } from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
 import { connectDB } from "@/lib/db";
 import {
   Viatico,
@@ -265,6 +268,94 @@ export async function updateCondicionesViaje(viaticoId: string, input: Condicion
   return { ok: true };
 }
 
+// Documentos adjuntos del viaje (comprobantes, facturas escaneadas,
+// reservas...) — mismo mecanismo que uploadEmployeeDocument en
+// empleados/actions.ts: cada archivo se sube con su propia action apenas
+// se elige, se guarda a disco en el VPS y se agrega a `documentos` con
+// $push. 2026-11-25, pedido de Ariel: botón antes de "Condiciones".
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+const DOC_ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const DOCS_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "viaticos", "documentos");
+
+export type ViaticoDocumentoResult = {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAtISO: string;
+};
+
+export async function uploadViaticoDocument(
+  viaticoId: string,
+  formData: FormData
+): Promise<{ ok: true; documento: ViaticoDocumentoResult } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  const file = formData.get("archivo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "No se seleccionó ningún archivo." };
+  }
+  if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+    return { ok: false, error: "Solo se aceptan archivos PDF, JPG o PNG." };
+  }
+  if (file.size > MAX_DOC_BYTES) {
+    return { ok: false, error: "El archivo pesa más de 10MB." };
+  }
+
+  try {
+    await connectDB();
+    const exists = await Viatico.exists({ _id: viaticoId });
+    if (!exists) return { ok: false, error: "El viaje ya no existe." };
+
+    await mkdir(DOCS_UPLOAD_DIR, { recursive: true });
+    const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    const filename = `${randomUUID()}.${ext}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    await writeFile(path.join(DOCS_UPLOAD_DIR, filename), bytes);
+
+    const uploadedAt = new Date();
+    const documento = {
+      nombre: file.name || filename,
+      path: `/uploads/viaticos/documentos/${filename}`,
+      mimeType: file.type,
+      size: file.size,
+      uploadedAt,
+    };
+    await Viatico.findByIdAndUpdate(viaticoId, { $push: { documentos: documento } });
+
+    revalidatePath("/viaticos");
+    return { ok: true, documento: { ...documento, uploadedAtISO: uploadedAt.toISOString() } };
+  } catch (err) {
+    console.error("uploadViaticoDocument error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo subir el archivo: ${message}` };
+  }
+}
+
+export async function deleteViaticoDocument(viaticoId: string, documentoPath: string) {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  try {
+    await connectDB();
+    await Viatico.findByIdAndUpdate(viaticoId, { $pull: { documentos: { path: documentoPath } } });
+    const fullPath = path.join(process.cwd(), "public", documentoPath);
+    await unlink(fullPath).catch(() => {});
+  } catch (err) {
+    console.error("deleteViaticoDocument error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo borrar el archivo: ${message}` };
+  }
+
+  revalidatePath("/viaticos");
+  return { ok: true };
+}
+
 export async function deleteViatico(viaticoId: string) {
   const session = await getSession();
   if (!session?.user) {
@@ -273,7 +364,12 @@ export async function deleteViatico(viaticoId: string) {
 
   try {
     await connectDB();
+    const existing = await Viatico.findById(viaticoId).select("documentos").lean();
     await Viatico.findByIdAndDelete(viaticoId);
+    for (const doc of existing?.documentos ?? []) {
+      const fullPath = path.join(process.cwd(), "public", doc.path);
+      await unlink(fullPath).catch(() => {});
+    }
   } catch (err) {
     console.error("deleteViatico error:", err);
     const message = err instanceof Error ? err.message : String(err);

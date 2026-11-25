@@ -108,6 +108,20 @@ export interface IViaticoCondiciones {
   montoEfectivo?: number;
 }
 
+// Documentos adjuntos del viaje (comprobantes, facturas escaneadas,
+// reservas...) — mismo mecanismo que IEmployeeDocumento en Employee.ts:
+// cada uno se identifica por su `path` (único por el UUID del nombre de
+// archivo en disco), sin _id propio porque no hace falta. 2026-11-25,
+// pedido de Ariel: poder subir PDF/JPG/PNG por viaje, con su propio botón
+// antes de "Condiciones".
+export interface IViaticoDocumento {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: Date;
+}
+
 // Tope diario de viático, ahora POR EMPLEADO (antes era un único monto
 // global para todo el viaje). `monto` es el importe/tope por día asignado
 // al empleado — si el monto por día de un empleado con honorarioType
@@ -135,6 +149,7 @@ export interface IViatico {
   fechaFin: Date;
   empleados: IViaticoEmpleado[];
   condiciones?: IViaticoCondiciones;
+  documentos: IViaticoDocumento[];
   hospedaje?: IViaticoHospedaje;
   combustible?: IViaticoCombustible;
   extras: IViaticoExtra[];
@@ -175,6 +190,17 @@ const ViaticoCondicionesSchema = new Schema<IViaticoCondiciones>(
     numeroVale: String,
     formaPago: { type: String, enum: VIATICO_CONDICIONES_PAYMENT_MODES },
     montoEfectivo: Number,
+  },
+  { _id: false }
+);
+
+const ViaticoDocumentoSchema = new Schema<IViaticoDocumento>(
+  {
+    nombre: { type: String, required: true },
+    path: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
   },
   { _id: false }
 );
@@ -253,6 +279,7 @@ const ViaticoSchema = new Schema<IViatico>({
   fechaFin: { type: Date, required: true },
   empleados: { type: [ViaticoEmpleadoSchema], default: [] },
   condiciones: ViaticoCondicionesSchema,
+  documentos: { type: [ViaticoDocumentoSchema], default: [] },
   hospedaje: ViaticoHospedajeSchema,
   combustible: ViaticoCombustibleSchema,
   extras: { type: [ViaticoExtraSchema], default: [] },

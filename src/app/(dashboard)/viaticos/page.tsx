@@ -60,6 +60,13 @@ export default async function ViaticosPage() {
           montoEfectivo: v.condiciones.montoEfectivo,
         }
       : undefined,
+    documentos: (v.documentos ?? []).map((d) => ({
+      nombre: d.nombre,
+      path: d.path,
+      mimeType: d.mimeType,
+      size: d.size,
+      uploadedAtISO: d.uploadedAt ? new Date(d.uploadedAt).toISOString() : undefined,
+    })),
     hospedajeLugar: v.hospedaje?.lugar,
     hospedajeCheckIn: toISODate(v.hospedaje?.checkIn),
     hospedajeCheckOut: toISODate(v.hospedaje?.checkOut),

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, ClipboardList, X, Printer } from "lucide-react";
+import { Plus, Trash2, ClipboardList, X, Printer, Paperclip, FileText, Image as ImageIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,8 +24,11 @@ import {
   updateViatico,
   deleteViatico,
   updateCondicionesViaje,
+  uploadViaticoDocument,
+  deleteViaticoDocument,
   type ViaticoFormInput,
   type CondicionesFormInput,
+  type ViaticoDocumentoResult,
 } from "./actions";
 import { SimuladorViajesButton } from "./simulador-viajes";
 import { condicionesViajePdf } from "@/lib/condiciones-viaje-pdf";
@@ -95,6 +98,16 @@ export type ViaticoCondicionesItem = {
   montoEfectivo?: number;
 };
 
+// Documentos adjuntos del viaje (comprobantes, reservas...) — mismo
+// mecanismo que EmployeeDocumentoItem en empleados/employee-form.tsx.
+export type ViaticoDocumentoItem = {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAtISO?: string;
+};
+
 export type ViaticoExtraItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
 export type ViaticoMaterialItem = {
   descripcion: string;
@@ -121,6 +134,7 @@ export type ViaticoItem = {
   fechaFinISO: string;
   empleados: ViaticoEmpleadoItem[];
   condiciones?: ViaticoCondicionesItem;
+  documentos?: ViaticoDocumentoItem[];
   hospedajeLugar?: string;
   hospedajeCheckIn?: string;
   hospedajeCheckOut?: string;
@@ -257,6 +271,105 @@ function calcularTotal(v: {
   );
 }
 
+const DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Documentos del viaje (comprobantes, reservas...) — mismo mecanismo que
+// EmployeeDocumentos en empleados/employee-form.tsx: cada archivo se sube
+// apenas se elige, con su propia action, sin pasar por el formulario
+// grande del viaje. 2026-11-25, pedido de Ariel.
+function ViaticoDocumentos({ viaticoId, initialDocs }: { viaticoId: string; initialDocs: ViaticoDocumentoItem[] }) {
+  const [docs, setDocs] = useState<ViaticoDocumentoItem[]>(initialDocs);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const input = e.target;
+
+    if (file.size > MAX_DOC_BYTES) {
+      toast.error("El archivo pesa más de 10MB.");
+      input.value = "";
+      return;
+    }
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      toast.error("Solo se aceptan archivos PDF, JPG o PNG.");
+      input.value = "";
+      return;
+    }
+
+    const fd = new FormData();
+    fd.set("archivo", file);
+    setUploading(true);
+    let result: { ok: true; documento: ViaticoDocumentoResult } | { ok: false; error: string };
+    try {
+      result = await uploadViaticoDocument(viaticoId, fd);
+    } catch (err) {
+      console.error("uploadViaticoDocument error:", err);
+      setUploading(false);
+      input.value = "";
+      toast.error("No se pudo subir el archivo — puede ser demasiado pesado para el servidor.");
+      return;
+    }
+    setUploading(false);
+    input.value = "";
+
+    if (!result.ok) {
+      toast.error(result.error ?? "No se pudo subir el archivo.");
+      return;
+    }
+    setDocs((prev) => [...prev, result.documento]);
+    toast.success("Archivo subido.");
+  }
+
+  async function handleDelete(doc: ViaticoDocumentoItem) {
+    const result = await deleteViaticoDocument(viaticoId, doc.path);
+    if (!result.ok) {
+      toast.error(result.error ?? "No se pudo borrar el archivo.");
+      return;
+    }
+    setDocs((prev) => prev.filter((d) => d.path !== doc.path));
+    toast.success("Archivo borrado.");
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label>Documentos (PDF, JPG o PNG — máx. 10MB)</Label>
+        <Input type="file" accept={DOC_ACCEPT} onChange={handleFile} disabled={uploading} className="max-w-56" />
+      </div>
+      {docs.length === 0 && <p className="text-xs text-muted-foreground">Sin documentos cargados.</p>}
+      {docs.map((d) => (
+        <div key={d.path} className="flex items-center justify-between gap-2 rounded-md bg-muted/20 p-2 text-sm">
+          <a
+            href={d.path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-w-0 flex-1 items-center gap-1.5 truncate hover:underline"
+          >
+            {d.mimeType === "application/pdf" ? (
+              <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <span className="truncate">{d.nombre}</span>
+          </a>
+          <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(d.size)}</span>
+          <Button type="button" size="sm" variant="delete" onClick={() => void handleDelete(d)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ViaticosClient({
   employees,
   viaticos,
@@ -284,6 +397,9 @@ export function ViaticosClient({
   const [condFormaPago, setCondFormaPago] = useState<ViaticoCondicionesPaymentMode | "">("");
   const [condMontoEfectivo, setCondMontoEfectivo] = useState("");
   const [savingCondiciones, setSavingCondiciones] = useState(false);
+
+  // Documentos del viaje — modal propio, independiente de Condiciones.
+  const [documentosTarget, setDocumentosTarget] = useState<ViaticoItem | null>(null);
 
   // Campos simples
   const [nombre, setNombre] = useState("");
@@ -614,6 +730,15 @@ export function ViaticosClient({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDocumentosTarget(v)}
+                      title="Documentos del viaje"
+                    >
+                      <Paperclip className="mr-1 h-3.5 w-3.5" />
+                      Documentos
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -1571,6 +1696,20 @@ export function ViaticosClient({
               Total estimado: {formatCurrency(calcularTotal(detailTarget))}
             </p>
           </div>
+        )}
+      </Dialog>
+
+      {/* Documentos del viaje — ligado al viaje de documentosTarget */}
+      <Dialog
+        open={documentosTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDocumentosTarget(null);
+        }}
+        title={documentosTarget ? `Documentos — ${documentosTarget.nombre}` : undefined}
+        className="max-w-lg"
+      >
+        {documentosTarget && (
+          <ViaticoDocumentos viaticoId={documentosTarget.id} initialDocs={documentosTarget.documentos ?? []} />
         )}
       </Dialog>
 
