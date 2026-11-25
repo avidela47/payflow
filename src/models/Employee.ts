@@ -7,6 +7,19 @@ export type EmployeeCategory = "MONOTRIBUTISTA" | "EMPLEADO";
 // Monotributista factura un monto, no "horas".
 export type PaymentType = "FIJO" | "POR_HORA";
 
+// Documentos adjuntos de la ficha (DNI, contrato, certificados...) — a
+// diferencia de `foto` (un único archivo que se reemplaza), acá se van
+// acumulando: cada uno se identifica por su `path` (único, por el UUID del
+// nombre de archivo), no tiene su propio _id de Mongo porque no hace falta
+// (2026-11-25, pedido de Ariel: poder subir PDF/JPG/PNG por empleado).
+export interface IEmployeeDocumento {
+  nombre: string; // nombre original del archivo, para mostrarlo en la lista
+  path: string; // ruta pública (public/uploads/empleados/documentos/...)
+  mimeType: string;
+  size: number;
+  uploadedAt: Date;
+}
+
 export interface IEmployee {
   _id: mongoose.Types.ObjectId;
   nombre: string;
@@ -27,6 +40,7 @@ export interface IEmployee {
   cbuAlias?: string; // CBU/CVU o alias para transferir el pago
   area?: string; // texto libre — dónde trabaja dentro de ITELSA
   foto?: string; // ruta al archivo subido (public/uploads/empleados/...)
+  documentos: IEmployeeDocumento[];
   active: boolean;
   createdAt: Date;
 }
@@ -35,6 +49,17 @@ export interface IEmployee {
 // de la persona — es del pago puntual (ver PayrollEntry.modality), porque
 // en la práctica un mismo empleado suele tener las dos partes en el mismo
 // período.
+const EmployeeDocumentoSchema = new Schema<IEmployeeDocumento>(
+  {
+    nombre: { type: String, required: true },
+    path: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const EmployeeSchema = new Schema<IEmployee>({
   nombre: { type: String, required: true },
   apellido: { type: String, required: true },
@@ -54,6 +79,7 @@ const EmployeeSchema = new Schema<IEmployee>({
   cbuAlias: String,
   area: String,
   foto: String,
+  documentos: { type: [EmployeeDocumentoSchema], default: [] },
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });

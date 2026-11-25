@@ -3,10 +3,17 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Trash2, FileText, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createEmployee, updateEmployee } from "./actions";
+import {
+  createEmployee,
+  updateEmployee,
+  uploadEmployeeDocument,
+  deleteEmployeeDocument,
+  type EmployeeDocumentoResult,
+} from "./actions";
 
 type Category = "MONOTRIBUTISTA" | "EMPLEADO";
 type PaymentType = "FIJO" | "POR_HORA";
@@ -14,6 +21,126 @@ type PaymentType = "FIJO" | "POR_HORA";
 // Mismo tope que valida el servidor — avisamos acá antes de mandar el
 // archivo, para no hacer esperar el viaje al server por nada.
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+const DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
+
+export type EmployeeDocumentoItem = {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAtISO?: string;
+};
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Documentos de la ficha (DNI, contrato, certificados...) — a diferencia de
+// la foto (campo único que viaja con el resto del formulario), cada
+// documento se sube apenas se elige el archivo, con su propia action —
+// 2026-11-25, pedido de Ariel. Por eso solo aparece en modo "edit": hace
+// falta el _id del empleado para poder subir algo.
+function EmployeeDocumentos({
+  employeeId,
+  initialDocs,
+}: {
+  employeeId: string;
+  initialDocs: EmployeeDocumentoItem[];
+}) {
+  const [docs, setDocs] = useState<EmployeeDocumentoItem[]>(initialDocs);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_DOC_BYTES) {
+      toast.error("El archivo pesa más de 10MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      toast.error("Solo se aceptan archivos PDF, JPG o PNG.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const fd = new FormData();
+    fd.set("archivo", file);
+    setUploading(true);
+    let result: { ok: true; documento: EmployeeDocumentoResult } | { ok: false; error: string };
+    try {
+      result = await uploadEmployeeDocument(employeeId, fd);
+    } catch (err) {
+      console.error("uploadEmployeeDocument error:", err);
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast.error("No se pudo subir el archivo — puede ser demasiado pesado para el servidor.");
+      return;
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    if (!result.ok) {
+      toast.error(result.error ?? "No se pudo subir el archivo.");
+      return;
+    }
+    setDocs((prev) => [...prev, result.documento]);
+    toast.success("Archivo subido.");
+  }
+
+  async function handleDelete(doc: EmployeeDocumentoItem) {
+    const result = await deleteEmployeeDocument(employeeId, doc.path);
+    if (!result.ok) {
+      toast.error(result.error ?? "No se pudo borrar el archivo.");
+      return;
+    }
+    setDocs((prev) => prev.filter((d) => d.path !== doc.path));
+    toast.success("Archivo borrado.");
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/20 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label>Documentos (PDF, JPG o PNG — máx. 10MB)</Label>
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept={DOC_ACCEPT}
+          onChange={handleFile}
+          disabled={uploading}
+          className="max-w-56"
+        />
+      </div>
+      {docs.length === 0 && <p className="text-xs text-muted-foreground">Sin documentos cargados.</p>}
+      {docs.map((d) => (
+        <div key={d.path} className="flex items-center justify-between gap-2 rounded-md bg-background p-2 text-sm">
+          <a
+            href={d.path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-w-0 flex-1 items-center gap-1.5 truncate hover:underline"
+          >
+            {d.mimeType === "application/pdf" ? (
+              <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <span className="truncate">{d.nombre}</span>
+          </a>
+          <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(d.size)}</span>
+          <Button type="button" size="sm" variant="delete" onClick={() => void handleDelete(d)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export type EmployeeFormValues = {
   nombre?: string;
@@ -33,6 +160,7 @@ export type EmployeeFormValues = {
   cbuAlias?: string;
   area?: string;
   foto?: string;
+  documentos?: EmployeeDocumentoItem[];
 };
 
 export function EmployeeForm({
@@ -113,6 +241,7 @@ export function EmployeeForm({
   }
 
   return (
+    <div className="flex flex-col gap-6">
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
@@ -277,5 +406,14 @@ export function EmployeeForm({
         </Button>
       </div>
     </form>
+
+      {mode === "edit" && employeeId ? (
+        <EmployeeDocumentos employeeId={employeeId} initialDocs={defaultValues?.documentos ?? []} />
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Guardá el empleado para poder subir documentos (DNI, contrato, certificados...).
+        </p>
+      )}
+    </div>
   );
 }

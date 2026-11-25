@@ -99,11 +99,100 @@ async function savePhotoIfPresent(
   return { ok: true, path: `/uploads/empleados/${filename}` };
 }
 
-async function deletePhotoFile(publicPath?: string) {
+async function deleteUploadedFile(publicPath?: string) {
   if (!publicPath) return;
   const fullPath = path.join(process.cwd(), "public", publicPath);
   // Si el archivo ya no está, no es un error que deba frenar nada.
   await unlink(fullPath).catch(() => {});
+}
+
+// Documentos adjuntos (DNI, contrato, certificados...) — 2026-11-25, pedido
+// de Ariel. A diferencia de la foto (un campo que se reemplaza y viaja con
+// el resto del formulario), cada documento se sube con su propia action,
+// apenas se elige el archivo, y se agrega a `documentos` con $push — así el
+// modal no necesita juntar varios archivos y mandarlos recién al guardar
+// toda la ficha.
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+const DOC_ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const DOCS_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "empleados", "documentos");
+
+export type EmployeeDocumentoResult = {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAtISO: string;
+};
+
+export async function uploadEmployeeDocument(
+  employeeId: string,
+  formData: FormData
+): Promise<{ ok: true; documento: EmployeeDocumentoResult } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  const file = formData.get("archivo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "No se seleccionó ningún archivo." };
+  }
+  if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+    return { ok: false, error: "Solo se aceptan archivos PDF, JPG o PNG." };
+  }
+  if (file.size > MAX_DOC_BYTES) {
+    return { ok: false, error: "El archivo pesa más de 10MB." };
+  }
+
+  try {
+    await connectDB();
+    const exists = await Employee.exists({ _id: employeeId });
+    if (!exists) return { ok: false, error: "El empleado ya no existe." };
+
+    await mkdir(DOCS_UPLOAD_DIR, { recursive: true });
+    const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    const filename = `${randomUUID()}.${ext}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    await writeFile(path.join(DOCS_UPLOAD_DIR, filename), bytes);
+
+    const uploadedAt = new Date();
+    const documento = {
+      nombre: file.name || filename,
+      path: `/uploads/empleados/documentos/${filename}`,
+      mimeType: file.type,
+      size: file.size,
+      uploadedAt,
+    };
+    await Employee.findByIdAndUpdate(employeeId, { $push: { documentos: documento } });
+
+    revalidatePath("/empleados");
+    return { ok: true, documento: { ...documento, uploadedAtISO: uploadedAt.toISOString() } };
+  } catch (err) {
+    console.error("uploadEmployeeDocument error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo subir el archivo: ${message}` };
+  }
+}
+
+export async function deleteEmployeeDocument(employeeId: string, documentoPath: string) {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  try {
+    await connectDB();
+    await Employee.findByIdAndUpdate(employeeId, { $pull: { documentos: { path: documentoPath } } });
+    const fullPath = path.join(process.cwd(), "public", documentoPath);
+    await unlink(fullPath).catch(() => {});
+  } catch (err) {
+    console.error("deleteEmployeeDocument error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudo borrar el archivo: ${message}` };
+  }
+
+  revalidatePath("/empleados");
+  return { ok: true };
 }
 
 export async function createEmployee(formData: FormData) {
@@ -169,7 +258,7 @@ export async function updateEmployee(employeeId: string, formData: FormData) {
     if (photoResult.path) {
       const previous = await Employee.findById(employeeId).select("foto").lean();
       if (previous?.foto) {
-        await deletePhotoFile(previous.foto);
+        await deleteUploadedFile(previous.foto);
       }
     }
 
@@ -213,10 +302,13 @@ export async function deleteEmployee(employeeId: string) {
 
   try {
     await connectDB();
-    const existing = await Employee.findById(employeeId).select("foto").lean();
+    const existing = await Employee.findById(employeeId).select("foto documentos").lean();
     await Employee.findByIdAndDelete(employeeId);
     if (existing?.foto) {
-      await deletePhotoFile(existing.foto);
+      await deleteUploadedFile(existing.foto);
+    }
+    for (const doc of existing?.documentos ?? []) {
+      await deleteUploadedFile(doc.path);
     }
   } catch (err) {
     console.error("deleteEmployee error:", err);

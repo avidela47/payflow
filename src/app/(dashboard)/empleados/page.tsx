@@ -35,6 +35,13 @@ export default async function EmpleadosPage() {
     cbuAlias: emp.cbuAlias,
     area: emp.area,
     foto: emp.foto,
+    documentos: (emp.documentos ?? []).map((d) => ({
+      nombre: d.nombre,
+      path: d.path,
+      mimeType: d.mimeType,
+      size: d.size,
+      uploadedAtISO: d.uploadedAt ? new Date(d.uploadedAt).toISOString() : undefined,
+    })),
     active: emp.active,
   }));
 
