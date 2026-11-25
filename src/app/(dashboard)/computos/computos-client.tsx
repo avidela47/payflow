@@ -12,6 +12,7 @@ import { SPECS, specsOf, specsTxt, normTexto, type SpecKey, type SpecValues } fr
 import { comprimirImagen } from "@/lib/computos-image";
 import { generarPdfComputo } from "@/lib/computos-pdf";
 import { PlanoEditor } from "./plano-editor";
+import { Historial } from "./historial";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,8 @@ export type ComputoDoc = {
   obs?: string;
   plano?: { fileId: string; name: string; w: number; h: number; subido?: string };
   marcas?: { u: string; x: number; y: number }[];
+  reaperturas?: { ts: number; by: string; cerradoAntes: string }[];
+  basadoEn?: string;
 };
 
 function hoy(): string {
@@ -801,7 +804,7 @@ function ComputoWorking({
 export function ComputosClient() {
   const [luminarias, setLuminarias] = useState<Luminaria[] | null>(null);
   const [computos, setComputos] = useState<ComputoDoc[] | null>(null);
-  const [tab, setTab] = useState<"computo" | "base">("computo");
+  const [tab, setTab] = useState<"computo" | "base" | "historial">("computo");
   const [curId, setCurId] = useState<string | null>(null);
   const { quienSos, elegir } = useQuienSos();
 
@@ -872,10 +875,23 @@ export function ComputosClient() {
         <Button size="sm" variant={tab === "base" ? "default" : "outline"} onClick={() => setTab("base")}>
           Base de luminarias
         </Button>
+        <Button size="sm" variant={tab === "historial" ? "default" : "outline"} onClick={() => setTab("historial")}>
+          Historial
+        </Button>
       </div>
 
       {tab === "base" ? (
         <BaseLuminarias luminarias={luminarias} quienSos={quienSos} />
+      ) : tab === "historial" ? (
+        <Historial
+          computos={computos}
+          luminarias={luminarias}
+          quienSos={quienSos}
+          onAbrir={(id) => {
+            setCurId(id);
+            setTab("computo");
+          }}
+        />
       ) : curComputo && curComputo.estado !== "cerrado" ? (
         <ComputoWorking computo={curComputo} luminarias={luminarias} quienSos={quienSos} onSalir={() => setCurId(null)} />
       ) : (
