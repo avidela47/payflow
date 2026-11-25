@@ -8,6 +8,7 @@ import {
   VIATICO_HONORARIO_TYPES,
   VIATICO_PAYMENT_MODES,
   VIATICO_EMPLOYEE_PAYMENT_MODES,
+  VIATICO_CONDICIONES_PAYMENT_MODES,
 } from "@/models/Viatico";
 import { getSession } from "@/lib/auth";
 
@@ -87,6 +88,21 @@ const viaticoSchema = z
   });
 
 export type ViaticoFormInput = z.infer<typeof viaticoSchema>;
+
+// "Condiciones de viaje" (papel de Ariel, 2026-11-25): ficha aparte, ligada
+// a un viaje ya cargado — se guarda con su propia action en vez de ir
+// adentro de viaticoSchema, así el modal de condiciones no necesita mandar
+// todo el formulario completo del viaje para guardar solo esto.
+const condicionesSchema = z.object({
+  empleadosNombres: z.array(z.string().min(1)).default([]),
+  viaticosPactados: z.string().optional(),
+  llevanInsumos: z.boolean().optional(),
+  tieneVale: z.boolean().optional(),
+  numeroVale: z.string().optional(),
+  formaPago: z.enum(VIATICO_CONDICIONES_PAYMENT_MODES).optional(),
+});
+
+export type CondicionesFormInput = z.infer<typeof condicionesSchema>;
 
 // Tope diario de viático, por empleado (`topesDiarios`): cada empleado
 // puede tener su propio tope sobre el monto por día (solo aplica a
@@ -207,6 +223,43 @@ export async function updateViatico(viaticoId: string, input: ViaticoFormInput) 
 
   revalidatePath("/viaticos");
   revalidatePath("/");
+  return { ok: true };
+}
+
+export async function updateCondicionesViaje(viaticoId: string, input: CondicionesFormInput) {
+  const session = await getSession();
+  if (!session?.user) {
+    return { ok: false, error: "No autenticado." };
+  }
+
+  const parsed = condicionesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  try {
+    await connectDB();
+    const exists = await Viatico.exists({ _id: viaticoId });
+    if (!exists) return { ok: false, error: "El viaje ya no existe." };
+    await Viatico.findByIdAndUpdate(viaticoId, {
+      $set: {
+        condiciones: {
+          empleadosNombres: parsed.data.empleadosNombres.filter((n) => n.trim()),
+          viaticosPactados: parsed.data.viaticosPactados || undefined,
+          llevanInsumos: parsed.data.llevanInsumos,
+          tieneVale: parsed.data.tieneVale,
+          numeroVale: parsed.data.tieneVale ? parsed.data.numeroVale || undefined : undefined,
+          formaPago: parsed.data.formaPago,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("updateCondicionesViaje error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `No se pudieron guardar las condiciones: ${message}` };
+  }
+
+  revalidatePath("/viaticos");
   return { ok: true };
 }
 

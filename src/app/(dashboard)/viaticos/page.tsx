@@ -49,6 +49,16 @@ export default async function ViaticosPage() {
         pagos: (e.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: toISODate(p.fecha)! })),
       };
     }),
+    condiciones: v.condiciones
+      ? {
+          empleadosNombres: v.condiciones.empleadosNombres ?? [],
+          viaticosPactados: v.condiciones.viaticosPactados,
+          llevanInsumos: v.condiciones.llevanInsumos,
+          tieneVale: v.condiciones.tieneVale,
+          numeroVale: v.condiciones.numeroVale,
+          formaPago: v.condiciones.formaPago,
+        }
+      : undefined,
     hospedajeLugar: v.hospedaje?.lugar,
     hospedajeCheckIn: toISODate(v.hospedaje?.checkIn),
     hospedajeCheckOut: toISODate(v.hospedaje?.checkOut),

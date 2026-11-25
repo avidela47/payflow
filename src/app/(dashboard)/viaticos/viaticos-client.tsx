@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ClipboardList, X } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,9 +19,21 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import { createViatico, updateViatico, deleteViatico, type ViaticoFormInput } from "./actions";
+import {
+  createViatico,
+  updateViatico,
+  deleteViatico,
+  updateCondicionesViaje,
+  type ViaticoFormInput,
+  type CondicionesFormInput,
+} from "./actions";
 import { SimuladorViajesButton } from "./simulador-viajes";
-import type { ViaticoHonorarioType, ViaticoPaymentMode, ViaticoEmployeePaymentMode } from "@/models/Viatico";
+import type {
+  ViaticoHonorarioType,
+  ViaticoPaymentMode,
+  ViaticoEmployeePaymentMode,
+  ViaticoCondicionesPaymentMode,
+} from "@/models/Viatico";
 
 export type EmployeeOption = { id: string; nombre: string; apellido: string; area?: string };
 
@@ -43,6 +55,14 @@ const EMPLOYEE_PAYMENT_MODE_OPTIONS: { value: ViaticoEmployeePaymentMode; label:
   { value: "EFECTIVO", label: "Efectivo" },
 ];
 
+// Forma de pago de los viáticos PACTADOS con el/los empleado(s) — set
+// distinto (solo tarjeta/efectivo, confirmado con Ariel 2026-11-25), no es
+// ni paymentMode de empleado ni el de materiales/extras.
+const CONDICIONES_PAYMENT_MODE_OPTIONS: { value: ViaticoCondicionesPaymentMode; label: string }[] = [
+  { value: "TARJETA", label: "Tarjeta de crédito" },
+  { value: "EFECTIVO", label: "Efectivo" },
+];
+
 export type ViaticoPagoItem = { monto: number; fechaISO: string };
 
 export type ViaticoEmpleadoItem = {
@@ -59,6 +79,18 @@ export type ViaticoEmpleadoItem = {
   paymentMode?: ViaticoEmployeePaymentMode;
   // Pagos parciales hechos a este empleado a cuenta del monto total.
   pagos: ViaticoPagoItem[];
+};
+
+// "Condiciones de viaje" — ficha de lo acordado antes de viajar (papel de
+// Ariel, 2026-11-25). Nombres en texto libre, a propósito desacoplados de
+// `empleados` (que son honorarios atados a un Employee real).
+export type ViaticoCondicionesItem = {
+  empleadosNombres: string[];
+  viaticosPactados?: string;
+  llevanInsumos?: boolean;
+  tieneVale?: boolean;
+  numeroVale?: string;
+  formaPago?: ViaticoCondicionesPaymentMode;
 };
 
 export type ViaticoExtraItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
@@ -86,6 +118,7 @@ export type ViaticoItem = {
   fechaInicioISO: string;
   fechaFinISO: string;
   empleados: ViaticoEmpleadoItem[];
+  condiciones?: ViaticoCondicionesItem;
   hospedajeLugar?: string;
   hospedajeCheckIn?: string;
   hospedajeCheckOut?: string;
@@ -135,6 +168,11 @@ function emptyTopeRow(): TopeRow {
 }
 function emptyTopeGastoRow(): TopeGastoRow {
   return { _key: nextKey(), descripcion: "", monto: 0 };
+}
+
+type CondEmpleadoRow = { _key: number; nombre: string };
+function emptyCondEmpleadoRow(): CondEmpleadoRow {
+  return { _key: nextKey(), nombre: "" };
 }
 
 // Cubre ambos sets (materiales/extras/tope y el de empleados) para que el
@@ -232,6 +270,17 @@ export function ViaticosClient({
   const [confirmTarget, setConfirmTarget] = useState<ViaticoItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<ViaticoItem | null>(null);
+
+  // "Condiciones de viaje" — modal propio, ligado al viaje de `condicionesTarget`
+  // (no usa el form de alta/edición de arriba: es una ficha chica aparte).
+  const [condicionesTarget, setCondicionesTarget] = useState<ViaticoItem | null>(null);
+  const [condEmpleadosRows, setCondEmpleadosRows] = useState<CondEmpleadoRow[]>([emptyCondEmpleadoRow()]);
+  const [condViaticosPactados, setCondViaticosPactados] = useState("");
+  const [condLlevanInsumos, setCondLlevanInsumos] = useState(false);
+  const [condTieneVale, setCondTieneVale] = useState(false);
+  const [condNumeroVale, setCondNumeroVale] = useState("");
+  const [condFormaPago, setCondFormaPago] = useState<ViaticoCondicionesPaymentMode | "">("");
+  const [savingCondiciones, setSavingCondiciones] = useState(false);
 
   // Campos simples
   const [nombre, setNombre] = useState("");
@@ -332,6 +381,44 @@ export function ViaticosClient({
     );
     setEditingId(v.id);
     setFormOpen(true);
+  }
+
+  function openCondiciones(v: ViaticoItem) {
+    const c = v.condiciones;
+    setCondEmpleadosRows(
+      c && c.empleadosNombres.length > 0
+        ? c.empleadosNombres.map((nombre) => ({ _key: nextKey(), nombre }))
+        : [emptyCondEmpleadoRow()]
+    );
+    setCondViaticosPactados(c?.viaticosPactados ?? "");
+    setCondLlevanInsumos(c?.llevanInsumos ?? false);
+    setCondTieneVale(c?.tieneVale ?? false);
+    setCondNumeroVale(c?.numeroVale ?? "");
+    setCondFormaPago(c?.formaPago ?? "");
+    setCondicionesTarget(v);
+  }
+
+  async function handleSubmitCondiciones() {
+    if (!condicionesTarget) return;
+    const input: CondicionesFormInput = {
+      empleadosNombres: condEmpleadosRows.map((r) => r.nombre.trim()).filter(Boolean),
+      viaticosPactados: condViaticosPactados.trim() || undefined,
+      llevanInsumos: condLlevanInsumos,
+      tieneVale: condTieneVale,
+      numeroVale: condTieneVale ? condNumeroVale.trim() || undefined : undefined,
+      formaPago: condFormaPago || undefined,
+    };
+    setSavingCondiciones(true);
+    const result = await updateCondicionesViaje(condicionesTarget.id, input);
+    setSavingCondiciones(false);
+
+    if (!result.ok) {
+      toast.error(result.error ?? "Ocurrió un error.");
+      return;
+    }
+    toast.success("Condiciones de viaje guardadas.");
+    setCondicionesTarget(null);
+    router.refresh();
   }
 
   const previewTotal = useMemo(
@@ -506,6 +593,15 @@ export function ViaticosClient({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openCondiciones(v)}
+                      title="Condiciones de viaje"
+                    >
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                      Condiciones
+                    </Button>
                     <Button
                       size="sm"
                       variant="edit"
@@ -1302,6 +1398,36 @@ export function ViaticosClient({
               <span className="text-muted-foreground">Paga: </span>
               {detailTarget.paidBy ?? "—"}
             </p>
+            {detailTarget.condiciones && (
+              <div className="rounded-md border border-border bg-muted/20 p-2">
+                <span className="text-muted-foreground">Condiciones de viaje:</span>
+                <ul className="ml-4 list-disc">
+                  {detailTarget.condiciones.empleadosNombres.length > 0 && (
+                    <li>Viajan: {detailTarget.condiciones.empleadosNombres.join(", ")}</li>
+                  )}
+                  {detailTarget.condiciones.viaticosPactados && (
+                    <li>Viáticos pactados: {detailTarget.condiciones.viaticosPactados}</li>
+                  )}
+                  {detailTarget.condiciones.llevanInsumos != null && (
+                    <li>Llevan insumos: {detailTarget.condiciones.llevanInsumos ? "Sí" : "No"}</li>
+                  )}
+                  {detailTarget.condiciones.tieneVale != null && (
+                    <li>
+                      Vale: {detailTarget.condiciones.tieneVale ? "Sí" : "No"}
+                      {detailTarget.condiciones.tieneVale && detailTarget.condiciones.numeroVale
+                        ? ` — N° ${detailTarget.condiciones.numeroVale}`
+                        : ""}
+                    </li>
+                  )}
+                  {detailTarget.condiciones.formaPago && (
+                    <li>
+                      Forma de pago viáticos:{" "}
+                      {CONDICIONES_PAYMENT_MODE_OPTIONS.find((o) => o.value === detailTarget.condiciones!.formaPago)?.label}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
             <div>
               <span className="text-muted-foreground">Empleados:</span>
               <ul className="ml-4 list-disc">
@@ -1420,6 +1546,126 @@ export function ViaticosClient({
             <p className="border-t border-border pt-3 font-medium">
               Total estimado: {formatCurrency(calcularTotal(detailTarget))}
             </p>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Condiciones de viaje — ficha corta, ligada al viaje de condicionesTarget */}
+      <Dialog
+        open={condicionesTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCondicionesTarget(null);
+        }}
+        title={condicionesTarget ? `Condiciones de viaje — ${condicionesTarget.nombre}` : undefined}
+        className="max-w-lg"
+      >
+        {condicionesTarget && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label>Empleados que viajan</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCondEmpleadosRows((rows) => [...rows, emptyCondEmpleadoRow()])}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Agregar
+                </Button>
+              </div>
+              {condEmpleadosRows.map((row, i) => (
+                <div key={row._key} className="flex items-center gap-2">
+                  <Input
+                    placeholder={`Nombre empleado ${i + 1}`}
+                    value={row.nombre}
+                    onChange={(e) =>
+                      setCondEmpleadosRows((rows) =>
+                        rows.map((r) => (r._key === row._key ? { ...r, nombre: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="delete"
+                    onClick={() => setCondEmpleadosRows((rows) => rows.filter((r) => r._key !== row._key))}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="condViaticosPactados">Viáticos pactados</Label>
+              <Input
+                id="condViaticosPactados"
+                value={condViaticosPactados}
+                onChange={(e) => setCondViaticosPactados(e.target.value)}
+                placeholder="Lo acordado con el/los empleado(s)"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="condLlevanInsumos"
+                type="checkbox"
+                checked={condLlevanInsumos}
+                onChange={(e) => setCondLlevanInsumos(e.target.checked)}
+                className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+              <Label htmlFor="condLlevanInsumos" className="cursor-pointer font-normal">
+                Llevan insumos
+              </Label>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <input
+                  id="condTieneVale"
+                  type="checkbox"
+                  checked={condTieneVale}
+                  onChange={(e) => setCondTieneVale(e.target.checked)}
+                  className="h-4 w-4 rounded border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                />
+                <Label htmlFor="condTieneVale" className="cursor-pointer font-normal">
+                  Tiene vale
+                </Label>
+              </div>
+              {condTieneVale && (
+                <Input
+                  value={condNumeroVale}
+                  onChange={(e) => setCondNumeroVale(e.target.value)}
+                  placeholder="N° de vale"
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="condFormaPago">Forma de pago viáticos</Label>
+              <Select
+                id="condFormaPago"
+                value={condFormaPago}
+                onChange={(e) => setCondFormaPago(e.target.value as ViaticoCondicionesPaymentMode | "")}
+              >
+                <option value="">Sin definir...</option>
+                {CONDICIONES_PAYMENT_MODE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setCondicionesTarget(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" disabled={savingCondiciones} onClick={() => void handleSubmitCondiciones()}>
+                {savingCondiciones ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
           </div>
         )}
       </Dialog>

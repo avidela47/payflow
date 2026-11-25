@@ -81,6 +81,30 @@ export interface IViaticoTopeGasto {
   paymentMode?: ViaticoPaymentMode;
 }
 
+// Forma de pago de los viáticos pactados con el/los empleado(s) que viajan
+// — distinta de paymentMode de IViaticoEmpleado (que es cómo se le paga el
+// HONORARIO ya calculado): acá es la condición charlada antes del viaje.
+export const VIATICO_CONDICIONES_PAYMENT_MODES = ["TARJETA", "EFECTIVO"] as const;
+export type ViaticoCondicionesPaymentMode = (typeof VIATICO_CONDICIONES_PAYMENT_MODES)[number];
+
+// "Condiciones de viaje" — ficha de lo acordado ANTES de viajar (papel de
+// Ariel, 2026-11-25), separada a propósito de `empleados` (que son los
+// honorarios ya liquidados, atados a un Employee real): acá los nombres
+// son texto libre porque puede viajar gente sin honorario cargado todavía,
+// o ni siquiera estar en el padrón de Empleados. Vive dentro del Viatico
+// al que corresponde (no es una lista propia como el Simulador).
+export interface IViaticoCondiciones {
+  empleadosNombres: string[];
+  // Texto libre: lo que se acordó de viáticos (monto, qué cubre, etc.) —
+  // no se fuerza a número porque "pactado" en el papel no siempre es un
+  // monto limpio (puede ser "cubre hotel y comida", etc.).
+  viaticosPactados?: string;
+  llevanInsumos?: boolean;
+  tieneVale?: boolean;
+  numeroVale?: string; // solo tiene sentido si tieneVale === true
+  formaPago?: ViaticoCondicionesPaymentMode;
+}
+
 // Tope diario de viático, ahora POR EMPLEADO (antes era un único monto
 // global para todo el viaje). `monto` es el importe/tope por día asignado
 // al empleado — si el monto por día de un empleado con honorarioType
@@ -107,6 +131,7 @@ export interface IViatico {
   fechaInicio: Date;
   fechaFin: Date;
   empleados: IViaticoEmpleado[];
+  condiciones?: IViaticoCondiciones;
   hospedaje?: IViaticoHospedaje;
   combustible?: IViaticoCombustible;
   extras: IViaticoExtra[];
@@ -134,6 +159,18 @@ const ViaticoEmpleadoSchema = new Schema<IViaticoEmpleado>(
     dias: Number,
     paymentMode: { type: String, enum: VIATICO_EMPLOYEE_PAYMENT_MODES },
     pagos: { type: [ViaticoPagoSchema], default: [] },
+  },
+  { _id: false }
+);
+
+const ViaticoCondicionesSchema = new Schema<IViaticoCondiciones>(
+  {
+    empleadosNombres: { type: [String], default: [] },
+    viaticosPactados: String,
+    llevanInsumos: Boolean,
+    tieneVale: Boolean,
+    numeroVale: String,
+    formaPago: { type: String, enum: VIATICO_CONDICIONES_PAYMENT_MODES },
   },
   { _id: false }
 );
@@ -211,6 +248,7 @@ const ViaticoSchema = new Schema<IViatico>({
   fechaInicio: { type: Date, required: true },
   fechaFin: { type: Date, required: true },
   empleados: { type: [ViaticoEmpleadoSchema], default: [] },
+  condiciones: ViaticoCondicionesSchema,
   hospedaje: ViaticoHospedajeSchema,
   combustible: ViaticoCombustibleSchema,
   extras: { type: [ViaticoExtraSchema], default: [] },
