@@ -10,12 +10,24 @@ import mongoose, { Schema, models, model, Model } from "mongoose";
 // Mismo patrón de "pagos parciales" que IViaticoEmpleado.pagos: cada ítem
 // tiene su propia lista de pagos a cuenta del total (neto + iva), y el
 // saldo (total - pagado) define el estado — Pendiente / Parcial / Pagado.
-export const SIM_PAYMENT_MODES = ["TARJETA", "EFECTIVO", "DEBITO", "TRANSFERENCIA"] as const;
+//
+// 2026-11-25 (Ariel): cada PAGO ahora lleva su propia forma de pago (antes
+// era un único campo a nivel ítem) — así un proveedor se puede desglosar en
+// varios pagos con métodos distintos (parte efectivo, parte e-cheq...). El
+// campo `formaPago` del ítem queda como la forma de pago PLANEADA/principal
+// (se usa para el resumen cuando todavía no se cargó ningún pago real).
+// Se suma "ECHEQ", con `emitido` (solo aplica a ese método): si el e-cheque
+// ya se emitió o todavía está pendiente de emitir.
+export const SIM_PAYMENT_MODES = ["TARJETA", "EFECTIVO", "DEBITO", "TRANSFERENCIA", "ECHEQ"] as const;
 export type SimPaymentMode = (typeof SIM_PAYMENT_MODES)[number];
 
 export interface ISimPago {
   monto: number;
   fecha: Date;
+  formaPago?: SimPaymentMode;
+  // Solo tiene sentido cuando formaPago === "ECHEQ": si el e-cheque ya fue
+  // emitido o todavía está pendiente.
+  emitido?: boolean;
 }
 
 export interface ISimItem {
@@ -43,6 +55,8 @@ const SimPagoSchema = new Schema<ISimPago>(
   {
     monto: { type: Number, required: true },
     fecha: { type: Date, required: true },
+    formaPago: { type: String, enum: SIM_PAYMENT_MODES },
+    emitido: Boolean,
   },
   { _id: false }
 );

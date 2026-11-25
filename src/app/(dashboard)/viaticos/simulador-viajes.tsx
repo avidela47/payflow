@@ -17,7 +17,7 @@
 // total - pagado).
 import { useState } from "react";
 import { toast } from "sonner";
-import { Calculator, Plus, Trash2, X, CalendarDays, Wallet } from "lucide-react";
+import { Calculator, Plus, Trash2, X, CalendarDays, Wallet, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,11 +42,8 @@ const PAYMENT_MODE_OPTIONS: { value: SimPaymentMode; label: string }[] = [
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "DEBITO", label: "Débito" },
   { value: "TRANSFERENCIA", label: "Transferencia" },
+  { value: "ECHEQ", label: "E-Cheq" },
 ];
-
-function paymentModeLabel(mode?: SimPaymentMode): string {
-  return PAYMENT_MODE_OPTIONS.find((o) => o.value === mode)?.label ?? "Sin definir";
-}
 
 let keySeq = 0;
 function nextKey() {
@@ -64,7 +61,11 @@ function formatDate(iso?: string): string {
   return d && m && y ? `${d}/${m}/${y}` : iso;
 }
 
-type PagoRow = { _key: number; monto: number; fechaISO: string };
+// 2026-11-25 (Ariel): cada pago ahora lleva su propia forma de pago — un
+// mismo proveedor se puede desglosar en varios pagos con métodos distintos
+// (parte efectivo, parte e-cheq...), en vez de un único método por ítem.
+// `emitido` solo aplica cuando formaPago === "ECHEQ".
+type PagoRow = { _key: number; monto: number; fechaISO: string; formaPago?: SimPaymentMode; emitido?: boolean };
 type ItemRow = {
   _key: number;
   proveedor: string;
@@ -72,6 +73,8 @@ type ItemRow = {
   fechaFacturaISO: string;
   neto: number;
   iva: number;
+  // Forma de pago PLANEADA/principal del ítem — se usa en el resumen por
+  // forma de pago mientras no haya ningún pago real cargado todavía.
   formaPago?: SimPaymentMode;
   fechaPagoISO: string;
   pagos: PagoRow[];
@@ -80,8 +83,10 @@ type ItemRow = {
 function emptyItemRow(): ItemRow {
   return { _key: nextKey(), proveedor: "", fechaCompraISO: todayISO(), fechaFacturaISO: "", neto: 0, iva: 0, fechaPagoISO: "", pagos: [] };
 }
-function emptyPagoRow(): PagoRow {
-  return { _key: nextKey(), monto: 0, fechaISO: todayISO() };
+// Pre-carga la forma de pago del nuevo pago con la del ítem (planeada), para
+// no tener que elegirla de nuevo cuando coincide — sigue siendo editable.
+function emptyPagoRow(formaPagoDefault?: SimPaymentMode): PagoRow {
+  return { _key: nextKey(), monto: 0, fechaISO: todayISO(), formaPago: formaPagoDefault };
 }
 
 function totalItem(it: { neto: number; iva: number }): number {
@@ -155,7 +160,7 @@ export function SimuladorViajesButton() {
           iva: it.iva,
           formaPago: it.formaPago,
           fechaPagoISO: it.fechaPagoISO ?? "",
-          pagos: it.pagos.map((p) => ({ _key: nextKey(), monto: p.monto, fechaISO: p.fechaISO })),
+          pagos: it.pagos.map((p) => ({ _key: nextKey(), monto: p.monto, fechaISO: p.fechaISO, formaPago: p.formaPago, emitido: p.emitido })),
         }))
       );
       setView("form");
@@ -183,7 +188,7 @@ export function SimuladorViajesButton() {
           iva: it.iva || 0,
           formaPago: it.formaPago,
           fechaPago: it.fechaPagoISO || undefined,
-          pagos: it.pagos.filter((p) => p.monto > 0).map((p) => ({ monto: p.monto, fecha: p.fechaISO })),
+          pagos: it.pagos.filter((p) => p.monto > 0).map((p) => ({ monto: p.monto, fecha: p.fechaISO, formaPago: p.formaPago, emitido: p.emitido })),
         })),
     };
     setSaving(true);
@@ -224,10 +229,26 @@ export function SimuladorViajesButton() {
 
   const totalGeneral = items.reduce((s, it) => s + totalItem(it), 0);
 
-  const porFormaPago = PAYMENT_MODE_OPTIONS.map((opt) => ({
-    label: opt.label,
-    total: items.filter((it) => it.formaPago === opt.value).reduce((s, it) => s + totalItem(it), 0),
-  })).filter((g) => g.total > 0);
+  // Por forma de pago: si el ítem ya tiene pagos cargados, se desglosa por
+  // el método de CADA pago (puede ser más de uno distinto); si todavía no
+  // tiene ningún pago, cuenta el total completo bajo la forma de pago
+  // PLANEADA del ítem (si la cargó) — así el resumen sirve tanto para lo ya
+  // pagado como para lo que todavía está solo proyectado.
+  const porFormaPagoMap = new Map<SimPaymentMode, number>();
+  items.forEach((it) => {
+    if (it.pagos.length > 0) {
+      it.pagos.forEach((p) => {
+        const metodo = p.formaPago ?? it.formaPago;
+        if (!metodo || !(p.monto > 0)) return;
+        porFormaPagoMap.set(metodo, (porFormaPagoMap.get(metodo) ?? 0) + p.monto);
+      });
+    } else if (it.formaPago) {
+      porFormaPagoMap.set(it.formaPago, (porFormaPagoMap.get(it.formaPago) ?? 0) + totalItem(it));
+    }
+  });
+  const porFormaPago = PAYMENT_MODE_OPTIONS.map((opt) => ({ label: opt.label, total: porFormaPagoMap.get(opt.value) ?? 0 })).filter((g) => g.total > 0);
+
+  const echeqsSinEmitir = items.flatMap((it) => it.pagos).filter((p) => p.formaPago === "ECHEQ" && !p.emitido && p.monto > 0);
 
   const calendario = Object.entries(
     items
@@ -311,8 +332,8 @@ export function SimuladorViajesButton() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
                       <Input placeholder="Proveedor" value={it.proveedor} onChange={(e) => patchItem(it._key, { proveedor: e.target.value })} />
-                      <Select value={it.formaPago ?? ""} onChange={(e) => patchItem(it._key, { formaPago: (e.target.value || undefined) as SimPaymentMode | undefined })}>
-                        <option value="">Forma de pago...</option>
+                      <Select value={it.formaPago ?? ""} onChange={(e) => patchItem(it._key, { formaPago: (e.target.value || undefined) as SimPaymentMode | undefined })} title="Forma de pago prevista, mientras no se cargue ningún pago real">
+                        <option value="">Forma de pago prevista...</option>
                         {PAYMENT_MODE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
@@ -358,34 +379,48 @@ export function SimuladorViajesButton() {
                   <div className="flex flex-col gap-2 rounded-md bg-background p-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">Pagos registrados</span>
-                      <Button type="button" size="sm" variant="outline" onClick={() => patchItem(it._key, { pagos: [...it.pagos, emptyPagoRow()] })}>
+                      <Button type="button" size="sm" variant="outline" onClick={() => patchItem(it._key, { pagos: [...it.pagos, emptyPagoRow(it.formaPago)] })}>
                         <Plus className="mr-1 h-3.5 w-3.5" />
                         Agregar pago
                       </Button>
                     </div>
                     {it.pagos.length === 0 && <p className="text-xs text-muted-foreground">Sin pagos registrados.</p>}
-                    {it.pagos.map((pago) => (
-                      <div key={pago._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Monto pagado"
-                          value={pago.monto || ""}
-                          onChange={(e) =>
-                            patchItem(it._key, { pagos: it.pagos.map((p) => (p._key === pago._key ? { ...p, monto: Number(e.target.value) } : p)) })
-                          }
-                        />
-                        <Input
-                          type="date"
-                          value={pago.fechaISO}
-                          onChange={(e) => patchItem(it._key, { pagos: it.pagos.map((p) => (p._key === pago._key ? { ...p, fechaISO: e.target.value } : p)) })}
-                        />
-                        <Button type="button" size="sm" variant="delete" onClick={() => patchItem(it._key, { pagos: it.pagos.filter((p) => p._key !== pago._key) })}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                    {it.pagos.map((pago) => {
+                      function patchPago(patch: Partial<PagoRow>) {
+                        patchItem(it._key, { pagos: it.pagos.map((p) => (p._key === pago._key ? { ...p, ...patch } : p)) });
+                      }
+                      return (
+                        <div key={pago._key} className="flex flex-col gap-2 rounded-md bg-muted/20 p-2">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                            <Input type="number" step="0.01" min="0" placeholder="Monto pagado" value={pago.monto || ""} onChange={(e) => patchPago({ monto: Number(e.target.value) })} />
+                            <Input type="date" value={pago.fechaISO} onChange={(e) => patchPago({ fechaISO: e.target.value })} />
+                            <Select
+                              value={pago.formaPago ?? ""}
+                              onChange={(e) => patchPago({ formaPago: (e.target.value || undefined) as SimPaymentMode | undefined, emitido: e.target.value === "ECHEQ" ? pago.emitido ?? false : undefined })}
+                            >
+                              <option value="">Forma de pago...</option>
+                              {PAYMENT_MODE_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </Select>
+                            <Button type="button" size="sm" variant="delete" onClick={() => patchItem(it._key, { pagos: it.pagos.filter((p) => p._key !== pago._key) })}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {pago.formaPago === "ECHEQ" && (
+                            <button
+                              type="button"
+                              onClick={() => patchPago({ emitido: !pago.emitido })}
+                              className={`flex items-center gap-1.5 self-start rounded-full border px-3 py-1 text-xs ${pago.emitido ? "border-success text-success" : "border-warning text-warning"}`}
+                            >
+                              <FileWarning className="h-3.5 w-3.5" /> {pago.emitido ? "E-cheq emitido" : "E-cheq sin emitir todavía"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                     <p className="text-xs">
                       {totalItem(it) > 0 && saldoItem(it) <= 0 ? (
                         <Badge variant="success">Pagado</Badge>
@@ -415,6 +450,13 @@ export function SimuladorViajesButton() {
                 <span>Total general</span>
                 <span>{formatCurrency(totalGeneral)}</span>
               </div>
+
+              {echeqsSinEmitir.length > 0 && (
+                <p className="flex items-center gap-1.5 text-xs text-warning">
+                  <FileWarning className="h-3.5 w-3.5" />
+                  {echeqsSinEmitir.length} e-cheq(s) sin emitir todavía — {formatCurrency(echeqsSinEmitir.reduce((s, p) => s + p.monto, 0))}
+                </p>
+              )}
 
               {porFormaPago.length > 0 && (
                 <div className="flex flex-col gap-1">

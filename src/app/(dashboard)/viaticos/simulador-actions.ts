@@ -14,6 +14,8 @@ import { getSession } from "@/lib/auth";
 const pagoSchema = z.object({
   monto: z.coerce.number().positive(),
   fecha: z.string().min(1),
+  formaPago: z.enum(SIM_PAYMENT_MODES).optional(),
+  emitido: z.coerce.boolean().optional(),
 });
 
 const itemSchema = z.object({
@@ -55,7 +57,7 @@ export type SimuladorDetalle = {
     iva: number;
     formaPago?: (typeof SIM_PAYMENT_MODES)[number];
     fechaPagoISO?: string;
-    pagos: { monto: number; fechaISO: string }[];
+    pagos: { monto: number; fechaISO: string; formaPago?: (typeof SIM_PAYMENT_MODES)[number]; emitido?: boolean }[];
   }[];
 };
 
@@ -74,7 +76,7 @@ function buildDoc(data: SimuladorFormInput) {
       iva: it.iva,
       formaPago: it.formaPago,
       fechaPago: it.fechaPago ? new Date(it.fechaPago) : undefined,
-      pagos: it.pagos.map((p) => ({ monto: p.monto, fecha: new Date(p.fecha) })),
+      pagos: it.pagos.map((p) => ({ monto: p.monto, fecha: new Date(p.fecha), formaPago: p.formaPago, emitido: p.emitido })),
     })),
     notes: data.notes || undefined,
   };
@@ -108,7 +110,7 @@ export async function getSimulador(id: string): Promise<SimuladorDetalle | null>
       iva: it.iva,
       formaPago: it.formaPago,
       fechaPagoISO: toISO(it.fechaPago),
-      pagos: (it.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: toISO(p.fecha)! })),
+      pagos: (it.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: toISO(p.fecha)!, formaPago: p.formaPago, emitido: p.emitido })),
     })),
   };
 }
