@@ -458,32 +458,14 @@ const navItems: NavItem[] = [
   },
 ];
 
-// Mismas iniciales que el header del Dashboard (page.tsx) cuando no hay
-// foto cargada: dos primeras palabras del nombre, primera letra de c/u.
-function getInitials(fullName: string): string {
-  return (
-    fullName
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
-
 export function Sidebar({
   role,
-  name,
-  foto,
   restrictedModules,
 }: {
   role: string;
-  name: string;
-  foto?: string;
   restrictedModules: string[];
 }) {
   const pathname = usePathname();
-  const initials = getInitials(name);
   // Solo importa en mobile/tablet (< md) — en desktop el aside queda
   // siempre visible y este estado no se usa para nada.
   const [open, setOpen] = useState(false);
@@ -537,26 +519,15 @@ export function Sidebar({
       <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="PayFlow" className="h-7 w-auto" />
-          <span className="font-semibold">{name}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            {foto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={foto} alt="" className="h-full w-full object-cover object-top" />
-            ) : (
-              initials
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-            aria-label="Abrir menú"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+          aria-label="Abrir menú"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
       </header>
 
       {/* Fondo oscuro detrás del menú, solo mientras está abierto en
@@ -578,30 +549,11 @@ export function Sidebar({
         {/* Header del menú en desktop (siempre visible) */}
         <div className="hidden items-center gap-2 border-b border-border px-4 py-4 md:flex">
           <img src="/logo.png" alt="PayFlow" className="h-8 w-auto" />
-          <span className="flex-1 font-semibold">{name}</span>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            {foto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={foto} alt="" className="h-full w-full object-cover object-top" />
-            ) : (
-              initials
-            )}
-          </div>
         </div>
         {/* Header del menú en mobile/tablet (dentro del panel deslizante,
             con botón para cerrarlo) */}
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-4 md:hidden">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              {foto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={foto} alt="" className="h-full w-full object-cover object-top" />
-              ) : (
-                initials
-              )}
-            </div>
-            <span className="font-semibold">{name}</span>
-          </div>
+          <img src="/logo.png" alt="PayFlow" className="h-7 w-auto" />
           <button
             type="button"
             onClick={() => setOpen(false)}
