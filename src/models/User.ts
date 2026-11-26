@@ -70,6 +70,12 @@ export interface IUser {
   // Dashboard en vez de un círculo con iniciales. No tiene nada que ver
   // con permisos — un usuario sin este campo sigue funcionando igual.
   employeeId?: mongoose.Types.ObjectId;
+  // Foto del avatar para cuentas SIN legajo de Empleados (ej. Candelaria,
+  // Melina, Fabio, Cristian, Pajarito — login sin ficha completa) —
+  // 2026-11-26, pedido de Ariel: que se vea la foto al loguearse sin
+  // necesidad de cargar una ficha entera. Si `employeeId` está seteado,
+  // la foto de Empleados tiene prioridad sobre esta.
+  foto?: string;
   createdAt: Date;
 }
 
@@ -85,6 +91,7 @@ const UserSchema = new Schema<IUser>({
     default: [],
   },
   employeeId: { type: Schema.Types.ObjectId, ref: "Employee" },
+  foto: String,
   createdAt: { type: Date, default: Date.now },
 });
 

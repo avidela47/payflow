@@ -982,10 +982,11 @@ export default async function DashboardPage() {
     .filter((group) => group.items.length > 0);
 
   const displayName = session?.user?.name ? firstName(session.user.name) : "";
-  // No hay foto cargada para el usuario logueado (User no tiene ese campo,
-  // a diferencia de Employee) — mismo estilo que el avatar de Empleados
-  // (círculo de color con iniciales), pero con las iniciales del nombre
-  // de la cuenta en vez de una foto real.
+  // Foto del avatar: primero la de Empleados si la cuenta está ligada a un
+  // legajo (linkedEmployee.foto), si no la propia de la cuenta (User.foto —
+  // 2026-11-26, para cuentas sin ficha completa como Candelaria/Melina/
+  // Fabio/Cristian/Pajarito), y si no hay ninguna, el círculo de iniciales.
+  const avatarFoto = linkedEmployee?.foto || session?.user?.foto;
   const userInitials = (session?.user?.name ?? "?")
     .trim()
     .split(/\s+/)
@@ -998,9 +999,9 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-            {linkedEmployee?.foto ? (
+            {avatarFoto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={linkedEmployee.foto} alt="" className="h-full w-full object-cover object-top" />
+              <img src={avatarFoto} alt="" className="h-full w-full object-cover object-top" />
             ) : (
               userInitials
             )}

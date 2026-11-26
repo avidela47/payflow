@@ -13,6 +13,9 @@ declare module "next-auth" {
       // Legajo de Empleados ligado a esta cuenta (ver User.employeeId) —
       // solo para mostrar la foto real como avatar en el Dashboard.
       employeeId?: string;
+      // Foto propia de la cuenta (ver User.foto), para cuando no hay
+      // legajo de Empleados ligado — ver comentario en User.ts.
+      foto?: string;
     } & DefaultSession["user"];
   }
 
@@ -21,6 +24,7 @@ declare module "next-auth" {
     role: "OWNER" | "ACCOUNTANT";
     restrictedModules: RestrictableModule[];
     employeeId?: string;
+    foto?: string;
   }
 }
 
@@ -30,5 +34,6 @@ declare module "next-auth/jwt" {
     role: "OWNER" | "ACCOUNTANT";
     restrictedModules: RestrictableModule[];
     employeeId?: string;
+    foto?: string;
   }
 }
