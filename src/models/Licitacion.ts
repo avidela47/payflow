@@ -46,6 +46,11 @@ export interface ILicitacion {
   estado: LicitacionEstado;
   numeroProveedor?: string;
   licitaciones: ILicitacionItem[];
+  // Documentación general de la entidad (constancia de inscripción, CUIT,
+  // lo que sirva), sin atarse a ninguna licitación puntual — pedido de
+  // Ariel, 2026-11-26: "diferenciado del número de licitación". Mismo
+  // mecanismo de archivo que `documento` de cada item, pero como lista.
+  otrosDocumentos: IDocumentoLicitacion[];
   observaciones?: string;
   createdAt: Date;
 }
@@ -75,6 +80,7 @@ const LicitacionSchema = new Schema<ILicitacion>({
   estado: { type: String, enum: LICITACION_ESTADOS, required: true, default: "NO_INSCRIPTO" },
   numeroProveedor: String,
   licitaciones: { type: [LicitacionItemSchema], default: [] },
+  otrosDocumentos: { type: [DocumentoLicitacionSchema], default: [] },
   observaciones: String,
   createdAt: { type: Date, default: Date.now },
 });

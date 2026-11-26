@@ -57,6 +57,9 @@ export type LicitacionItem = {
   estado: LicitacionEstado;
   numeroProveedor?: string;
   licitaciones: LicitacionItemRow[];
+  // Documentación general de la entidad, sin atarse a ninguna licitación
+  // puntual (constancia de inscripción, CUIT, etc.).
+  otrosDocumentos?: LicitacionDocumento[];
   observaciones?: string;
 };
 
@@ -97,6 +100,10 @@ function LicitacionForm({
   const [items, setItems] = useState<LicitacionItemRow[]>(
     initial?.licitaciones && initial.licitaciones.length > 0 ? initial.licitaciones : [emptyItemRow()]
   );
+  const [otrosDocumentos, setOtrosDocumentos] = useState<LicitacionDocumento[]>(
+    initial?.otrosDocumentos ?? []
+  );
+  const [nuevosOtrosDocumentos, setNuevosOtrosDocumentos] = useState<File[]>([]);
   const [localSaving, setLocalSaving] = useState(false);
 
   function updateItem(index: number, patch: Partial<LicitacionItemRow>) {
@@ -132,6 +139,29 @@ function LicitacionForm({
     updateItem(index, { nuevoArchivo: null });
   }
 
+  // Documentación general de la entidad — a diferencia del documento por
+  // licitación, acá solo se agrega o se quita, no hay "reemplazar".
+  function handleOtroDocumentoFile(file: File | undefined) {
+    if (!file) return;
+    if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Solo se aceptan archivos PDF, JPG o PNG.");
+      return;
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      toast.error("El archivo pesa más de 10MB.");
+      return;
+    }
+    setNuevosOtrosDocumentos((prev) => [...prev, file]);
+  }
+
+  function quitarOtroDocumentoExistente(index: number) {
+    setOtrosDocumentos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function quitarOtroDocumentoNuevo(index: number) {
+    setNuevosOtrosDocumentos((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -164,6 +194,12 @@ function LicitacionForm({
       fd.append("itemEstado", row.estado);
       fd.append("itemDocumentoFile", row.nuevoArchivo ?? "");
       fd.append("itemDocumentoExisting", row.nuevoArchivo ? "" : row.documento ? JSON.stringify(row.documento) : "");
+    }
+    for (const doc of otrosDocumentos) {
+      fd.append("otroDocExistente", JSON.stringify(doc));
+    }
+    for (const file of nuevosOtrosDocumentos) {
+      fd.append("otroDocNuevo", file);
     }
 
     setLocalSaving(true);
@@ -321,6 +357,77 @@ function LicitacionForm({
         </p>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <Label>Otra documentación de la entidad</Label>
+          <label className="cursor-pointer">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-xs hover:bg-muted">
+              <Paperclip className="h-3.5 w-3.5" />
+              Agregar documento
+            </span>
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              className="hidden"
+              onChange={(e) => {
+                handleOtroDocumentoFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+        {otrosDocumentos.length === 0 && nuevosOtrosDocumentos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Documentación general de esta entidad, sin atarse a ninguna licitación puntual (constancia de
+            inscripción, CUIT, etc.).
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {otrosDocumentos.map((doc, i) => (
+              <div
+                key={`existente-${i}`}
+                className="flex items-center justify-between gap-2 rounded-md bg-muted/40 p-2 text-xs"
+              >
+                <a
+                  href={doc.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-w-0 flex-1 items-center gap-1.5 truncate hover:underline"
+                >
+                  {doc.mimeType === "application/pdf" ? (
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{doc.nombre}</span>
+                  <span className="shrink-0 text-muted-foreground">({formatBytes(doc.size)})</span>
+                </a>
+                <Button type="button" size="sm" variant="delete" onClick={() => quitarOtroDocumentoExistente(i)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+            {nuevosOtrosDocumentos.map((file, i) => (
+              <div
+                key={`nuevo-${i}`}
+                className="flex items-center justify-between gap-2 rounded-md bg-muted/40 p-2 text-xs"
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{file.name}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    ({formatBytes(file.size)}) — se sube al guardar
+                  </span>
+                </span>
+                <Button type="button" size="sm" variant="outline" onClick={() => quitarOtroDocumentoNuevo(i)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="observaciones">Observaciones</Label>
         <Textarea
@@ -417,7 +524,20 @@ export function LicitacionesClient({
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.entidad}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span>{item.entidad}</span>
+                    {item.otrosDocumentos && item.otrosDocumentos.length > 0 && (
+                      <span
+                        title={`${item.otrosDocumentos.length} documento(s) de la entidad`}
+                        className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        {item.otrosDocumentos.length}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant={ESTADO_BADGE[item.estado]}>{ESTADO_LABEL[item.estado]}</Badge>
                 </TableCell>

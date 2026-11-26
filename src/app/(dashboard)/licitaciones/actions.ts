@@ -131,16 +131,82 @@ async function buildLicitacionesArray(
   return items;
 }
 
-// Después de reconstruir el array completo de licitaciones, borra del
-// disco los documentos que ya no quedaron referenciados por ninguna fila
-// (fila borrada, documento reemplazado o quitado a mano).
+// Borra del disco cualquier archivo que estaba referenciado "antes" y ya
+// no aparece en "después" (fila borrada, documento reemplazado o quitado a
+// mano) — misma lógica para los documentos por licitación y para la lista
+// de "otros documentos" de la entidad, cada uno llama esto con sus propios
+// paths.
+async function limpiarArchivosHuerfanos(antes: (string | undefined)[], despues: (string | undefined)[]) {
+  const vigentes = new Set(despues.filter(Boolean));
+  for (const p of antes) {
+    if (p && !vigentes.has(p)) await deleteUploadedFile(p);
+  }
+}
+
 async function limpiarDocumentosHuerfanos(antes: ILicitacionItem[], despues: ILicitacionItem[]) {
-  const pathsVigentes = new Set(despues.map((it) => it.documento?.path).filter(Boolean));
-  for (const item of antes) {
-    if (item.documento?.path && !pathsVigentes.has(item.documento.path)) {
-      await deleteUploadedFile(item.documento.path);
+  await limpiarArchivosHuerfanos(
+    antes.map((it) => it.documento?.path),
+    despues.map((it) => it.documento?.path)
+  );
+}
+
+// Documentación general de la entidad (no atada a ninguna licitación
+// puntual) — pedido de Ariel, 2026-11-26: "diferenciado del N° de
+// licitación, otra documentación que me sirva". A diferencia del documento
+// por fila, acá no hay reemplazo: solo agregar nuevos (otroDocNuevo) y
+// conservar/quitar los existentes (otroDocExistente, uno por cada que el
+// cliente decidió mantener — si lo sacó de la lista, simplemente no lo
+// reenvía).
+const OTROS_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "licitaciones", "otros");
+
+async function buildOtrosDocumentos(formData: FormData): Promise<IDocumentoLicitacion[]> {
+  const existentes = formData.getAll("otroDocExistente");
+  const nuevos = formData.getAll("otroDocNuevo");
+
+  const docs: IDocumentoLicitacion[] = [];
+
+  for (const raw of existentes) {
+    if (typeof raw !== "string" || raw.trim().length === 0) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.path === "string") {
+        docs.push({
+          nombre: String(parsed.nombre ?? parsed.path),
+          path: parsed.path,
+          mimeType: String(parsed.mimeType ?? "application/octet-stream"),
+          size: Number(parsed.size) || 0,
+          uploadedAt: parsed.uploadedAtISO ? new Date(parsed.uploadedAtISO) : new Date(),
+        });
+      }
+    } catch {
+      // JSON inválido — no debería pasar salvo manipulación manual del
+      // formulario; se ignora ese documento puntual.
     }
   }
+
+  for (const file of nuevos) {
+    if (!(file instanceof File) || file.size === 0) continue;
+    if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+      throw new Error("Solo se aceptan archivos PDF, JPG o PNG para la documentación de la entidad.");
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      throw new Error("Uno de los documentos de la entidad pesa más de 10MB.");
+    }
+    await mkdir(OTROS_UPLOAD_DIR, { recursive: true });
+    const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    const filename = `${randomUUID()}.${ext}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    await writeFile(path.join(OTROS_UPLOAD_DIR, filename), bytes);
+    docs.push({
+      nombre: file.name || filename,
+      path: `/uploads/licitaciones/otros/${filename}`,
+      mimeType: file.type,
+      size: file.size,
+      uploadedAt: new Date(),
+    });
+  }
+
+  return docs;
 }
 
 export async function createLicitacion(formData: FormData) {
@@ -158,12 +224,14 @@ export async function createLicitacion(formData: FormData) {
   try {
     await connectDB();
     const licitaciones = await buildLicitacionesArray(parsed.data, formData);
+    const otrosDocumentos = await buildOtrosDocumentos(formData);
     await Licitacion.create({
       entidad: parsed.data.entidad,
       estado: parsed.data.estado,
       numeroProveedor: parsed.data.numeroProveedor,
       observaciones: parsed.data.observaciones,
       licitaciones,
+      otrosDocumentos,
     });
   } catch (err) {
     console.error("createLicitacion error:", err);
@@ -189,18 +257,24 @@ export async function updateLicitacion(id: string, formData: FormData) {
 
   try {
     await connectDB();
-    const antes = await Licitacion.findById(id).select("licitaciones").lean();
+    const antes = await Licitacion.findById(id).select("licitaciones otrosDocumentos").lean();
     if (!antes) return { ok: false, error: "La entidad ya no existe." };
 
     const licitaciones = await buildLicitacionesArray(parsed.data, formData);
+    const otrosDocumentos = await buildOtrosDocumentos(formData);
     await Licitacion.findByIdAndUpdate(id, {
       entidad: parsed.data.entidad,
       estado: parsed.data.estado,
       numeroProveedor: parsed.data.numeroProveedor,
       observaciones: parsed.data.observaciones,
       licitaciones,
+      otrosDocumentos,
     });
     await limpiarDocumentosHuerfanos(antes.licitaciones ?? [], licitaciones);
+    await limpiarArchivosHuerfanos(
+      (antes.otrosDocumentos ?? []).map((d) => d.path),
+      otrosDocumentos.map((d) => d.path)
+    );
   } catch (err) {
     console.error("updateLicitacion error:", err);
     const message = err instanceof Error ? err.message : String(err);
@@ -217,9 +291,12 @@ export async function deleteLicitacion(id: string) {
 
   try {
     await connectDB();
-    const entidad = await Licitacion.findById(id).select("licitaciones").lean();
+    const entidad = await Licitacion.findById(id).select("licitaciones otrosDocumentos").lean();
     for (const item of entidad?.licitaciones ?? []) {
       await deleteUploadedFile(item.documento?.path);
+    }
+    for (const doc of entidad?.otrosDocumentos ?? []) {
+      await deleteUploadedFile(doc.path);
     }
     await Licitacion.findByIdAndDelete(id);
   } catch (err) {

@@ -27,6 +27,13 @@ export default async function LicitacionesPage() {
           }
         : undefined,
     })),
+    otrosDocumentos: (e.otrosDocumentos ?? []).map((d) => ({
+      nombre: d.nombre,
+      path: d.path,
+      mimeType: d.mimeType,
+      size: d.size,
+      uploadedAtISO: d.uploadedAt.toISOString(),
+    })),
     observaciones: e.observaciones,
   }));
 
