@@ -16,6 +16,7 @@ import { Note } from "@/models/Note";
 import { PettyCashMovement } from "@/models/PettyCash";
 import { Reparacion } from "@/models/Reparacion";
 import { Vale } from "@/models/Vale";
+import { Licitacion } from "@/models/Licitacion";
 import { getComercialPlantaReport, getProduccionReport, getStockReport, currentPeriodString } from "@/lib/reports";
 import {
   Users,
@@ -57,6 +58,7 @@ import {
   Wrench,
   Package,
   Boxes,
+  Gavel,
   type LucideIcon,
 } from "lucide-react";
 import { formatCurrency, formatFullDate, formatPeriod, cn } from "@/lib/utils";
@@ -271,6 +273,11 @@ export default async function DashboardPage() {
 
   const stockBajoMinimoCount =
     stockReport.componentes.bajoMinimo.length + stockReport.luminarias.bajoMinimo.length;
+
+  // Licitaciones (módulo nuevo, 2026-11-26): cuántas entidades NO están en
+  // "Inscripto" todavía — mismo criterio que el resto de las tarjetas de
+  // Finanzas, que muestran lo pendiente, no el total.
+  const licitacionesPendientesCount = await Licitacion.countDocuments({ estado: { $ne: "INSCRIPTO" } });
 
   const totalSalesThisMonth = salesThisMonth.reduce((sum, s) => sum + s.amount, 0);
   const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, p) => sum + p.amount, 0);
@@ -745,6 +752,16 @@ export default async function DashboardPage() {
           description: "Viáticos y gastos de viaje",
           icon: Plane,
           moduleKey: "viaticos",
+        },
+        {
+          href: "/licitaciones",
+          title: "Licitaciones",
+          description: "Inscripción como proveedor por entidad",
+          value: String(licitacionesPendientesCount),
+          caption: licitacionesPendientesCount === 1 ? "pendiente" : "pendientes",
+          captionTone: licitacionesPendientesCount > 0 ? "text-warning" : undefined,
+          icon: Gavel,
+          moduleKey: "licitaciones",
         },
       ],
     },

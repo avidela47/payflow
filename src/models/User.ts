@@ -15,6 +15,7 @@ export const RESTRICTABLE_MODULES = [
   "sueldos",
   "costos-fijos",
   "cheques",
+  "licitaciones",
   "reportes",
   "vault",
   "caja-chica",

@@ -34,7 +34,7 @@ const ACCESS_GROUPS: Record<string, RestrictableModule[]> = {
     "marketing",
   ],
   comercial: [], // Clientes/Proveedores/Ventas/Compras: sin moduleKey, siempre visibles
-  finanzas: ["empleados", "sueldos", "costos-fijos", "pagos", "cheques", "caja-chica", "viaticos"],
+  finanzas: ["empleados", "sueldos", "costos-fijos", "pagos", "cheques", "caja-chica", "viaticos", "licitaciones"],
   utilidades: ["vault"], // Agenda/Calendario/Notas: sin moduleKey, siempre visibles
   produccion: ["componentes", "recetas", "fabricar", "movimientos-componentes", "proyectos"],
   stock: ["sensores", "luminarias", "herramientas", "materiales"],
