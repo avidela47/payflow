@@ -295,8 +295,13 @@ function FichaReceta({
               <div key={c.componenteId} className="overflow-hidden rounded-md border border-border">
                 <div className="flex h-20 items-center justify-center bg-muted">
                   {foto ? (
+                    // 2026-11-26, Ariel: en la ficha técnica se quiere ver la
+                    // foto completa del componente (no recortada) — object-
+                    // contain en vez de object-cover, a diferencia del
+                    // listado de Componentes donde sí conviene que llene el
+                    // cuadrado.
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={foto} alt={c.codigoComponente} className="h-full w-full object-cover" />
+                    <img src={foto} alt={c.codigoComponente} className="h-full w-full object-contain" />
                   ) : (
                     <span className="text-2xl">📦</span>
                   )}
