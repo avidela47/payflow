@@ -27,9 +27,15 @@ export interface IViaticoPago {
 export interface IViaticoEmpleado {
   employee: mongoose.Types.ObjectId;
   honorarioType: ViaticoHonorarioType;
-  // Si honorarioType === "TRABAJO": monto total del viaje para ese empleado.
-  // Si honorarioType === "DIA": monto por día — se multiplica por `dias`.
+  // Si honorarioType === "TRABAJO": monto NETO total del viaje para ese
+  // empleado. Si honorarioType === "DIA": monto NETO por día — se
+  // multiplica por `dias`.
   monto: number;
+  // IVA sobre `monto` (mismo criterio: por día si honorarioType === "DIA",
+  // se multiplica junto con `monto` x `dias`) — 2026-11-26, Ariel: todos
+  // los montos de Viajes discriminan neto/IVA, honorarios incluidos.
+  // Se autocompleta al 21% del neto en el cliente, pero queda editable.
+  iva?: number;
   dias?: number; // solo aplica con honorarioType === "DIA"
   paymentMode?: ViaticoEmployeePaymentMode;
   // Lista de pagos parciales hechos a este empleado — ver IViaticoPago.
@@ -41,20 +47,24 @@ export interface IViaticoHospedaje {
   checkIn?: Date;
   checkOut?: Date;
   costoPorDia?: number;
+  // IVA por día sobre `costoPorDia` — ver nota en IViaticoEmpleado.iva.
+  ivaPorDia?: number;
   cantidadDias?: number;
   // Igual que paidBy en Sueldos: texto libre ("ITELSA", "Rubén", etc.)
   paidBy?: string;
 }
 
 export interface IViaticoCombustible {
-  // Monto pagado a EdenRed (o la empresa de combustible que corresponda).
+  // Monto NETO pagado a EdenRed (o la empresa de combustible que corresponda).
   monto?: number;
+  iva?: number;
   paidBy?: string;
 }
 
 export interface IViaticoExtra {
   descripcion: string;
   monto: number;
+  iva?: number;
   paymentMode?: ViaticoPaymentMode;
 }
 
@@ -62,6 +72,7 @@ export interface IViaticoMaterial {
   descripcion: string;
   cantidad?: number;
   monto: number;
+  iva?: number;
   paymentMode?: ViaticoPaymentMode;
 }
 
@@ -70,6 +81,7 @@ export interface IViaticoSeguro {
   cobertura?: string;
   cantidadDias?: number;
   costo?: number;
+  iva?: number;
 }
 
 // Un gasto individual descontado del importe de tope asignado a un
@@ -78,6 +90,7 @@ export interface IViaticoSeguro {
 export interface IViaticoTopeGasto {
   descripcion: string;
   monto: number;
+  iva?: number;
   paymentMode?: ViaticoPaymentMode;
 }
 
@@ -132,6 +145,7 @@ export interface IViaticoDocumento {
 export interface IViaticoTopeDiario {
   employee: mongoose.Types.ObjectId;
   monto: number;
+  iva?: number;
   gastos: IViaticoTopeGasto[];
 }
 
@@ -174,6 +188,7 @@ const ViaticoEmpleadoSchema = new Schema<IViaticoEmpleado>(
     employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
     honorarioType: { type: String, enum: VIATICO_HONORARIO_TYPES, required: true },
     monto: { type: Number, required: true },
+    iva: Number,
     dias: Number,
     paymentMode: { type: String, enum: VIATICO_EMPLOYEE_PAYMENT_MODES },
     pagos: { type: [ViaticoPagoSchema], default: [] },
@@ -211,6 +226,7 @@ const ViaticoHospedajeSchema = new Schema<IViaticoHospedaje>(
     checkIn: Date,
     checkOut: Date,
     costoPorDia: Number,
+    ivaPorDia: Number,
     cantidadDias: Number,
     paidBy: String,
   },
@@ -220,6 +236,7 @@ const ViaticoHospedajeSchema = new Schema<IViaticoHospedaje>(
 const ViaticoCombustibleSchema = new Schema<IViaticoCombustible>(
   {
     monto: Number,
+    iva: Number,
     paidBy: String,
   },
   { _id: false }
@@ -229,6 +246,7 @@ const ViaticoExtraSchema = new Schema<IViaticoExtra>(
   {
     descripcion: { type: String, required: true },
     monto: { type: Number, required: true },
+    iva: Number,
     paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
   },
   { _id: false }
@@ -239,6 +257,7 @@ const ViaticoMaterialSchema = new Schema<IViaticoMaterial>(
     descripcion: { type: String, required: true },
     cantidad: Number,
     monto: { type: Number, required: true },
+    iva: Number,
     paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
   },
   { _id: false }
@@ -250,6 +269,7 @@ const ViaticoSeguroSchema = new Schema<IViaticoSeguro>(
     cobertura: String,
     cantidadDias: Number,
     costo: Number,
+    iva: Number,
   },
   { _id: false }
 );
@@ -258,6 +278,7 @@ const ViaticoTopeGastoSchema = new Schema<IViaticoTopeGasto>(
   {
     descripcion: { type: String, required: true },
     monto: { type: Number, required: true },
+    iva: Number,
     paymentMode: { type: String, enum: VIATICO_PAYMENT_MODES },
   },
   { _id: false }
@@ -267,6 +288,7 @@ const ViaticoTopeDiarioSchema = new Schema<IViaticoTopeDiario>(
   {
     employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
     monto: { type: Number, required: true },
+    iva: Number,
     gastos: { type: [ViaticoTopeGastoSchema], default: [] },
   },
   { _id: false }

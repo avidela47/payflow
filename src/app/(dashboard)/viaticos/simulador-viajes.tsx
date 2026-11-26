@@ -17,7 +17,7 @@
 // total - pagado).
 import { useState } from "react";
 import { toast } from "sonner";
-import { Calculator, Plus, Trash2, X, CalendarDays, Wallet, FileWarning } from "lucide-react";
+import { Calculator, Plus, Trash2, X, CalendarDays, Wallet, FileWarning, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,8 @@ import {
   type SimuladorFormInput,
 } from "./simulador-actions";
 import { SIM_PAYMENT_MODES, type SimPaymentMode } from "@/models/SimuladorViaje";
+import { nextIva } from "@/lib/iva";
+import { simuladorViajePdf } from "@/lib/simulador-viaje-pdf";
 
 const PAYMENT_MODE_OPTIONS: { value: SimPaymentMode; label: string }[] = [
   { value: "TARJETA", label: "Tarjeta" },
@@ -361,11 +363,20 @@ export function SimuladorViajesButton() {
                       <Input type="date" value={it.fechaFacturaISO} onChange={(e) => patchItem(it._key, { fechaFacturaISO: e.target.value })} />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs">Neto</Label>
-                      <Input type="number" step="0.01" min="0" value={it.neto || ""} onChange={(e) => patchItem(it._key, { neto: Number(e.target.value) })} />
+                      <Label className="text-xs">Monto neto</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={it.neto || ""}
+                        onChange={(e) => {
+                          const newNeto = Number(e.target.value);
+                          patchItem(it._key, { neto: newNeto, iva: nextIva(it.neto, it.iva, newNeto) });
+                        }}
+                      />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs">IVA</Label>
+                      <Label className="text-xs">IVA (21%)</Label>
                       <Input type="number" step="0.01" min="0" value={it.iva || ""} onChange={(e) => patchItem(it._key, { iva: Number(e.target.value) })} />
                     </div>
                   </div>
@@ -506,6 +517,28 @@ export function SimuladorViajesButton() {
                 <span />
               )}
               <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    void simuladorViajePdf({
+                      nombre: nombre.trim() || "Simulación",
+                      items: items
+                        .filter((it) => it.proveedor.trim())
+                        .map((it) => ({
+                          proveedor: it.proveedor.trim(),
+                          neto: it.neto || 0,
+                          iva: it.iva || 0,
+                          formaPago: it.formaPago,
+                          fechaPagoISO: it.fechaPagoISO || undefined,
+                        })),
+                    })
+                  }
+                  title="Imprimir con neto e IVA discriminados"
+                >
+                  <Printer className="mr-1.5 h-3.5 w-3.5" />
+                  Imprimir
+                </Button>
                 <Button type="button" variant="outline" onClick={() => setView("list")}>
                   Volver
                 </Button>

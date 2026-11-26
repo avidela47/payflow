@@ -32,6 +32,8 @@ import {
 } from "./actions";
 import { SimuladorViajesButton } from "./simulador-viajes";
 import { condicionesViajePdf } from "@/lib/condiciones-viaje-pdf";
+import { viajeGastosPdf } from "@/lib/viaje-gastos-pdf";
+import { nextIva } from "@/lib/iva";
 import type {
   ViaticoHonorarioType,
   ViaticoPaymentMode,
@@ -78,7 +80,11 @@ export type ViaticoEmpleadoItem = {
   // no lo tiene.
   employeeName?: string;
   honorarioType: ViaticoHonorarioType;
+  // Monto NETO (por día, u honorario total si es "TRABAJO").
   monto: number;
+  // IVA sobre `monto` — 2026-11-26, Ariel: honorarios también discriminan
+  // neto/IVA. Se autocompleta al 21% del neto pero queda editable.
+  iva?: number;
   dias?: number;
   paymentMode?: ViaticoEmployeePaymentMode;
   // Pagos parciales hechos a este empleado a cuenta del monto total.
@@ -108,19 +114,26 @@ export type ViaticoDocumentoItem = {
   uploadedAtISO?: string;
 };
 
-export type ViaticoExtraItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
+export type ViaticoExtraItem = { descripcion: string; monto: number; iva?: number; paymentMode?: ViaticoPaymentMode };
 export type ViaticoMaterialItem = {
   descripcion: string;
   cantidad?: number;
   monto: number;
+  iva?: number;
   paymentMode?: ViaticoPaymentMode;
 };
-export type ViaticoTopeGastoItem = { descripcion: string; monto: number; paymentMode?: ViaticoPaymentMode };
+export type ViaticoTopeGastoItem = {
+  descripcion: string;
+  monto: number;
+  iva?: number;
+  paymentMode?: ViaticoPaymentMode;
+};
 export type ViaticoTopeDiarioItem = {
   employeeId: string;
   employeeName?: string;
-  // Importe/tope por día asignado al empleado.
+  // Importe/tope NETO por día asignado al empleado.
   monto: number;
+  iva?: number;
   // Gastos descontados de ese importe — discrimina qué se gastó y cómo
   // se pagó, sin tener que repetir la fila del empleado por cada gasto.
   gastos: ViaticoTopeGastoItem[];
@@ -139,9 +152,11 @@ export type ViaticoItem = {
   hospedajeCheckIn?: string;
   hospedajeCheckOut?: string;
   hospedajeCostoPorDia?: number;
+  hospedajeIvaPorDia?: number;
   hospedajeCantidadDias?: number;
   hospedajePaidBy?: string;
   combustibleMonto?: number;
+  combustibleIva?: number;
   combustiblePaidBy?: string;
   extras: ViaticoExtraItem[];
   materiales: ViaticoMaterialItem[];
@@ -149,6 +164,7 @@ export type ViaticoItem = {
   seguroCobertura?: string;
   seguroCantidadDias?: number;
   seguroCosto?: number;
+  seguroIva?: number;
   topesDiarios: ViaticoTopeDiarioItem[];
   excedente: number;
   notes?: string;
@@ -168,22 +184,22 @@ function nextKey() {
 }
 
 function emptyEmpleadoRow(): EmpleadoRow {
-  return { _key: nextKey(), employeeId: "", honorarioType: "DIA", monto: 0, dias: 1, pagos: [] };
+  return { _key: nextKey(), employeeId: "", honorarioType: "DIA", monto: 0, iva: 0, dias: 1, pagos: [] };
 }
 function emptyPagoRow(): PagoRow {
   return { _key: nextKey(), monto: 0, fechaISO: todayISO() };
 }
 function emptyExtraRow(): ExtraRow {
-  return { _key: nextKey(), descripcion: "", monto: 0 };
+  return { _key: nextKey(), descripcion: "", monto: 0, iva: 0 };
 }
 function emptyMaterialRow(): MaterialRow {
-  return { _key: nextKey(), descripcion: "", cantidad: undefined, monto: 0 };
+  return { _key: nextKey(), descripcion: "", cantidad: undefined, monto: 0, iva: 0 };
 }
 function emptyTopeRow(): TopeRow {
-  return { _key: nextKey(), employeeId: "", monto: 0, gastos: [] };
+  return { _key: nextKey(), employeeId: "", monto: 0, iva: 0, gastos: [] };
 }
 function emptyTopeGastoRow(): TopeGastoRow {
-  return { _key: nextKey(), descripcion: "", monto: 0 };
+  return { _key: nextKey(), descripcion: "", monto: 0, iva: 0 };
 }
 
 type CondEmpleadoRow = { _key: number; nombre: string };
@@ -200,10 +216,17 @@ function paymentModeLabel(mode?: ViaticoPaymentMode | ViaticoEmployeePaymentMode
   return found ? found.label : null;
 }
 
-// Monto total que se le debe pagar a un empleado (igual cálculo que la
-// columna "Monto total"): monto x días si es por día, o monto fijo.
-function montoTotalEmpleado(e: { honorarioType: ViaticoHonorarioType; monto: number; dias?: number }): number {
-  return e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto;
+// Monto total (NETO + IVA) que se le debe pagar a un empleado (igual
+// cálculo que la columna "Monto total"): (monto+iva) x días si es por
+// día, o monto+iva fijo — 2026-11-26, honorarios discriminan neto/IVA.
+function montoTotalEmpleado(e: {
+  honorarioType: ViaticoHonorarioType;
+  monto: number;
+  iva?: number;
+  dias?: number;
+}): number {
+  const unitario = e.monto + (e.iva ?? 0);
+  return e.honorarioType === "DIA" ? unitario * (e.dias ?? 1) : unitario;
 }
 
 // Saldo pendiente de pago de un empleado: monto total menos la suma de
@@ -211,6 +234,7 @@ function montoTotalEmpleado(e: { honorarioType: ViaticoHonorarioType; monto: num
 function saldoEmpleado(e: {
   honorarioType: ViaticoHonorarioType;
   monto: number;
+  iva?: number;
   dias?: number;
   pagos: ViaticoPagoItem[];
 }): number {
@@ -218,11 +242,16 @@ function saldoEmpleado(e: {
   return montoTotalEmpleado(e) - pagado;
 }
 
-// Saldo disponible del importe de tope asignado a un empleado: el
-// importe menos la suma de los gastos cargados contra él.
-function saldoTope(t: { monto: number; gastos: ViaticoTopeGastoItem[] }): number {
-  const gastado = t.gastos.reduce((sum, g) => sum + g.monto, 0);
-  return t.monto - gastado;
+// Total (neto+IVA) de un gasto cargado contra un tope diario.
+function totalTopeGasto(g: { monto: number; iva?: number }): number {
+  return g.monto + (g.iva ?? 0);
+}
+
+// Saldo disponible del importe (neto+IVA) de tope asignado a un
+// empleado: el importe menos la suma de los gastos cargados contra él.
+function saldoTope(t: { monto: number; iva?: number; gastos: ViaticoTopeGastoItem[] }): number {
+  const gastado = t.gastos.reduce((sum, g) => sum + totalTopeGasto(g), 0);
+  return t.monto + (t.iva ?? 0) - gastado;
 }
 
 function todayISO() {
@@ -230,6 +259,13 @@ function todayISO() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate()
   ).padStart(2, "0")}`;
+}
+
+// Texto corto "neto + IVA" para el detalle de solo lectura — si no hay
+// IVA cargado, muestra solo el neto (no suma "+ IVA $0" de más).
+function fmtNetoIva(neto: number, iva?: number): string {
+  if (!iva) return formatCurrency(neto);
+  return `${formatCurrency(neto)} + IVA ${formatCurrency(iva)}`;
 }
 
 function formatDate(iso?: string): string {
@@ -240,35 +276,55 @@ function formatDate(iso?: string): string {
   );
 }
 
-// Total "pagado" del viático: suma de honorarios de empleados (TRABAJO:
-// monto fijo; DIA: monto x días) + hospedaje + combustible + extras +
-// materiales + seguro. El excedente NO se suma aparte: ya está adentro
-// del monto de honorario del empleado que lo generó, es solo una línea
-// informativa para contabilidad/impuestos.
-function calcularTotal(v: {
+type ViaticoTotalesInput = {
   empleados: ViaticoEmpleadoItem[];
   hospedajeCostoPorDia?: number;
+  hospedajeIvaPorDia?: number;
   hospedajeCantidadDias?: number;
   combustibleMonto?: number;
+  combustibleIva?: number;
   extras: ViaticoExtraItem[];
   materiales: ViaticoMaterialItem[];
   seguroCosto?: number;
-}): number {
-  const empleadosTotal = v.empleados.reduce(
-    (sum, e) => sum + (e.honorarioType === "DIA" ? e.monto * (e.dias ?? 1) : e.monto),
+  seguroIva?: number;
+};
+
+// Total (NETO + IVA) del viático: suma de honorarios de empleados
+// (TRABAJO: monto fijo; DIA: monto x días) + hospedaje + combustible +
+// extras + materiales + seguro, cada uno ya con su IVA adentro. El
+// excedente NO se suma aparte: ya está incluido dentro del monto de
+// honorario del empleado que lo generó, es solo una línea informativa
+// para contabilidad/impuestos.
+function calcularTotal(v: ViaticoTotalesInput): number {
+  return calcularTotalesDiscriminados(v).total;
+}
+
+// Desglose neto/IVA/total del viático completo — 2026-11-26, Ariel: poder
+// imprimir el viaje con neto e IVA discriminados. Mismas siete categorías
+// que calcularTotal, pero separando cuánto es neto y cuánto es IVA.
+function calcularTotalesDiscriminados(v: ViaticoTotalesInput): { neto: number; iva: number; total: number } {
+  const empleadosNeto = v.empleados.reduce(
+    (sum, e) => sum + e.monto * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
     0
   );
-  const hospedajeTotal = (v.hospedajeCostoPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0);
-  const extrasTotal = v.extras.reduce((sum, x) => sum + x.monto, 0);
-  const materialesTotal = v.materiales.reduce((sum, x) => sum + x.monto, 0);
-  return (
-    empleadosTotal +
-    hospedajeTotal +
-    (v.combustibleMonto ?? 0) +
-    extrasTotal +
-    materialesTotal +
-    (v.seguroCosto ?? 0)
+  const empleadosIva = v.empleados.reduce(
+    (sum, e) => sum + (e.iva ?? 0) * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
+    0
   );
+  const hospedajeNeto = (v.hospedajeCostoPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0);
+  const hospedajeIva = (v.hospedajeIvaPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0);
+  const extrasNeto = v.extras.reduce((sum, x) => sum + x.monto, 0);
+  const extrasIva = v.extras.reduce((sum, x) => sum + (x.iva ?? 0), 0);
+  const materialesNeto = v.materiales.reduce((sum, x) => sum + x.monto, 0);
+  const materialesIva = v.materiales.reduce((sum, x) => sum + (x.iva ?? 0), 0);
+  const combustibleNeto = v.combustibleMonto ?? 0;
+  const combustibleIva = v.combustibleIva ?? 0;
+  const seguroNeto = v.seguroCosto ?? 0;
+  const seguroIva = v.seguroIva ?? 0;
+
+  const neto = empleadosNeto + hospedajeNeto + combustibleNeto + extrasNeto + materialesNeto + seguroNeto;
+  const iva = empleadosIva + hospedajeIva + combustibleIva + extrasIva + materialesIva + seguroIva;
+  return { neto, iva, total: neto + iva };
 }
 
 const DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
@@ -413,11 +469,13 @@ export function ViaticosClient({
   const [hospedajeCheckIn, setHospedajeCheckIn] = useState("");
   const [hospedajeCheckOut, setHospedajeCheckOut] = useState("");
   const [hospedajeCostoPorDia, setHospedajeCostoPorDia] = useState("");
+  const [hospedajeIvaPorDia, setHospedajeIvaPorDia] = useState("");
   const [hospedajeCantidadDias, setHospedajeCantidadDias] = useState("");
   const [hospedajePaidBy, setHospedajePaidBy] = useState("");
 
   // Combustible (EdenRed)
   const [combustibleMonto, setCombustibleMonto] = useState("");
+  const [combustibleIva, setCombustibleIva] = useState("");
   const [combustiblePaidBy, setCombustiblePaidBy] = useState("");
 
   // Seguro
@@ -425,6 +483,21 @@ export function ViaticosClient({
   const [seguroCobertura, setSeguroCobertura] = useState("");
   const [seguroCantidadDias, setSeguroCantidadDias] = useState("");
   const [seguroCosto, setSeguroCosto] = useState("");
+  const [seguroIva, setSeguroIva] = useState("");
+
+  // Autocompleta el campo de IVA (string) de un monto "suelto" (hospedaje
+  // por día, combustible, seguro) al 21% del neto que se acaba de tipear,
+  // respetando el valor si el usuario ya lo pisó a mano — mismo criterio
+  // que nextIva() para las filas dinámicas.
+  function autoSetIva(
+    newNeto: string,
+    prevNeto: string,
+    prevIva: string,
+    setIva: (v: string) => void
+  ) {
+    const computed = nextIva(Number(prevNeto) || 0, Number(prevIva) || 0, Number(newNeto) || 0);
+    setIva(computed ? String(computed) : "");
+  }
 
   // Listas dinámicas
   const [empleadosRows, setEmpleadosRows] = useState<EmpleadoRow[]>([emptyEmpleadoRow()]);
@@ -442,14 +515,17 @@ export function ViaticosClient({
     setHospedajeCheckIn("");
     setHospedajeCheckOut("");
     setHospedajeCostoPorDia("");
+    setHospedajeIvaPorDia("");
     setHospedajeCantidadDias("");
     setHospedajePaidBy("");
     setCombustibleMonto("");
+    setCombustibleIva("");
     setCombustiblePaidBy("");
     setSeguroCompania("");
     setSeguroCobertura("");
     setSeguroCantidadDias("");
     setSeguroCosto("");
+    setSeguroIva("");
     setEmpleadosRows([emptyEmpleadoRow()]);
     setExtrasRows([]);
     setMaterialesRows([]);
@@ -472,14 +548,17 @@ export function ViaticosClient({
     setHospedajeCheckIn(v.hospedajeCheckIn ?? "");
     setHospedajeCheckOut(v.hospedajeCheckOut ?? "");
     setHospedajeCostoPorDia(v.hospedajeCostoPorDia != null ? String(v.hospedajeCostoPorDia) : "");
+    setHospedajeIvaPorDia(v.hospedajeIvaPorDia != null ? String(v.hospedajeIvaPorDia) : "");
     setHospedajeCantidadDias(v.hospedajeCantidadDias != null ? String(v.hospedajeCantidadDias) : "");
     setHospedajePaidBy(v.hospedajePaidBy ?? "");
     setCombustibleMonto(v.combustibleMonto != null ? String(v.combustibleMonto) : "");
+    setCombustibleIva(v.combustibleIva != null ? String(v.combustibleIva) : "");
     setCombustiblePaidBy(v.combustiblePaidBy ?? "");
     setSeguroCompania(v.seguroCompania ?? "");
     setSeguroCobertura(v.seguroCobertura ?? "");
     setSeguroCantidadDias(v.seguroCantidadDias != null ? String(v.seguroCantidadDias) : "");
     setSeguroCosto(v.seguroCosto != null ? String(v.seguroCosto) : "");
+    setSeguroIva(v.seguroIva != null ? String(v.seguroIva) : "");
     setEmpleadosRows(
       v.empleados.length > 0
         ? v.empleados.map((e) => ({
@@ -558,29 +637,45 @@ export function ViaticosClient({
     router.refresh();
   }
 
-  const previewTotal = useMemo(
+  const previewTotales = useMemo(
     () =>
-      calcularTotal({
+      calcularTotalesDiscriminados({
         empleados: empleadosRows,
         hospedajeCostoPorDia: Number(hospedajeCostoPorDia) || undefined,
+        hospedajeIvaPorDia: Number(hospedajeIvaPorDia) || undefined,
         hospedajeCantidadDias: Number(hospedajeCantidadDias) || undefined,
         combustibleMonto: Number(combustibleMonto) || undefined,
+        combustibleIva: Number(combustibleIva) || undefined,
         extras: extrasRows,
         materiales: materialesRows,
         seguroCosto: Number(seguroCosto) || undefined,
+        seguroIva: Number(seguroIva) || undefined,
       }),
-    [empleadosRows, hospedajeCostoPorDia, hospedajeCantidadDias, combustibleMonto, extrasRows, materialesRows, seguroCosto]
+    [
+      empleadosRows,
+      hospedajeCostoPorDia,
+      hospedajeIvaPorDia,
+      hospedajeCantidadDias,
+      combustibleMonto,
+      combustibleIva,
+      extrasRows,
+      materialesRows,
+      seguroCosto,
+      seguroIva,
+    ]
   );
+  const previewTotal = previewTotales.total;
 
   const previewExcedente = useMemo(() => {
     const topesValidos = topesRows.filter((t) => t.employeeId);
     if (topesValidos.length === 0) return 0;
-    const topeByEmployee = new Map(topesValidos.map((t) => [t.employeeId, t.monto]));
+    const topeByEmployee = new Map(topesValidos.map((t) => [t.employeeId, t.monto + (t.iva ?? 0)]));
     return empleadosRows.reduce((sum, e) => {
       if (e.honorarioType !== "DIA") return sum;
       const tope = topeByEmployee.get(e.employeeId);
       if (tope == null) return sum;
-      const diff = e.monto - tope;
+      const totalPorDia = e.monto + (e.iva ?? 0);
+      const diff = totalPorDia - tope;
       if (diff <= 0) return sum;
       return sum + diff * (e.dias ?? 1);
     }, 0);
@@ -600,6 +695,7 @@ export function ViaticosClient({
           employeeId: r.employeeId,
           honorarioType: r.honorarioType,
           monto: r.monto,
+          iva: r.iva || undefined,
           dias: r.honorarioType === "DIA" ? r.dias || 1 : undefined,
           paymentMode: r.paymentMode,
           pagos: r.pagos.map((p) => ({ monto: p.monto, fecha: p.fechaISO })),
@@ -608,33 +704,38 @@ export function ViaticosClient({
       hospedajeCheckIn: hospedajeCheckIn || undefined,
       hospedajeCheckOut: hospedajeCheckOut || undefined,
       hospedajeCostoPorDia: hospedajeCostoPorDia ? Number(hospedajeCostoPorDia) : undefined,
+      hospedajeIvaPorDia: hospedajeIvaPorDia ? Number(hospedajeIvaPorDia) : undefined,
       hospedajeCantidadDias: hospedajeCantidadDias ? Number(hospedajeCantidadDias) : undefined,
       hospedajePaidBy: hospedajePaidBy || undefined,
       combustibleMonto: combustibleMonto ? Number(combustibleMonto) : undefined,
+      combustibleIva: combustibleIva ? Number(combustibleIva) : undefined,
       combustiblePaidBy: combustiblePaidBy || undefined,
       extras: extrasRows
         .filter((r) => r.descripcion)
-        .map((r) => ({ descripcion: r.descripcion, monto: r.monto, paymentMode: r.paymentMode })),
+        .map((r) => ({ descripcion: r.descripcion, monto: r.monto, iva: r.iva || undefined, paymentMode: r.paymentMode })),
       materiales: materialesRows
         .filter((r) => r.descripcion)
         .map((r) => ({
           descripcion: r.descripcion,
           cantidad: r.cantidad,
           monto: r.monto,
+          iva: r.iva || undefined,
           paymentMode: r.paymentMode,
         })),
       seguroCompania: seguroCompania || undefined,
       seguroCobertura: seguroCobertura || undefined,
       seguroCantidadDias: seguroCantidadDias ? Number(seguroCantidadDias) : undefined,
       seguroCosto: seguroCosto ? Number(seguroCosto) : undefined,
+      seguroIva: seguroIva ? Number(seguroIva) : undefined,
       topesDiarios: topesRows
         .filter((r) => r.employeeId)
         .map((r) => ({
           employeeId: r.employeeId,
           monto: r.monto,
+          iva: r.iva || undefined,
           gastos: r.gastos
             .filter((g) => g.descripcion)
-            .map((g) => ({ descripcion: g.descripcion, monto: g.monto, paymentMode: g.paymentMode })),
+            .map((g) => ({ descripcion: g.descripcion, monto: g.monto, iva: g.iva || undefined, paymentMode: g.paymentMode })),
         })),
       notes: notes || undefined,
     };
@@ -653,6 +754,39 @@ export function ViaticosClient({
     resetForm();
     setEditingId(null);
     router.refresh();
+  }
+
+  // PDF con neto/IVA discriminados por categoría — 2026-11-26, pedido de
+  // Ariel junto con el resto del cambio de IVA en Viajes.
+  function imprimirViatico(v: ViaticoItem) {
+    void viajeGastosPdf({
+      nombreViaje: v.nombre,
+      fechaInicioISO: v.fechaInicioISO,
+      fechaFinISO: v.fechaFinISO,
+      empleados: v.empleados.map((e) => ({
+        label: `${e.employeeName ?? "Empleado"} — ${
+          e.honorarioType === "DIA" ? `${e.dias ?? 1} día(s)` : "monto fijo"
+        }`,
+        neto: e.monto * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
+        iva: (e.iva ?? 0) * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
+      })),
+      hospedaje:
+        v.hospedajeCostoPorDia != null
+          ? {
+              neto: (v.hospedajeCostoPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0),
+              iva: (v.hospedajeIvaPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0),
+            }
+          : undefined,
+      combustible: v.combustibleMonto != null ? { neto: v.combustibleMonto, iva: v.combustibleIva ?? 0 } : undefined,
+      extras: v.extras.map((x) => ({ label: x.descripcion, neto: x.monto, iva: x.iva ?? 0 })),
+      materiales: v.materiales.map((m) => ({ label: m.descripcion, neto: m.monto, iva: m.iva ?? 0 })),
+      seguro: v.seguroCosto != null ? { neto: v.seguroCosto, iva: v.seguroIva ?? 0 } : undefined,
+      topesDiarios: v.topesDiarios.map((t) => ({
+        label: `${t.employeeName ?? "Empleado"} (tope/día)`,
+        neto: t.monto,
+        iva: t.iva ?? 0,
+      })),
+    });
   }
 
   async function performDelete(v: ViaticoItem) {
@@ -750,6 +884,15 @@ export function ViaticosClient({
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => imprimirViatico(v)}
+                      title="Imprimir resumen con neto e IVA discriminados"
+                    >
+                      <Printer className="mr-1 h-3.5 w-3.5" />
+                      Imprimir
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="edit"
                       onClick={() => openEdit(v)}
                     >
@@ -839,7 +982,7 @@ export function ViaticosClient({
             </div>
             {empleadosRows.map((row, idx) => (
               <div key={row._key} className="flex flex-col gap-2 rounded-md border border-border/60 p-2">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] sm:items-end">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_1fr_auto] sm:items-end">
                 <div className="flex flex-col gap-1.5">
                   {idx === 0 && <Label>Empleado</Label>}
                   <Select
@@ -878,15 +1021,34 @@ export function ViaticosClient({
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {idx === 0 && <Label>{row.honorarioType === "DIA" ? "Monto por día" : "Monto total"}</Label>}
+                  {idx === 0 && (
+                    <Label>{row.honorarioType === "DIA" ? "Monto neto por día" : "Monto neto total"}</Label>
+                  )}
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
                     value={row.monto || ""}
+                    onChange={(e) => {
+                      const newNeto = Number(e.target.value);
+                      setEmpleadosRows((rows) =>
+                        rows.map((r) =>
+                          r._key === row._key ? { ...r, monto: newNeto, iva: nextIva(r.monto, r.iva, newNeto) } : r
+                        )
+                      );
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {idx === 0 && <Label>IVA</Label>}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={row.iva || ""}
                     onChange={(e) =>
                       setEmpleadosRows((rows) =>
-                        rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                        rows.map((r) => (r._key === row._key ? { ...r, iva: Number(e.target.value) } : r))
                       )
                     }
                   />
@@ -912,9 +1074,7 @@ export function ViaticosClient({
                     readOnly
                     disabled
                     className="bg-muted/50"
-                    value={formatCurrency(
-                      row.honorarioType === "DIA" ? row.monto * (row.dias ?? 1) : row.monto
-                    )}
+                    value={formatCurrency(montoTotalEmpleado(row))}
                   />
                 </div>
                 <Button
@@ -1074,7 +1234,7 @@ export function ViaticosClient({
             )}
             {topesRows.map((row, idx) => (
               <div key={row._key} className="flex flex-col gap-2 rounded-md border border-border/60 p-2">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.8fr_1fr_1fr_auto] sm:items-end">
                   <div className="flex flex-col gap-1.5">
                     {idx === 0 && <Label>Empleado</Label>}
                     <Select
@@ -1095,15 +1255,32 @@ export function ViaticosClient({
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {idx === 0 && <Label>Importe (tope por día)</Label>}
+                    {idx === 0 && <Label>Importe neto (tope por día)</Label>}
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={row.monto || ""}
+                      onChange={(e) => {
+                        const newNeto = Number(e.target.value);
+                        setTopesRows((rows) =>
+                          rows.map((r) =>
+                            r._key === row._key ? { ...r, monto: newNeto, iva: nextIva(r.monto, r.iva, newNeto) } : r
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {idx === 0 && <Label>IVA</Label>}
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={row.iva || ""}
                       onChange={(e) =>
                         setTopesRows((rows) =>
-                          rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                          rows.map((r) => (r._key === row._key ? { ...r, iva: Number(e.target.value) } : r))
                         )
                       }
                     />
@@ -1142,7 +1319,7 @@ export function ViaticosClient({
                     <p className="text-xs text-muted-foreground">Sin gastos cargados.</p>
                   )}
                   {row.gastos.map((gasto) => (
-                    <div key={gasto._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+                    <div key={gasto._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                       <Input
                         placeholder="Qué gasto"
                         value={gasto.descripcion}
@@ -1165,8 +1342,32 @@ export function ViaticosClient({
                         type="number"
                         step="0.01"
                         min="0"
-                        placeholder="Monto"
+                        placeholder="Monto neto"
                         value={gasto.monto || ""}
+                        onChange={(e) => {
+                          const newNeto = Number(e.target.value);
+                          setTopesRows((rows) =>
+                            rows.map((r) =>
+                              r._key === row._key
+                                ? {
+                                    ...r,
+                                    gastos: r.gastos.map((g) =>
+                                      g._key === gasto._key
+                                        ? { ...g, monto: newNeto, iva: nextIva(g.monto, g.iva, newNeto) }
+                                        : g
+                                    ),
+                                  }
+                                : r
+                            )
+                          );
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="IVA"
+                        value={gasto.iva || ""}
                         onChange={(e) =>
                           setTopesRows((rows) =>
                             rows.map((r) =>
@@ -1174,7 +1375,7 @@ export function ViaticosClient({
                                 ? {
                                     ...r,
                                     gastos: r.gastos.map((g) =>
-                                      g._key === gasto._key ? { ...g, monto: Number(e.target.value) } : g
+                                      g._key === gasto._key ? { ...g, iva: Number(e.target.value) } : g
                                     ),
                                   }
                                 : r
@@ -1263,13 +1464,27 @@ export function ViaticosClient({
                 <Input type="date" value={hospedajeCheckOut} onChange={(e) => setHospedajeCheckOut(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label>Costo por día</Label>
+                <Label>Costo neto por día</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={hospedajeCostoPorDia}
-                  onChange={(e) => setHospedajeCostoPorDia(e.target.value)}
+                  onChange={(e) => {
+                    const newNeto = e.target.value;
+                    autoSetIva(newNeto, hospedajeCostoPorDia, hospedajeIvaPorDia, setHospedajeIvaPorDia);
+                    setHospedajeCostoPorDia(newNeto);
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>IVA por día</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={hospedajeIvaPorDia}
+                  onChange={(e) => setHospedajeIvaPorDia(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1296,15 +1511,29 @@ export function ViaticosClient({
           {/* Combustible / EdenRed */}
           <div className="flex flex-col gap-3 rounded-lg border border-border bg-orange-50/50 p-4">
             <span className="text-sm font-medium">Combustible (EdenRed)</span>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <Label>Monto</Label>
+                <Label>Monto neto</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={combustibleMonto}
-                  onChange={(e) => setCombustibleMonto(e.target.value)}
+                  onChange={(e) => {
+                    const newNeto = e.target.value;
+                    autoSetIva(newNeto, combustibleMonto, combustibleIva, setCombustibleIva);
+                    setCombustibleMonto(newNeto);
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>IVA</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={combustibleIva}
+                  onChange={(e) => setCombustibleIva(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1333,7 +1562,7 @@ export function ViaticosClient({
               </Button>
             </div>
             {extrasRows.map((row) => (
-              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                 <Input
                   placeholder="Descripción"
                   value={row.descripcion}
@@ -1347,11 +1576,26 @@ export function ViaticosClient({
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Monto"
+                  placeholder="Monto neto"
                   value={row.monto || ""}
+                  onChange={(e) => {
+                    const newNeto = Number(e.target.value);
+                    setExtrasRows((rows) =>
+                      rows.map((r) =>
+                        r._key === row._key ? { ...r, monto: newNeto, iva: nextIva(r.monto, r.iva, newNeto) } : r
+                      )
+                    );
+                  }}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="IVA"
+                  value={row.iva || ""}
                   onChange={(e) =>
                     setExtrasRows((rows) =>
-                      rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                      rows.map((r) => (r._key === row._key ? { ...r, iva: Number(e.target.value) } : r))
                     )
                   }
                 />
@@ -1401,7 +1645,7 @@ export function ViaticosClient({
               </Button>
             </div>
             {materialesRows.map((row) => (
-              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+              <div key={row._key} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]">
                 <Input
                   placeholder="Descripción"
                   value={row.descripcion}
@@ -1427,11 +1671,26 @@ export function ViaticosClient({
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Monto"
+                  placeholder="Monto neto"
                   value={row.monto || ""}
+                  onChange={(e) => {
+                    const newNeto = Number(e.target.value);
+                    setMaterialesRows((rows) =>
+                      rows.map((r) =>
+                        r._key === row._key ? { ...r, monto: newNeto, iva: nextIva(r.monto, r.iva, newNeto) } : r
+                      )
+                    );
+                  }}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="IVA"
+                  value={row.iva || ""}
                   onChange={(e) =>
                     setMaterialesRows((rows) =>
-                      rows.map((r) => (r._key === row._key ? { ...r, monto: Number(e.target.value) } : r))
+                      rows.map((r) => (r._key === row._key ? { ...r, iva: Number(e.target.value) } : r))
                     )
                   }
                 />
@@ -1469,7 +1728,7 @@ export function ViaticosClient({
           {/* Seguro */}
           <div className="flex flex-col gap-3 rounded-lg border border-border bg-rose-50/50 p-4">
             <span className="text-sm font-medium">Seguro</span>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="flex flex-col gap-1.5">
                 <Label>Compañía</Label>
                 <Input value={seguroCompania} onChange={(e) => setSeguroCompania(e.target.value)} />
@@ -1489,13 +1748,27 @@ export function ViaticosClient({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label>Costo</Label>
+                <Label>Costo neto</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={seguroCosto}
-                  onChange={(e) => setSeguroCosto(e.target.value)}
+                  onChange={(e) => {
+                    const newNeto = e.target.value;
+                    autoSetIva(newNeto, seguroCosto, seguroIva, setSeguroIva);
+                    setSeguroCosto(newNeto);
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>IVA</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={seguroIva}
+                  onChange={(e) => setSeguroIva(e.target.value)}
                 />
               </div>
             </div>
@@ -1508,7 +1781,9 @@ export function ViaticosClient({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <div className="text-sm text-muted-foreground">
-              Total estimado: <span className="font-medium text-foreground">{formatCurrency(previewTotal)}</span>
+              Neto: <span className="font-medium text-foreground">{formatCurrency(previewTotales.neto)}</span>
+              {" · "}IVA: <span className="font-medium text-foreground">{formatCurrency(previewTotales.iva)}</span>
+              {" · "}Total estimado: <span className="font-medium text-foreground">{formatCurrency(previewTotal)}</span>
               {previewExcedente > 0 && (
                 <>
                   {" · "}Excedente de viáticos:{" "}
@@ -1584,8 +1859,8 @@ export function ViaticosClient({
                   <li key={i}>
                     {e.employeeName} —{" "}
                     {e.honorarioType === "DIA"
-                      ? `${formatCurrency(e.monto)}/día x ${e.dias ?? 1} día(s)`
-                      : formatCurrency(e.monto)}
+                      ? `${fmtNetoIva(e.monto, e.iva)}/día x ${e.dias ?? 1} día(s)`
+                      : fmtNetoIva(e.monto, e.iva)}
                     {paymentModeLabel(e.paymentMode) ? ` (${paymentModeLabel(e.paymentMode)})` : ""}
                     {" — "}
                     {saldoEmpleado(e) <= 0 ? (
@@ -1616,7 +1891,7 @@ export function ViaticosClient({
             {detailTarget.combustibleMonto ? (
               <p>
                 <span className="text-muted-foreground">Combustible (EdenRed): </span>
-                {formatCurrency(detailTarget.combustibleMonto)}
+                {fmtNetoIva(detailTarget.combustibleMonto, detailTarget.combustibleIva)}
                 {detailTarget.combustiblePaidBy ? ` — paga ${detailTarget.combustiblePaidBy}` : ""}
               </p>
             ) : null}
@@ -1626,7 +1901,7 @@ export function ViaticosClient({
                 <ul className="ml-4 list-disc">
                   {detailTarget.extras.map((e, i) => (
                     <li key={i}>
-                      {e.descripcion} — {formatCurrency(e.monto)}
+                      {e.descripcion} — {fmtNetoIva(e.monto, e.iva)}
                       {paymentModeLabel(e.paymentMode) ? ` (${paymentModeLabel(e.paymentMode)})` : ""}
                     </li>
                   ))}
@@ -1639,7 +1914,7 @@ export function ViaticosClient({
                 <ul className="ml-4 list-disc">
                   {detailTarget.materiales.map((m, i) => (
                     <li key={i}>
-                      {m.descripcion} {m.cantidad ? `x${m.cantidad}` : ""} — {formatCurrency(m.monto)}
+                      {m.descripcion} {m.cantidad ? `x${m.cantidad}` : ""} — {fmtNetoIva(m.monto, m.iva)}
                       {paymentModeLabel(m.paymentMode) ? ` (${paymentModeLabel(m.paymentMode)})` : ""}
                     </li>
                   ))}
@@ -1650,7 +1925,7 @@ export function ViaticosClient({
               <p>
                 <span className="text-muted-foreground">Seguro: </span>
                 {detailTarget.seguroCompania} — {detailTarget.seguroCobertura} (
-                {detailTarget.seguroCantidadDias ?? 0} día(s), {formatCurrency(detailTarget.seguroCosto ?? 0)})
+                {detailTarget.seguroCantidadDias ?? 0} día(s), {fmtNetoIva(detailTarget.seguroCosto ?? 0, detailTarget.seguroIva)})
               </p>
             )}
             {detailTarget.topesDiarios.length > 0 && (
@@ -1659,7 +1934,7 @@ export function ViaticosClient({
                 <ul className="ml-4 list-disc">
                   {detailTarget.topesDiarios.map((t, i) => (
                     <li key={i}>
-                      {t.employeeName} — {formatCurrency(t.monto)}/día —{" "}
+                      {t.employeeName} — {fmtNetoIva(t.monto, t.iva)}/día —{" "}
                       {saldoTope(t) < 0 ? (
                         <Badge variant="warning">Excedido en {formatCurrency(Math.abs(saldoTope(t)))}</Badge>
                       ) : (
@@ -1669,7 +1944,7 @@ export function ViaticosClient({
                         <ul className="ml-4 list-[circle] text-xs text-muted-foreground">
                           {t.gastos.map((g, gi) => (
                             <li key={gi}>
-                              {g.descripcion} — {formatCurrency(g.monto)}
+                              {g.descripcion} — {fmtNetoIva(g.monto, g.iva)}
                               {paymentModeLabel(g.paymentMode) ? ` (${paymentModeLabel(g.paymentMode)})` : ""}
                             </li>
                           ))}
@@ -1692,9 +1967,23 @@ export function ViaticosClient({
                 {detailTarget.notes}
               </p>
             )}
-            <p className="border-t border-border pt-3 font-medium">
-              Total estimado: {formatCurrency(calcularTotal(detailTarget))}
-            </p>
+            <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+              <p className="font-medium">
+                Neto: {formatCurrency(calcularTotalesDiscriminados(detailTarget).neto)} · IVA:{" "}
+                {formatCurrency(calcularTotalesDiscriminados(detailTarget).iva)} · Total:{" "}
+                {formatCurrency(calcularTotalesDiscriminados(detailTarget).total)}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => imprimirViatico(detailTarget)}
+                title="Imprimir resumen con neto e IVA discriminados"
+              >
+                <Printer className="mr-1 h-3.5 w-3.5" />
+                Imprimir
+              </Button>
+            </div>
           </div>
         )}
       </Dialog>

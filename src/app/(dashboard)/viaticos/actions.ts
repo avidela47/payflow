@@ -31,6 +31,7 @@ const empleadoSchema = z.object({
   employeeId: z.string().min(1),
   honorarioType: z.enum(VIATICO_HONORARIO_TYPES),
   monto: z.coerce.number().nonnegative(),
+  iva: z.coerce.number().nonnegative().optional(),
   dias: z.coerce.number().positive().optional(),
   paymentMode: z.enum(VIATICO_EMPLOYEE_PAYMENT_MODES).optional(),
   pagos: z.array(pagoSchema).default([]),
@@ -39,6 +40,7 @@ const empleadoSchema = z.object({
 const extraSchema = z.object({
   descripcion: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
+  iva: z.coerce.number().nonnegative().optional(),
   paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
@@ -46,18 +48,21 @@ const materialSchema = z.object({
   descripcion: z.string().min(1),
   cantidad: z.coerce.number().nonnegative().optional(),
   monto: z.coerce.number().nonnegative(),
+  iva: z.coerce.number().nonnegative().optional(),
   paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const topeGastoSchema = z.object({
   descripcion: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
+  iva: z.coerce.number().nonnegative().optional(),
   paymentMode: z.enum(VIATICO_PAYMENT_MODES).optional(),
 });
 
 const topeDiarioSchema = z.object({
   employeeId: z.string().min(1),
   monto: z.coerce.number().nonnegative(),
+  iva: z.coerce.number().nonnegative().optional(),
   gastos: z.array(topeGastoSchema).default([]),
 });
 
@@ -72,9 +77,11 @@ const viaticoSchema = z
     hospedajeCheckIn: z.string().optional(),
     hospedajeCheckOut: z.string().optional(),
     hospedajeCostoPorDia: z.coerce.number().nonnegative().optional(),
+    hospedajeIvaPorDia: z.coerce.number().nonnegative().optional(),
     hospedajeCantidadDias: z.coerce.number().nonnegative().optional(),
     hospedajePaidBy: z.string().optional(),
     combustibleMonto: z.coerce.number().nonnegative().optional(),
+    combustibleIva: z.coerce.number().nonnegative().optional(),
     combustiblePaidBy: z.string().optional(),
     extras: z.array(extraSchema).default([]),
     materiales: z.array(materialSchema).default([]),
@@ -82,6 +89,7 @@ const viaticoSchema = z
     seguroCobertura: z.string().optional(),
     seguroCantidadDias: z.coerce.number().nonnegative().optional(),
     seguroCosto: z.coerce.number().nonnegative().optional(),
+    seguroIva: z.coerce.number().nonnegative().optional(),
     topesDiarios: z.array(topeDiarioSchema).default([]),
     notes: z.string().optional(),
   })
@@ -116,17 +124,22 @@ export type CondicionesFormInput = z.infer<typeof condicionesSchema>;
 // aparte al total — ya está incluido dentro del monto de ese empleado, es
 // solo para identificarlo como excedente. Un empleado sin tope asignado
 // no genera excedente.
+// 2026-11-26 (Ariel): tanto el honorario del empleado como el tope ahora
+// discriminan neto/IVA — la comparación se hace sobre el TOTAL (neto+IVA)
+// de cada uno, no solo sobre el neto, porque lo que importa acá es cuánto
+// termina cobrando el empleado por día contra cuánto se le autorizó.
 function calcularExcedente(
   empleados: z.infer<typeof empleadoSchema>[],
   topesDiarios: z.infer<typeof topeDiarioSchema>[]
 ): number {
   if (topesDiarios.length === 0) return 0;
-  const topeByEmployee = new Map(topesDiarios.map((t) => [t.employeeId, t.monto]));
+  const topeByEmployee = new Map(topesDiarios.map((t) => [t.employeeId, t.monto + (t.iva ?? 0)]));
   return empleados.reduce((sum, emp) => {
     if (emp.honorarioType !== "DIA") return sum;
     const tope = topeByEmployee.get(emp.employeeId);
     if (tope == null) return sum;
-    const diff = emp.monto - tope;
+    const totalPorDia = emp.monto + (emp.iva ?? 0);
+    const diff = totalPorDia - tope;
     if (diff <= 0) return sum;
     return sum + diff * (emp.dias ?? 1);
   }, 0);
@@ -142,6 +155,7 @@ function buildDoc(data: ViaticoFormInput) {
       employee: e.employeeId,
       honorarioType: e.honorarioType,
       monto: e.monto,
+      iva: e.iva,
       dias: e.dias,
       paymentMode: e.paymentMode,
       pagos: e.pagos.map((p) => ({ monto: p.monto, fecha: new Date(p.fecha) })),
@@ -151,11 +165,13 @@ function buildDoc(data: ViaticoFormInput) {
       checkIn: data.hospedajeCheckIn ? new Date(data.hospedajeCheckIn) : undefined,
       checkOut: data.hospedajeCheckOut ? new Date(data.hospedajeCheckOut) : undefined,
       costoPorDia: data.hospedajeCostoPorDia,
+      ivaPorDia: data.hospedajeIvaPorDia,
       cantidadDias: data.hospedajeCantidadDias,
       paidBy: data.hospedajePaidBy || undefined,
     },
     combustible: {
       monto: data.combustibleMonto,
+      iva: data.combustibleIva,
       paidBy: data.combustiblePaidBy || undefined,
     },
     extras: data.extras,
@@ -165,13 +181,16 @@ function buildDoc(data: ViaticoFormInput) {
       cobertura: data.seguroCobertura || undefined,
       cantidadDias: data.seguroCantidadDias,
       costo: data.seguroCosto,
+      iva: data.seguroIva,
     },
     topesDiarios: data.topesDiarios.map((t) => ({
       employee: t.employeeId,
       monto: t.monto,
+      iva: t.iva,
       gastos: t.gastos.map((g) => ({
         descripcion: g.descripcion,
         monto: g.monto,
+        iva: g.iva,
         paymentMode: g.paymentMode,
       })),
     })),

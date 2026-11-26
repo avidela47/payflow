@@ -44,6 +44,7 @@ export default async function ViaticosPage() {
         employeeName: employeeDoc ? `${employeeDoc.nombre} ${employeeDoc.apellido}` : "Empleado eliminado",
         honorarioType: e.honorarioType,
         monto: e.monto,
+        iva: e.iva,
         dias: e.dias,
         paymentMode: e.paymentMode,
         pagos: (e.pagos ?? []).map((p) => ({ monto: p.monto, fechaISO: toISODate(p.fecha)! })),
@@ -71,25 +72,30 @@ export default async function ViaticosPage() {
     hospedajeCheckIn: toISODate(v.hospedaje?.checkIn),
     hospedajeCheckOut: toISODate(v.hospedaje?.checkOut),
     hospedajeCostoPorDia: v.hospedaje?.costoPorDia,
+    hospedajeIvaPorDia: v.hospedaje?.ivaPorDia,
     hospedajeCantidadDias: v.hospedaje?.cantidadDias,
     hospedajePaidBy: v.hospedaje?.paidBy,
     combustibleMonto: v.combustible?.monto,
+    combustibleIva: v.combustible?.iva,
     combustiblePaidBy: v.combustible?.paidBy,
     extras: (v.extras ?? []).map((x) => ({
       descripcion: x.descripcion,
       monto: x.monto,
+      iva: x.iva,
       paymentMode: x.paymentMode,
     })),
     materiales: (v.materiales ?? []).map((m) => ({
       descripcion: m.descripcion,
       cantidad: m.cantidad,
       monto: m.monto,
+      iva: m.iva,
       paymentMode: m.paymentMode,
     })),
     seguroCompania: v.seguro?.compania,
     seguroCobertura: v.seguro?.cobertura,
     seguroCantidadDias: v.seguro?.cantidadDias,
     seguroCosto: v.seguro?.costo,
+    seguroIva: v.seguro?.iva,
     topesDiarios: (v.topesDiarios ?? []).map((t) => {
       const employeeDoc =
         t.employee && typeof t.employee === "object" && "_id" in t.employee
@@ -99,9 +105,11 @@ export default async function ViaticosPage() {
         employeeId: employeeDoc ? employeeDoc._id.toString() : String(t.employee),
         employeeName: employeeDoc ? `${employeeDoc.nombre} ${employeeDoc.apellido}` : "Empleado eliminado",
         monto: t.monto,
+        iva: t.iva,
         gastos: (t.gastos ?? []).map((g) => ({
           descripcion: g.descripcion,
           monto: g.monto,
+          iva: g.iva,
           paymentMode: g.paymentMode,
         })),
       };
