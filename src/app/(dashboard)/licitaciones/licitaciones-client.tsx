@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Mail } from "lucide-react";
+import { Plus, Trash2, Mail, Paperclip, FileText, Image as ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,10 +21,35 @@ import {
 
 export type LicitacionEstado = "INSCRIPTO" | "NO_INSCRIPTO" | "EN_TRAMITE";
 
+export type LicitacionDocumento = {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAtISO?: string;
+};
+
 export type LicitacionItemRow = {
   numero: string;
   estado: LicitacionEstado;
+  // Documento ya guardado en base (viene del server). Se reenvía tal cual
+  // al guardar para no perderlo, salvo que el usuario lo reemplace o lo
+  // quite en esta misma edición.
+  documento?: LicitacionDocumento | null;
+  // Archivo recién elegido en esta sesión de edición, todavía no subido —
+  // viaja con el resto del formulario al guardar (mismo criterio que la
+  // foto de Empleados: no hace falta que la licitación ya exista en base).
+  nuevoArchivo?: File | null;
 };
+
+const DOC_ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export type LicitacionItem = {
   id: string;
@@ -48,7 +73,7 @@ const ESTADO_BADGE: Record<LicitacionEstado, "success" | "warning" | "destructiv
 };
 
 function emptyItemRow(): LicitacionItemRow {
-  return { numero: "", estado: "EN_TRAMITE" };
+  return { numero: "", estado: "EN_TRAMITE", documento: undefined, nuevoArchivo: null };
 }
 
 // ---------- formulario de alta/edición de una entidad ----------
@@ -86,6 +111,27 @@ function LicitacionForm({
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleDocumentoFile(index: number, file: File | undefined) {
+    if (!file) return;
+    if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Solo se aceptan archivos PDF, JPG o PNG.");
+      return;
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      toast.error("El archivo pesa más de 10MB.");
+      return;
+    }
+    updateItem(index, { nuevoArchivo: file });
+  }
+
+  function quitarDocumento(index: number) {
+    updateItem(index, { documento: null, nuevoArchivo: null });
+  }
+
+  function cancelarNuevoArchivo(index: number) {
+    updateItem(index, { nuevoArchivo: null });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const fd = new FormData();
@@ -99,6 +145,8 @@ function LicitacionForm({
     for (const row of items) {
       fd.append("itemNumero", row.numero);
       fd.append("itemEstado", row.estado);
+      fd.append("itemDocumentoFile", row.nuevoArchivo ?? "");
+      fd.append("itemDocumentoExisting", row.nuevoArchivo ? "" : row.documento ? JSON.stringify(row.documento) : "");
     }
 
     setLocalSaving(true);
@@ -161,32 +209,93 @@ function LicitacionForm({
         </div>
         <div className="flex flex-col gap-2">
           {items.map((row, i) => (
-            <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border p-2 sm:grid-cols-5">
-              <Input
-                placeholder="N° de licitación"
-                value={row.numero}
-                onChange={(e) => updateItem(i, { numero: e.target.value })}
-                className="sm:col-span-2"
-              />
-              <Select
-                value={row.estado}
-                onChange={(e) => updateItem(i, { estado: e.target.value as LicitacionEstado })}
-                className="sm:col-span-2"
-              >
-                <option value="INSCRIPTO">Inscripto</option>
-                <option value="NO_INSCRIPTO">No inscripto</option>
-                <option value="EN_TRAMITE">En trámite</option>
-              </Select>
-              <Button
-                type="button"
-                variant="delete"
-                size="sm"
-                className="sm:col-span-1"
-                onClick={() => removeItem(i)}
-                disabled={items.length === 1}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            <div key={i} className="flex flex-col gap-2 rounded-md border border-border p-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+                <Input
+                  placeholder="N° de licitación"
+                  value={row.numero}
+                  onChange={(e) => updateItem(i, { numero: e.target.value })}
+                  className="sm:col-span-2"
+                />
+                <Select
+                  value={row.estado}
+                  onChange={(e) => updateItem(i, { estado: e.target.value as LicitacionEstado })}
+                  className="sm:col-span-2"
+                >
+                  <option value="INSCRIPTO">Inscripto</option>
+                  <option value="NO_INSCRIPTO">No inscripto</option>
+                  <option value="EN_TRAMITE">En trámite</option>
+                </Select>
+                <Button
+                  type="button"
+                  variant="delete"
+                  size="sm"
+                  className="sm:col-span-1"
+                  onClick={() => removeItem(i)}
+                  disabled={items.length === 1}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {row.nuevoArchivo ? (
+                <div className="flex items-center justify-between gap-2 rounded-md bg-muted/40 p-2 text-xs">
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+                    <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{row.nuevoArchivo.name}</span>
+                    <span className="shrink-0 text-muted-foreground">
+                      ({formatBytes(row.nuevoArchivo.size)}) — se sube al guardar
+                    </span>
+                  </span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => cancelarNuevoArchivo(i)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : row.documento ? (
+                <div className="flex items-center justify-between gap-2 rounded-md bg-muted/40 p-2 text-xs">
+                  <a
+                    href={row.documento.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 truncate hover:underline"
+                  >
+                    {row.documento.mimeType === "application/pdf" ? (
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="truncate">{row.documento.nombre}</span>
+                    <span className="shrink-0 text-muted-foreground">({formatBytes(row.documento.size)})</span>
+                  </a>
+                  <div className="flex shrink-0 gap-1">
+                    <label className="cursor-pointer">
+                      <span className="inline-flex h-8 items-center rounded-md border border-border bg-background px-2 text-xs hover:bg-muted">
+                        Reemplazar
+                      </span>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentoFile(i, e.target.files?.[0])}
+                      />
+                    </label>
+                    <Button type="button" size="sm" variant="delete" onClick={() => quitarDocumento(i)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Adjuntar documento (PDF, JPG o PNG — máx. 10MB)
+                  <input
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    className="hidden"
+                    onChange={(e) => handleDocumentoFile(i, e.target.files?.[0])}
+                  />
+                </label>
+              )}
             </div>
           ))}
         </div>
@@ -305,6 +414,17 @@ export function LicitacionesClient({
                         <div key={i} className="flex items-center gap-1.5 text-xs">
                           <span className="font-medium">{lic.numero}</span>
                           <Badge variant={ESTADO_BADGE[lic.estado]}>{ESTADO_LABEL[lic.estado]}</Badge>
+                          {lic.documento && (
+                            <a
+                              href={lic.documento.path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={lic.documento.nombre}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Paperclip className="h-3 w-3" />
+                            </a>
+                          )}
                         </div>
                       ))}
                     </div>

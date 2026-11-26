@@ -14,6 +14,22 @@ import mongoose, { Schema, models, model, Model } from "mongoose";
 export const LICITACION_ESTADOS = ["INSCRIPTO", "NO_INSCRIPTO", "EN_TRAMITE"] as const;
 export type LicitacionEstado = (typeof LICITACION_ESTADOS)[number];
 
+// Documento adjunto de una licitación puntual (pliego, constancia, lo que
+// sea) — pedido de Ariel, 2026-11-26: "permitime subir doc, sea pdf jpg
+// png". A diferencia de los "documentos" de Empleados/Viáticos (lista que
+// se sube con su propia action porque cuelga de un registro que ya existe),
+// acá cada licitación puede no existir todavía en la base cuando el
+// usuario la está cargando en el modal — así que el archivo viaja con el
+// resto del formulario (mismo criterio que la foto de Empleados) y se
+// resuelve recién al guardar la entidad completa.
+export interface IDocumentoLicitacion {
+  nombre: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: Date;
+}
+
 // Una licitación puntual dentro de una entidad — "Licitaciones N°" del
 // papel, con su propio estado (no hereda el de la entidad: se puede estar
 // Inscripto en la entidad en general y, aun así, No inscripto en una
@@ -21,6 +37,7 @@ export type LicitacionEstado = (typeof LICITACION_ESTADOS)[number];
 export interface ILicitacionItem {
   numero: string;
   estado: LicitacionEstado;
+  documento?: IDocumentoLicitacion;
 }
 
 export interface ILicitacion {
@@ -33,10 +50,22 @@ export interface ILicitacion {
   createdAt: Date;
 }
 
+const DocumentoLicitacionSchema = new Schema<IDocumentoLicitacion>(
+  {
+    nombre: { type: String, required: true },
+    path: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, required: true },
+  },
+  { _id: false }
+);
+
 const LicitacionItemSchema = new Schema<ILicitacionItem>(
   {
     numero: { type: String, required: true },
     estado: { type: String, enum: LICITACION_ESTADOS, required: true, default: "EN_TRAMITE" },
+    documento: { type: DocumentoLicitacionSchema, required: false },
   },
   { _id: false }
 );

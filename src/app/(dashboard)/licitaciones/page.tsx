@@ -14,7 +14,19 @@ export default async function LicitacionesPage() {
     entidad: e.entidad,
     estado: e.estado,
     numeroProveedor: e.numeroProveedor,
-    licitaciones: (e.licitaciones ?? []).map((it) => ({ numero: it.numero, estado: it.estado })),
+    licitaciones: (e.licitaciones ?? []).map((it) => ({
+      numero: it.numero,
+      estado: it.estado,
+      documento: it.documento
+        ? {
+            nombre: it.documento.nombre,
+            path: it.documento.path,
+            mimeType: it.documento.mimeType,
+            size: it.documento.size,
+            uploadedAtISO: it.documento.uploadedAt.toISOString(),
+          }
+        : undefined,
+    })),
     observaciones: e.observaciones,
   }));
 

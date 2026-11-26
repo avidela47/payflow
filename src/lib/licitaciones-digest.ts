@@ -32,10 +32,11 @@ export async function runLicitacionesDigest() {
     return { sent: false, count: 0 };
   }
 
-  const recipient = process.env.AGENDA_RECIPIENT_EMAIL;
-  if (!recipient) {
-    throw new Error("Falta AGENDA_RECIPIENT_EMAIL en las variables de entorno.");
-  }
+  // Mismo buzón que el resto de las alertas de PayFlow (ver AGENDA_RECIPIENT_EMAIL
+  // en Agenda/Calendario) — Ariel confirmó el destino explícitamente acá,
+  // 2026-11-26, así que admin@itelsasas.com queda como default aunque esa
+  // variable de entorno no esté seteada.
+  const recipient = process.env.AGENDA_RECIPIENT_EMAIL || "admin@itelsasas.com";
 
   const lines: string[] = [];
   for (const e of entidades) {
