@@ -88,7 +88,7 @@ async function resolveItemDocumento(
           path: parsed.path,
           mimeType: String(parsed.mimeType ?? "application/octet-stream"),
           size: Number(parsed.size) || 0,
-          uploadedAt: parsed.uploadedAt ? new Date(parsed.uploadedAt) : new Date(),
+          uploadedAt: parsed.uploadedAtISO ? new Date(parsed.uploadedAtISO) : new Date(),
         };
       }
     } catch {

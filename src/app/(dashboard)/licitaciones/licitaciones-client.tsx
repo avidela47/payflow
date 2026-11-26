@@ -134,6 +134,23 @@ function LicitacionForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // 2026-11-26, Ariel: una fila sin N° de licitación se descarta entera
+    // al guardar (ver comentario server-side) — si tiene un documento
+    // adjunto, ese documento se iba con ella sin ningún aviso (pasó en
+    // producción con EPEC: subió el archivo, grabó, y al volver a entrar
+    // ya no estaba — nunca se había llegado a escribir en el servidor).
+    // Frenamos acá antes de mandar el formulario.
+    const filaConDocumentoSinNumero = items.find(
+      (row) => row.numero.trim().length === 0 && (row.nuevoArchivo || row.documento)
+    );
+    if (filaConDocumentoSinNumero) {
+      toast.error(
+        "Hay un documento adjunto en una fila sin N° de licitación. Completá el número o quitá el documento antes de guardar."
+      );
+      return;
+    }
+
     const fd = new FormData();
     fd.set("entidad", entidad);
     fd.set("estado", estado);
