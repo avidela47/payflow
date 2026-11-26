@@ -30,9 +30,9 @@ import {
   type CondicionesFormInput,
   type ViaticoDocumentoResult,
 } from "./actions";
+import Link from "next/link";
 import { SimuladorViajesButton } from "./simulador-viajes";
 import { condicionesViajePdf } from "@/lib/condiciones-viaje-pdf";
-import { viajeGastosPdf } from "@/lib/viaje-gastos-pdf";
 import { nextIva } from "@/lib/iva";
 import type {
   ViaticoHonorarioType,
@@ -756,39 +756,6 @@ export function ViaticosClient({
     router.refresh();
   }
 
-  // PDF con neto/IVA discriminados por categoría — 2026-11-26, pedido de
-  // Ariel junto con el resto del cambio de IVA en Viajes.
-  function imprimirViatico(v: ViaticoItem) {
-    void viajeGastosPdf({
-      nombreViaje: v.nombre,
-      fechaInicioISO: v.fechaInicioISO,
-      fechaFinISO: v.fechaFinISO,
-      empleados: v.empleados.map((e) => ({
-        label: `${e.employeeName ?? "Empleado"} — ${
-          e.honorarioType === "DIA" ? `${e.dias ?? 1} día(s)` : "monto fijo"
-        }`,
-        neto: e.monto * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
-        iva: (e.iva ?? 0) * (e.honorarioType === "DIA" ? e.dias ?? 1 : 1),
-      })),
-      hospedaje:
-        v.hospedajeCostoPorDia != null
-          ? {
-              neto: (v.hospedajeCostoPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0),
-              iva: (v.hospedajeIvaPorDia ?? 0) * (v.hospedajeCantidadDias ?? 0),
-            }
-          : undefined,
-      combustible: v.combustibleMonto != null ? { neto: v.combustibleMonto, iva: v.combustibleIva ?? 0 } : undefined,
-      extras: v.extras.map((x) => ({ label: x.descripcion, neto: x.monto, iva: x.iva ?? 0 })),
-      materiales: v.materiales.map((m) => ({ label: m.descripcion, neto: m.monto, iva: m.iva ?? 0 })),
-      seguro: v.seguroCosto != null ? { neto: v.seguroCosto, iva: v.seguroIva ?? 0 } : undefined,
-      topesDiarios: v.topesDiarios.map((t) => ({
-        label: `${t.employeeName ?? "Empleado"} (tope/día)`,
-        neto: t.monto,
-        iva: t.iva ?? 0,
-      })),
-    });
-  }
-
   async function performDelete(v: ViaticoItem) {
     setDeletingId(v.id);
     const result = await deleteViatico(v.id);
@@ -882,15 +849,12 @@ export function ViaticosClient({
                       <ClipboardList className="mr-1 h-3.5 w-3.5" />
                       Condiciones
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => imprimirViatico(v)}
-                      title="Imprimir resumen con neto e IVA discriminados"
-                    >
-                      <Printer className="mr-1 h-3.5 w-3.5" />
-                      Imprimir
-                    </Button>
+                    <Link href={`/imprimir/viaticos/${v.id}`} target="_blank">
+                      <Button size="sm" variant="outline" title="Vista de impresión, con neto e IVA discriminados">
+                        <Printer className="mr-1 h-3.5 w-3.5" />
+                        Imprimir
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
                       variant="edit"
@@ -1973,16 +1937,12 @@ export function ViaticosClient({
                 {formatCurrency(calcularTotalesDiscriminados(detailTarget).iva)} · Total:{" "}
                 {formatCurrency(calcularTotalesDiscriminados(detailTarget).total)}
               </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => imprimirViatico(detailTarget)}
-                title="Imprimir resumen con neto e IVA discriminados"
-              >
-                <Printer className="mr-1 h-3.5 w-3.5" />
-                Imprimir
-              </Button>
+              <Link href={`/imprimir/viaticos/${detailTarget.id}`} target="_blank">
+                <Button type="button" size="sm" variant="outline" title="Vista de impresión, con neto e IVA discriminados">
+                  <Printer className="mr-1 h-3.5 w-3.5" />
+                  Imprimir
+                </Button>
+              </Link>
             </div>
           </div>
         )}

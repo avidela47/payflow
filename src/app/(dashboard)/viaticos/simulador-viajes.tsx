@@ -16,6 +16,7 @@
 // parciales de empleados en Viatico (pagos[] con monto+fecha, saldo =
 // total - pagado).
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Calculator, Plus, Trash2, X, CalendarDays, Wallet, FileWarning, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,6 @@ import {
 } from "./simulador-actions";
 import { SIM_PAYMENT_MODES, type SimPaymentMode } from "@/models/SimuladorViaje";
 import { nextIva } from "@/lib/iva";
-import { simuladorViajePdf } from "@/lib/simulador-viaje-pdf";
 
 const PAYMENT_MODE_OPTIONS: { value: SimPaymentMode; label: string }[] = [
   { value: "TARJETA", label: "Tarjeta" },
@@ -314,6 +314,11 @@ export function SimuladorViajesButton() {
                     </div>
                     <p className="shrink-0 text-sm font-semibold">{formatCurrency(s.total)}</p>
                     <div className="flex shrink-0 gap-2">
+                      <Link href={`/imprimir/simulador-viajes/${s.id}`} target="_blank">
+                        <Button type="button" size="sm" variant="outline" title="Vista de impresión">
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
                       <Button type="button" size="sm" variant="edit" onClick={() => void abrirSimulacion(s.id)}>
                         Abrir
                       </Button>
@@ -517,28 +522,19 @@ export function SimuladorViajesButton() {
                 <span />
               )}
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    void simuladorViajePdf({
-                      nombre: nombre.trim() || "Simulación",
-                      items: items
-                        .filter((it) => it.proveedor.trim())
-                        .map((it) => ({
-                          proveedor: it.proveedor.trim(),
-                          neto: it.neto || 0,
-                          iva: it.iva || 0,
-                          formaPago: it.formaPago,
-                          fechaPagoISO: it.fechaPagoISO || undefined,
-                        })),
-                    })
-                  }
-                  title="Imprimir con neto e IVA discriminados"
-                >
-                  <Printer className="mr-1.5 h-3.5 w-3.5" />
-                  Imprimir
-                </Button>
+                {editingId ? (
+                  <Link href={`/imprimir/simulador-viajes/${editingId}`} target="_blank">
+                    <Button type="button" variant="outline" title="Vista de impresión, con neto e IVA discriminados">
+                      <Printer className="mr-1.5 h-3.5 w-3.5" />
+                      Imprimir
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button type="button" variant="outline" disabled title="Guardá la simulación primero para poder imprimirla">
+                    <Printer className="mr-1.5 h-3.5 w-3.5" />
+                    Imprimir
+                  </Button>
+                )}
                 <Button type="button" variant="outline" onClick={() => setView("list")}>
                   Volver
                 </Button>
