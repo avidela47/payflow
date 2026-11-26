@@ -1,8 +1,10 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Provider } from "@/models/Provider";
 import { ProvidersClient, type ProviderItem } from "./proveedores-client";
 
 export default async function ProveedoresPage() {
+  await requireModuleAccess("proveedores");
   await connectDB();
 
   const providers = await Provider.find({}).sort({ nombre: 1 }).lean();

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getSalesReport, currentPeriodString } from "@/lib/reports";
-import { requireModuleAccess } from "@/lib/auth";
+import { requireModuleAccess, requireReportModules } from "@/lib/auth";
 
 function channelLabel(channel: "OFICINA" | "MERCADO_LIBRE"): string {
   return channel === "MERCADO_LIBRE" ? "Mercado Libre" : "Oficina";
@@ -26,7 +26,8 @@ export default async function ReporteVentasPage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requireModuleAccess("reportes");
+  const session = await requireModuleAccess("reportes");
+  await requireReportModules(session, ["ventas"]);
 
   const periodISO = searchParams.period || currentPeriodString();
   const report = await getSalesReport(periodISO);

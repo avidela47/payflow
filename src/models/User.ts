@@ -45,6 +45,15 @@ export const RESTRICTABLE_MODULES = [
   "despachos",
   "recibos",
   "vales",
+  // 2026-11-26, Ariel: antes Clientes/Proveedores/Ventas/Compras (sección
+  // COMERCIAL) no tenían moduleKey y quedaban siempre visibles para
+  // cualquier usuario autenticado, sin importar restrictedModules — pidió
+  // poder sacarle ese acceso puntualmente a varios usuarios, así que ahora
+  // sí son restringibles.
+  "clientes",
+  "proveedores",
+  "ventas",
+  "compras",
 ] as const;
 export type RestrictableModule = (typeof RESTRICTABLE_MODULES)[number];
 

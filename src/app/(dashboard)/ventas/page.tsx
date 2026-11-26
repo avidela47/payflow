@@ -1,9 +1,11 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Client } from "@/models/Client";
 import { Sale } from "@/models/Sale";
 import { VentasClient, type SaleItem } from "./ventas-client";
 
 export default async function VentasPage() {
+  await requireModuleAccess("ventas");
   await connectDB();
 
   const [clients, sales] = await Promise.all([

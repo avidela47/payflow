@@ -33,10 +33,13 @@ import type { RestrictableModule } from "@/models/User";
 // módulos tenga restringidos ese usuario — alguien sin acceso a Finanzas
 // igual veía el reporte de Sueldos. Mismo criterio que ya usa el Dashboard
 // con sus tarjetas/KPIs: cada reporte declara de qué módulo(s) depende
-// (moduleKeys: null = siempre visible, como Ventas/Compras que tampoco se
-// pueden restringir en el sidebar) y se oculta si falta acceso a
-// CUALQUIERA de ellos — algunos reportes cruzan más de un módulo (ej.
-// Stock mezcla Componentes de Producción y Luminarias de Stock).
+// (moduleKeys: null = siempre visible, sin ningún moduleKey del que
+// depender) y se oculta si falta acceso a CUALQUIERA de ellos — algunos
+// reportes cruzan más de un módulo (ej. Stock mezcla Componentes de
+// Producción y Luminarias de Stock).
+// 2026-11-26: Ventas/Compras (sección COMERCIAL) pasaron a ser
+// restringibles (antes eran siempre visibles, ver RESTRICTABLE_MODULES en
+// models/User.ts) — sus tarjetas de reporte ya no son moduleKeys: null.
 type ReportCard = {
   href: string;
   title: string;
@@ -51,14 +54,14 @@ const REPORT_CARDS: ReportCard[] = [
     title: "Ventas",
     description: "Por mes: total, cobradas/pendientes y formas de pago.",
     icon: TrendingUp,
-    moduleKeys: null,
+    moduleKeys: ["ventas"],
   },
   {
     href: "/reportes/compras",
     title: "Compras",
     description: "Por mes: total, pagadas/pendientes, formas de pago y estado de recepción.",
     icon: ShoppingCart,
-    moduleKeys: null,
+    moduleKeys: ["compras"],
   },
   {
     href: "/reportes/sueldos",

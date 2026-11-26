@@ -33,7 +33,10 @@ const ACCESS_GROUPS: Record<string, RestrictableModule[]> = {
     "computo-privado",
     "marketing",
   ],
-  comercial: [], // Clientes/Proveedores/Ventas/Compras: sin moduleKey, siempre visibles
+  // 2026-11-26: Clientes/Proveedores/Ventas/Compras pasaron a ser
+  // restringibles (antes no tenían moduleKey y eran siempre visibles) —
+  // Ariel pidió poder sacarle este acceso a usuarios puntuales.
+  comercial: ["clientes", "proveedores", "ventas", "compras"],
   finanzas: ["empleados", "sueldos", "costos-fijos", "pagos", "cheques", "caja-chica", "viaticos", "licitaciones"],
   utilidades: ["vault"], // Agenda/Calendario/Notas: sin moduleKey, siempre visibles
   produccion: ["componentes", "recetas", "fabricar", "movimientos-componentes", "proyectos"],
@@ -115,21 +118,24 @@ const USERS_TO_CREATE: UserToCreate[] = [
     email: "cristian",
     password: "Cristian2026$",
     role: "ACCOUNTANT",
-    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
   },
   {
     name: "Fabio",
     email: "fabio",
     password: "Fabio2026$",
     role: "ACCOUNTANT",
-    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
   },
   {
     name: "Pajarito",
     email: "pajarito",
     password: "Pajarito2026$",
     role: "ACCOUNTANT",
-    allowedGroups: ["reportes", "comercial", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
   },
 ];
 

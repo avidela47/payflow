@@ -1,8 +1,10 @@
 import { connectDB } from "@/lib/db";
+import { requireModuleAccess } from "@/lib/auth";
 import { Client } from "@/models/Client";
 import { ClientsClient, type ClientItem } from "./clientes-client";
 
 export default async function ClientesPage() {
+  await requireModuleAccess("clientes");
   await connectDB();
 
   const clients = await Client.find({}).sort({ nombre: 1 }).lean();

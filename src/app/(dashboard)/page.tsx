@@ -615,7 +615,7 @@ export default async function DashboardPage() {
       title: "Nuevo cliente",
       description: "Sumar a la cartera",
       icon: Building2,
-      moduleKey: null,
+      moduleKey: "clientes",
     },
   ].filter((action) => !action.moduleKey || !restrictedModules.includes(action.moduleKey as never));
 
@@ -651,7 +651,7 @@ export default async function DashboardPage() {
           value: String(totalClients),
           caption: totalClients === 1 ? "cliente" : "clientes",
           icon: Building2,
-          moduleKey: null,
+          moduleKey: "clientes",
         },
         {
           href: "/proveedores",
@@ -660,7 +660,7 @@ export default async function DashboardPage() {
           value: String(totalProviders),
           caption: totalProviders === 1 ? "proveedor" : "proveedores",
           icon: Truck,
-          moduleKey: null,
+          moduleKey: "proveedores",
         },
         {
           href: "/ventas",
@@ -669,7 +669,7 @@ export default async function DashboardPage() {
           value: formatCurrency(totalSalesThisMonth),
           caption: "este mes",
           icon: TrendingUp,
-          moduleKey: null,
+          moduleKey: "ventas",
         },
         {
           href: "/compras",
@@ -678,7 +678,7 @@ export default async function DashboardPage() {
           value: formatCurrency(totalPurchasesThisMonth),
           caption: "este mes",
           icon: ShoppingCart,
-          moduleKey: null,
+          moduleKey: "compras",
         },
       ],
     },
