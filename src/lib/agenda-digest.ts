@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { CalendarEvent } from "@/models/CalendarEvent";
 import { Check } from "@/models/Check";
 import { FixedCostEntry } from "@/models/FixedCost";
+import { User } from "@/models/User";
 import { sendMail } from "@/lib/mail";
 
 // Argentina es UTC-3 fijo, sin horario de verano — no hace falta una
@@ -72,54 +73,112 @@ export async function runAgendaDigest() {
     return { sent: false, count: 0 };
   }
 
-  const recipient = process.env.AGENDA_RECIPIENT_EMAIL;
-  if (!recipient) {
+  const globalRecipient = process.env.AGENDA_RECIPIENT_EMAIL;
+  if (!globalRecipient) {
     throw new Error("Falta AGENDA_RECIPIENT_EMAIL en las variables de entorno.");
   }
 
-  const lines: string[] = [];
+  // 2026-11-27, pedido de Ariel: cada usuario con `notificationEmail`
+  // cargado (ver User.ts — se va completando de a poco con
+  // scripts/set-notification-emails.ts) recibe en SU mail solo SUS
+  // propios eventos de hoy. El mail global de siempre
+  // (AGENDA_RECIPIENT_EMAIL) sigue existiendo para cheques/costos fijos
+  // (no son de ningún usuario puntual) y como red de contención para los
+  // eventos de quien todavía no tiene notificationEmail cargado — así
+  // nunca se pierde un aviso por faltar ese dato.
+  const userIds = [...new Set(calendarItems.map((item) => item.user?.toString()).filter((id): id is string => Boolean(id)))];
+  const users =
+    userIds.length > 0 ? await User.find({ _id: { $in: userIds } }).select("notificationEmail").lean() : [];
+  const notificationEmailById = new Map(users.map((u) => [u._id.toString(), u.notificationEmail]));
 
-  if (calendarItems.length > 0) {
-    lines.push("Calendario de hoy:");
-    for (const item of calendarItems) {
+  type CalendarItem = (typeof calendarItems)[number];
+  const eventsByUserEmail = new Map<string, CalendarItem[]>();
+  const eventsSinMailPropio: CalendarItem[] = [];
+
+  for (const item of calendarItems) {
+    const mail = item.user ? notificationEmailById.get(item.user.toString()) : undefined;
+    if (mail) {
+      const list = eventsByUserEmail.get(mail) ?? [];
+      list.push(item);
+      eventsByUserEmail.set(mail, list);
+    } else {
+      eventsSinMailPropio.push(item);
+    }
+  }
+
+  let sentCount = 0;
+
+  // Un mail por usuario con notificationEmail propio, solo con sus eventos.
+  for (const [mail, userItems] of eventsByUserEmail) {
+    const lines = ["Calendario de hoy:"];
+    for (const item of userItems) {
       lines.push(`- ${item.title}${item.notes ? ` — ${item.notes}` : ""}`);
+    }
+    const text = lines.join("\n");
+    const html = `<pre style="font-family: inherit; white-space: pre-wrap; font-size: 14px;">${lines
+      .map(escapeHtml)
+      .join("\n")}</pre>`;
+
+    await sendMail({
+      to: mail,
+      subject: `PayFlow — Tu agenda del ${formatDate(today)}`,
+      text,
+      html,
+    });
+    sentCount += userItems.length;
+  }
+
+  // Mail global de siempre: eventos de quien no tiene notificationEmail
+  // todavía + cheques + costos fijos (mismo formato que antes de este
+  // cambio).
+  const globalLines: string[] = [];
+
+  if (eventsSinMailPropio.length > 0) {
+    globalLines.push("Calendario de hoy:");
+    for (const item of eventsSinMailPropio) {
+      globalLines.push(`- ${item.title}${item.notes ? ` — ${item.notes}` : ""}`);
     }
   }
 
   if (checks.length > 0) {
-    if (lines.length > 0) lines.push("");
-    lines.push("Cheques que vencen hoy:");
+    if (globalLines.length > 0) globalLines.push("");
+    globalLines.push("Cheques que vencen hoy:");
     for (const check of checks) {
       const typeLabel = check.type === "ELECTRONICO" ? "E-cheq" : "Físico";
-      lines.push(
+      globalLines.push(
         `- ${check.issuerName} — ${formatCurrency(check.amount)} (${typeLabel} ${check.checkNumber})`
       );
     }
   }
 
   if (fixedCosts.length > 0) {
-    if (lines.length > 0) lines.push("");
-    lines.push("Costos fijos que vencen hoy:");
+    if (globalLines.length > 0) globalLines.push("");
+    globalLines.push("Costos fijos que vencen hoy:");
     for (const cost of fixedCosts) {
       const categoryDoc =
         cost.category && typeof cost.category === "object" && "name" in cost.category
           ? (cost.category as unknown as { name: string })
           : null;
-      lines.push(`- ${categoryDoc ? categoryDoc.name : "Categoría eliminada"} — ${formatCurrency(cost.amount)}`);
+      globalLines.push(
+        `- ${categoryDoc ? categoryDoc.name : "Categoría eliminada"} — ${formatCurrency(cost.amount)}`
+      );
     }
   }
 
-  const text = lines.join("\n");
-  const html = `<pre style="font-family: inherit; white-space: pre-wrap; font-size: 14px;">${lines
-    .map(escapeHtml)
-    .join("\n")}</pre>`;
+  if (globalLines.length > 0) {
+    const text = globalLines.join("\n");
+    const html = `<pre style="font-family: inherit; white-space: pre-wrap; font-size: 14px;">${globalLines
+      .map(escapeHtml)
+      .join("\n")}</pre>`;
 
-  await sendMail({
-    to: recipient,
-    subject: `PayFlow — Agenda del ${formatDate(today)}`,
-    text,
-    html,
-  });
+    await sendMail({
+      to: globalRecipient,
+      subject: `PayFlow — Agenda del ${formatDate(today)}`,
+      text,
+      html,
+    });
+    sentCount += eventsSinMailPropio.length + checks.length + fixedCosts.length;
+  }
 
   if (calendarItems.length > 0) {
     await CalendarEvent.updateMany(
@@ -128,5 +187,5 @@ export async function runAgendaDigest() {
     );
   }
 
-  return { sent: true, count: totalItems };
+  return { sent: sentCount > 0, count: sentCount };
 }

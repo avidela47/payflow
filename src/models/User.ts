@@ -76,6 +76,15 @@ export interface IUser {
   // necesidad de cargar una ficha entera. Si `employeeId` está seteado,
   // la foto de Empleados tiene prioridad sobre esta.
   foto?: string;
+  // Mail real donde este usuario quiere recibir SU digest de Calendario
+  // (ver lib/agenda-digest.ts) — 2026-11-27, pedido de Ariel: antes todo
+  // el mundo caía en un solo mail fijo (AGENDA_RECIPIENT_EMAIL); ahora
+  // cada uno puede tener el suyo. Distinto de `email` (que es el usuario
+  // de login, no necesariamente un mail real — ver create-users.ts). Se
+  // va completando de a poco (ver scripts/set-notification-emails.ts); a
+  // quien no tenga este campo, sus eventos siguen cayendo en el mail
+  // global de siempre.
+  notificationEmail?: string;
   createdAt: Date;
 }
 
@@ -92,6 +101,7 @@ const UserSchema = new Schema<IUser>({
   },
   employeeId: { type: Schema.Types.ObjectId, ref: "Employee" },
   foto: String,
+  notificationEmail: String,
   createdAt: { type: Date, default: Date.now },
 });
 
