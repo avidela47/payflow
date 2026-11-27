@@ -119,7 +119,8 @@ const USERS_TO_CREATE: UserToCreate[] = [
     password: "Cristian2026$",
     role: "ACCOUNTANT",
     // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
-    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-27, Ariel: están en Producción y hacen Vales — les faltaba ese grupo.
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta", "vales"],
   },
   {
     name: "Fabio",
@@ -127,7 +128,8 @@ const USERS_TO_CREATE: UserToCreate[] = [
     password: "Fabio2026$",
     role: "ACCOUNTANT",
     // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
-    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-27, Ariel: están en Producción y hacen Vales — les faltaba ese grupo.
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta", "vales"],
   },
   {
     name: "Pajarito",
@@ -135,7 +137,8 @@ const USERS_TO_CREATE: UserToCreate[] = [
     password: "Pajarito2026$",
     role: "ACCOUNTANT",
     // 2026-11-26, Ariel: sacarle Comercial (Clientes/Proveedores/Ventas/Compras).
-    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta"],
+    // 2026-11-27, Ariel: están en Producción y hacen Vales — les faltaba ese grupo.
+    allowedGroups: ["reportes", "utilidades", "produccion", "stock", "comercialPlanta", "vales"],
   },
 ];
 
